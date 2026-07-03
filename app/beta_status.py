@@ -21,6 +21,7 @@ REQUIRED_FILES = [
     "app/preflight.py",
     "app/env_check.py",
     "app/musubi_runtime_check.py",
+    "app/musubi_runtime_check_test.py",
     "app/startup_check.py",
     "app/launcher_check.py",
     "app/command_preview_test.py",
