@@ -13,6 +13,7 @@ READINESS_FILES = {
     "command_path_guard": ROOT / "app" / "command_path_guard.py",
     "stage_guidance": ROOT / "app" / "stage_guidance.py",
     "export_validator": ROOT / "app" / "export_validator.py",
+    "verify_script": ROOT / "scripts" / "verify_pgx_beta.sh",
     "check_beta": ROOT / "scripts" / "check_beta.sh",
     "runbook": ROOT / "docs" / "pgx_beta_runbook.md",
     "acceptance": ROOT / "docs" / "v1_acceptance_checklist.md",
@@ -62,11 +63,16 @@ def verification_readiness() -> str:
         ("Stage guidance tells next checks", READINESS_FILES["stage_guidance"], "次に確認すること"),
         ("Export validator returns OK", READINESS_FILES["export_validator"], "Result: OK"),
         ("Export validator blocks missing ComfyUI folder", READINESS_FILES["export_validator"], "LoRAフォルダが存在しません"),
+        ("PGX verify script runs setup", READINESS_FILES["verify_script"], "bash ./scripts/setup.sh"),
+        ("PGX verify script runs check", READINESS_FILES["verify_script"], "bash ./scripts/check.sh"),
+        ("PGX verify script runs beta check", READINESS_FILES["verify_script"], "bash ./scripts/check_beta.sh"),
+        ("PGX verify script runs readiness", READINESS_FILES["verify_script"], "verification_readiness.py"),
         ("Beta check compiles desktop", READINESS_FILES["check_beta"], "app/desktop_main.py"),
         ("Beta check runs static check", READINESS_FILES["check_beta"], "desktop_static_check.py"),
         ("Beta check runs command path guard test", READINESS_FILES["check_beta"], "command_path_guard_test.py"),
         ("Beta check runs stage guidance test", READINESS_FILES["check_beta"], "stage_guidance_test.py"),
         ("Beta check runs musubi runtime test", READINESS_FILES["check_beta"], "musubi_runtime_check_test.py"),
+        ("Beta check runs verify script static check", READINESS_FILES["check_beta"], "verify_pgx_beta_static_check.py"),
         ("Beta check runs export validator test", READINESS_FILES["check_beta"], "export_validator_test.py"),
         ("Runbook documents command path guard", READINESS_FILES["runbook"], "Command Path Guard"),
         ("Runbook documents export validation", READINESS_FILES["runbook"], "コピー前チェック"),
@@ -90,7 +96,7 @@ def verification_readiness() -> str:
         lines.extend(f"- {item}" for item in blockers)
     else:
         lines.append("READY: PGX実機でZ-Image LoRAの通し検証に進めます。")
-        lines.append("Next: ./scripts/check_beta.sh をPGXで通してからGUIで実データ検証してください。")
+        lines.append("Next: bash ./scripts/verify_pgx_beta.sh をPGXで通してからGUIで実データ検証してください。")
     return "\n".join(lines)
 
 
