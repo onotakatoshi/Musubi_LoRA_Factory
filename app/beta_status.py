@@ -13,8 +13,11 @@ REQUIRED_FILES = [
     "app/model_adapters.py",
     "app/model_ui.py",
     "app/command_preview.py",
+    "app/command_path_guard.py",
+    "app/command_path_guard_test.py",
     "app/preflight.py",
     "app/env_check.py",
+    "app/musubi_runtime_check.py",
     "app/startup_check.py",
     "app/launcher_check.py",
     "app/command_preview_test.py",
@@ -24,6 +27,8 @@ REQUIRED_FILES = [
     "app/output_detector.py",
     "app/output_detector_test.py",
     "app/find_lora_output.py",
+    "app/export_validator.py",
+    "app/export_validator_test.py",
     "scripts/setup.sh",
     "scripts/start.sh",
     "scripts/start_desktop.sh",
@@ -55,7 +60,9 @@ def beta_status() -> str:
     lines.append("")
     lines.append("## Core engine")
     lines.append("- TrainingEngine: Latent Cache / Text Cache / Train")
+    lines.append("- CommandPathGuard: final path validation before run")
     lines.append("- OutputDetector: latest LoRA .safetensors detection")
+    lines.append("- ExportValidator: pre-copy validation for ComfyUI export")
     lines.append("")
     lines.append("## Required files")
     for rel in REQUIRED_FILES:
