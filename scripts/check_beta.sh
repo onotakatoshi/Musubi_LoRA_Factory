@@ -15,6 +15,7 @@ python app/command_preview_test.py
 python app/project_roundtrip_test.py
 python app/training_engine_test.py
 python app/output_detector_test.py
+python app/export_validator_test.py
 python app/beta_status_test.py
 python app/beta_status.py
 
