@@ -4,9 +4,7 @@ import sys
 import tempfile
 from pathlib import Path
 
-# Allow running as: python app/smoke_test.py
 APP_DIR = Path(__file__).resolve().parent
-ROOT = APP_DIR.parent
 if str(APP_DIR) not in sys.path:
     sys.path.insert(0, str(APP_DIR))
 
@@ -17,11 +15,11 @@ from command_preview import preview_from_settings
 from pipeline import build_dataset_toml, check_dataset
 
 
-def write_test_settings(path: Path) -> None:
+def write_test_settings(path: Path, musubi_repo: Path) -> None:
     path.write_text(
-        """
+        f"""
 [musubi]
-repo_path = "/tmp/musubi-tuner"
+repo_path = "{musubi_repo}"
 python_path = "python"
 
 [paths]
@@ -55,6 +53,8 @@ def main() -> int:
         root = Path(tmp)
         dataset = root / "dataset"
         output = root / "output"
+        musubi_repo = root / "musubi-tuner"
+        (musubi_repo / "src" / "musubi_tuner").mkdir(parents=True)
         dataset.mkdir()
 
         img = dataset / "sample.png"
@@ -75,7 +75,7 @@ def main() -> int:
         assert dataset_toml.exists()
 
         settings = root / "settings.toml"
-        write_test_settings(settings)
+        write_test_settings(settings, musubi_repo)
         preview = preview_from_settings(
             settings_path=settings,
             dataset_toml=str(dataset_toml),
@@ -87,6 +87,7 @@ def main() -> int:
             output_name="smoke_zimage",
             task="z-image",
         )
+        assert "cd " in preview
         assert "zimage_cache_latents.py" in preview
         assert "zimage_train_network.py" in preview
 
