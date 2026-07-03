@@ -4,17 +4,8 @@ from pathlib import Path
 
 import toml
 
-from commands import ModelPaths, build_command_preview
+from model_adapters import CommandContext, get_adapter
 from model_registry import get_profile
-
-
-def _paths_for_zimage(model_paths: dict) -> ModelPaths:
-    return ModelPaths(
-        vae=model_paths.get("zimage_vae", ""),
-        dit=model_paths.get("zimage_dit", ""),
-        text_encoder=model_paths.get("zimage_text_encoder", ""),
-        base_weights=model_paths.get("zimage_base_weights", ""),
-    )
 
 
 def preview_from_settings(
@@ -44,39 +35,34 @@ def preview_from_settings(
     dataset_path = Path(dataset_toml)
     output_dir = dataset_path.parent
 
-    if profile.id != "z-image":
-        return f"NG: {profile.display_name} のコマンド生成はまだ実装していません。"
+    try:
+        adapter = get_adapter(profile.id)
+    except NotImplementedError as exc:
+        return f"NG: {exc}"
 
-    paths = _paths_for_zimage(model_paths)
-    missing = []
-    if not paths.vae:
-        missing.append("model_paths.zimage_vae")
-    if not paths.dit:
-        missing.append("model_paths.zimage_dit")
-    if not paths.text_encoder:
-        missing.append("model_paths.zimage_text_encoder")
+    missing = adapter.validate_model_paths(model_paths)
     if missing:
         return "NG: settings.toml の以下を設定してください。\n" + "\n".join(f"- {m}" for m in missing)
 
-    command = build_command_preview(
-        target_model=profile.id,
-        musubi_python=Path(musubi.get("python_path", "python")),
-        musubi_repo=Path(musubi.get("repo_path", ".")),
-        dataset_toml=dataset_path,
-        output_dir=output_dir,
-        output_name=output_name,
-        paths=paths,
-        rank=rank,
-        alpha=alpha,
-        epochs=epochs,
-        lr=lr,
-        task=profile.task,
+    command = adapter.build_commands(
+        CommandContext(
+            musubi_python=Path(musubi.get("python_path", "python")),
+            musubi_repo=Path(musubi.get("repo_path", ".")),
+            dataset_toml=dataset_path,
+            output_dir=output_dir,
+            output_name=output_name,
+            model_paths=model_paths,
+            rank=rank,
+            alpha=alpha,
+            epochs=epochs,
+            lr=lr,
+        )
     )
 
     return (
         "# Command Preview\n"
         "# Ver 1.0 は Z-Image / Z-Image-Turbo 用LoRA作成に限定しています。\n"
-        "# ただし内部構造はモデルプロファイル追加を前提にしています。\n"
+        "# コマンド生成はモデルアダプタ経由です。Musubi Tuner対応モデルを後から追加しやすい構造にしています。\n"
         "# 内容を確認し、問題なければPGX上で順番に実行してください。\n\n"
         + command
     )
