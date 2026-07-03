@@ -17,6 +17,7 @@ python app/docs_static_check.py
 python app/verify_pgx_beta_extra_static_check.py
 python app/collect_debug_info_static_check.py
 python app/validation_report_static_check.py
+python app/desktop_launch_static_check.py
 python app/desktop_launch_smoke_test.py
 python app/verification_readiness.py
 
