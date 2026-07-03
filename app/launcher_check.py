@@ -9,6 +9,8 @@ REQUIRED_SCRIPTS = [
     "scripts/start.sh",
     "scripts/start_desktop.sh",
     "scripts/check.sh",
+    "scripts/check_beta.sh",
+    "scripts/verify_pgx_beta.sh",
     "scripts/update.sh",
     "scripts/create_desktop_launcher.sh",
 ]
@@ -25,6 +27,11 @@ def main() -> int:
         assert text.startswith("#!/usr/bin/env bash"), f"Missing bash shebang: {rel}"
         assert "set -euo pipefail" in text, f"Missing strict shell mode: {rel}"
     assert not missing, f"Missing launcher scripts: {missing}"
+
+    verify_text = (ROOT / "scripts" / "verify_pgx_beta.sh").read_text(encoding="utf-8")
+    assert "./scripts/check.sh" in verify_text
+    assert "./scripts/check_beta.sh" in verify_text
+    assert "verification_readiness.py" in verify_text
 
     desktop_script = ROOT / "scripts" / "create_desktop_launcher.sh"
     desktop_text = desktop_script.read_text(encoding="utf-8")
