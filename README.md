@@ -8,7 +8,9 @@ Z-Imageで最初に試す場合は、まず [PGX Z-Image setup notes](docs/pgx_z
 
 目的:
 - データセット選択
-- caption確認
+- caption診断
+- caption一覧編集
+- caption一括置換 / 一括削除
 - dataset.toml自動生成
 - musubi-tunerのcache/trainコマンドPreview
 - Preflight Check
@@ -29,7 +31,7 @@ chmod +x scripts/setup.sh scripts/start.sh scripts/check.sh scripts/create_deskt
 ./scripts/check.sh
 ```
 
-`configs/settings.toml` をPGX環境に合わせて編集します。
+初回設定はアプリの `設定` タブから行います。
 
 その後、起動します。
 
@@ -64,23 +66,27 @@ source .venv/bin/activate
 pip install -r requirements.txt
 cp configs/settings.example.toml configs/settings.toml
 python -m py_compile app/*.py
+python app/desktop_static_check.py
 python app/smoke_test.py
 python app/desktop_main.py
 ```
 
 ## 基本フロー
 
-1. `System` で Environment Check / GPU Status を確認
-2. `Dataset` で画像フォルダを指定
-3. `Check Dataset` で画像数・サイズ・caption有無を確認
-4. `Config` で `dataset.toml` を作成
-5. `Train` で Target model が `z-image` になっていることを確認
-6. `0. Preflight Check`
-7. `Preview Commands` で実行内容を確認
-8. `Run 1: Latent Cache`
-9. `Run 2: Text Cache`
-10. `Run 3: Train`
-11. `Export` で完成LoRAをComfyUIへコピー
+1. `設定` で musubi-tuner / Z-Image / ComfyUI のパスを設定
+2. `システム` で Environment Check / GPU Status を確認
+3. `データセット` で画像フォルダを指定
+4. `データセット確認` で画像数・サイズ・caption有無・重複を確認
+5. `Caption診断` でcaptionの不足やノイズ語を確認
+6. `Caption編集` でcaptionを一覧編集、一括置換、一括削除
+7. `設定生成` で `dataset.toml` を作成
+8. `学習` で Target model が `z-image` になっていることを確認
+9. `0. 事前チェック`
+10. `コマンド確認` で実行内容を確認
+11. `1. Latent Cache実行`
+12. `2. Text Cache実行`
+13. `3. 学習実行`
+14. `書き出し` で完成LoRAをComfyUIへコピー
 
 ## Z-Image paths
 
