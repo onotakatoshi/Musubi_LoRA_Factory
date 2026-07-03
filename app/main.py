@@ -19,6 +19,7 @@ from pipeline import (
     run_cache_placeholder,
     run_train_placeholder,
 )
+from workflow import next_action, workflow_markdown
 
 ROOT = Path(__file__).resolve().parents[1]
 SETTINGS_PATH = ROOT / "configs" / "settings.toml"
@@ -30,6 +31,10 @@ def load_config() -> AppConfig:
 
 def ui_check_dataset(dataset_dir: str) -> str:
     return check_dataset(Path(dataset_dir))
+
+
+def ui_next_action(dataset_dir: str, dataset_toml: str = "", lora_path: str = "") -> str:
+    return next_action(dataset_dir, dataset_toml, lora_path)
 
 
 def ui_generate_captions(dataset_dir: str, lora_type: str, caption_mode: str) -> str:
@@ -83,7 +88,19 @@ def ui_copy(lora_path: str) -> str:
 with gr.Blocks(title="Musubi LoRA Factory") as demo:
     gr.Markdown("# Musubi LoRA Factory\nPGX向けLoRA作成MVP")
 
+    with gr.Row():
+        with gr.Column(scale=2):
+            gr.Markdown(workflow_markdown(1))
+        with gr.Column(scale=1):
+            guide_dataset_dir = gr.Textbox(label="Dataset folder for guide", placeholder="/home/ono/datasets/lora/Eye_Blue_v1")
+            guide_dataset_toml = gr.Textbox(label="dataset.toml for guide", placeholder="/home/ono/outputs/lora/Eye_Blue_v1_wan22/dataset.toml")
+            guide_lora_path = gr.Textbox(label="LoRA path for guide", placeholder="/home/ono/outputs/lora/eye_lora_wan22.safetensors")
+            guide_btn = gr.Button("Show Next Action")
+            guide_text = gr.Markdown("次にやること: Datasetフォルダを指定して、`Show Next Action` を押してください。")
+            guide_btn.click(ui_next_action, inputs=[guide_dataset_dir, guide_dataset_toml, guide_lora_path], outputs=[guide_text])
+
     with gr.Tab("1. Dataset"):
+        gr.Markdown("## Step 1: Dataset\nまず画像フォルダを指定します。目標は、512x512の高品質画像100枚です。")
         dataset_dir = gr.Textbox(label="Dataset folder", placeholder="/home/ono/datasets/lora/Eye_Blue_v1")
         lora_type = gr.Dropdown(
             ["eye", "mouth", "face", "hair", "hand", "style", "clothing"],
@@ -102,7 +119,7 @@ with gr.Blocks(title="Musubi LoRA Factory") as demo:
         caption_btn.click(ui_generate_captions, inputs=[dataset_dir, lora_type, caption_mode], outputs=[dataset_log])
 
     with gr.Tab("2. Caption Editor"):
-        gr.Markdown("caption txtを一覧で確認・編集します。画像名は変更しないでください。")
+        gr.Markdown("## Step 2-3: Caption / Review\ncaption txtを一覧で確認・編集します。画像名は変更しないでください。")
         load_caption_btn = gr.Button("Load Captions")
         caption_table = gr.Dataframe(headers=["image", "caption"], datatype=["str", "str"], interactive=True)
         with gr.Row():
@@ -119,6 +136,7 @@ with gr.Blocks(title="Musubi LoRA Factory") as demo:
         save_caption_btn.click(ui_save_captions, inputs=[dataset_dir, caption_table], outputs=[caption_editor_log])
 
     with gr.Tab("3. Config"):
+        gr.Markdown("## Step 4: Config\ncaptionを確認したら、musubi-tuner用のdataset.tomlを作ります。")
         output_dir = gr.Textbox(label="Output folder", placeholder="/home/ono/outputs/lora/Eye_Blue_v1_wan22")
         resolution = gr.Dropdown([512, 768, 1024], value=512, label="Resolution")
         build_btn = gr.Button("Build dataset.toml")
@@ -126,6 +144,7 @@ with gr.Blocks(title="Musubi LoRA Factory") as demo:
         build_btn.click(ui_build_dataset_toml, inputs=[dataset_dir, output_dir, resolution], outputs=[dataset_toml])
 
     with gr.Tab("4. Train"):
+        gr.Markdown("## Step 5: Train\nまずcacheを作り、その後LoRA学習を実行します。")
         target_model = gr.Dropdown(
             ["wan2.2", "z-image", "flux", "hunyuanvideo", "framepack"],
             value="wan2.2",
@@ -143,6 +162,7 @@ with gr.Blocks(title="Musubi LoRA Factory") as demo:
         train_btn.click(ui_train, inputs=[dataset_toml, target_model, rank, alpha, epochs, lr, output_name], outputs=[train_log])
 
     with gr.Tab("5. Export"):
+        gr.Markdown("## Step 6: Export\n完成したLoRAをComfyUIのlorasフォルダへコピーします。")
         lora_path = gr.Textbox(label="LoRA file path", placeholder="/home/ono/outputs/lora/eye_lora_wan22.safetensors")
         copy_btn = gr.Button("Copy to ComfyUI")
         export_log = gr.Textbox(label="Log", lines=8)
