@@ -13,6 +13,7 @@ from caption_editor import (
 from command_preview import preview_from_settings
 from error_analyzer import analyze_log
 from gpu_monitor import gpu_preflight_warning
+from log_store import recent_logs_markdown
 from pipeline import (
     AppConfig,
     build_dataset_toml,
@@ -37,6 +38,10 @@ def load_config() -> AppConfig:
 
 def ui_gpu_status() -> str:
     return gpu_preflight_warning()
+
+
+def ui_recent_logs() -> str:
+    return recent_logs_markdown(ROOT)
 
 
 def ui_check_dataset(dataset_dir: str) -> str:
@@ -153,6 +158,11 @@ with gr.Blocks(title="Musubi LoRA Factory") as demo:
         gpu_status = gr.Markdown("GPU status will appear here.")
         gpu_btn.click(ui_gpu_status, outputs=[gpu_status])
 
+    with gr.Accordion("Recent Logs", open=False):
+        logs_btn = gr.Button("Refresh Recent Logs")
+        logs_status = gr.Markdown("Recent logs will appear here.")
+        logs_btn.click(ui_recent_logs, outputs=[logs_status])
+
     with gr.Tab("1. Dataset"):
         gr.Markdown("## Step 1: Dataset\nまず画像フォルダを指定します。目標は、512x512の高品質画像100枚です。")
         dataset_dir = gr.Textbox(label="Dataset folder", placeholder="/home/ono/datasets/lora/Eye_Blue_v1")
@@ -198,7 +208,7 @@ with gr.Blocks(title="Musubi LoRA Factory") as demo:
         build_btn.click(ui_build_dataset_toml, inputs=[dataset_dir, output_dir, resolution], outputs=[dataset_toml])
 
     with gr.Tab("4. Train"):
-        gr.Markdown("## Step 5: Train\nPreflight → Preview Commands → Latent Cache → Text Cache → Train の順に進めます。ログはリアルタイム表示されます。")
+        gr.Markdown("## Step 5: Train\nPreflight → Preview Commands → Latent Cache → Text Cache → Train の順に進めます。ログはリアルタイム表示され、`logs/`にも保存されます。")
         target_model = gr.Dropdown(
             ["wan2.2", "z-image", "flux", "hunyuanvideo", "framepack"],
             value="wan2.2",
