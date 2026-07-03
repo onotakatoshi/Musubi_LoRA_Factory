@@ -8,12 +8,11 @@ class CommandRunnerError(RuntimeError):
     pass
 
 
-def run_shell_command(command: str, cwd: Path | None = None) -> str:
-    """Run a shell command and return combined stdout/stderr.
+REQUIRED_SECTIONS = ["latent_cache", "text_cache", "train"]
 
-    This is intentionally simple for the first musubi-tuner GUI version.
-    A later version can stream logs line-by-line into Gradio.
-    """
+
+def run_shell_command(command: str, cwd: Path | None = None) -> str:
+    """Run a shell command and return combined stdout/stderr."""
     if not command.strip():
         raise CommandRunnerError("Empty command")
 
@@ -66,7 +65,22 @@ def split_command_sections(command_preview: str) -> dict[str, str]:
     return sections
 
 
+def validate_command_preview(command_preview: str) -> str:
+    if not command_preview.strip():
+        return "NG: コマンドが未生成です。先に『コマンド確認』を押してください。"
+    if command_preview.lstrip().startswith("NG:"):
+        return command_preview.strip()
+    sections = split_command_sections(command_preview)
+    missing = [name for name in REQUIRED_SECTIONS if not sections.get(name, "").strip()]
+    if missing:
+        return "NG: コマンドPreviewに不足があります。\n" + "\n".join(f"- {name}" for name in missing)
+    return "OK: latent cache / text cache / train の3コマンドが揃っています。"
+
+
 def run_preview_section(command_preview: str, section: str, cwd: Path | None = None) -> str:
+    validation = validate_command_preview(command_preview)
+    if validation.startswith("NG:"):
+        return validation
     sections = split_command_sections(command_preview)
     command = sections.get(section, "").strip()
     if not command:
