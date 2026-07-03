@@ -69,6 +69,8 @@ def verification_readiness() -> str:
         ("PGX verify script runs setup", READINESS_FILES["verify_script"], "bash ./scripts/setup.sh"),
         ("PGX verify script runs check", READINESS_FILES["verify_script"], "bash ./scripts/check.sh"),
         ("PGX verify script runs beta check", READINESS_FILES["verify_script"], "bash ./scripts/check_beta.sh"),
+        ("PGX verify script runs env check test", READINESS_FILES["verify_script"], "env_check_test.py"),
+        ("PGX verify script runs docs check", READINESS_FILES["verify_script"], "docs_static_check.py"),
         ("PGX verify script runs readiness", READINESS_FILES["verify_script"], "verification_readiness.py"),
         ("Beta check compiles desktop", READINESS_FILES["check_beta"], "app/desktop_main.py"),
         ("Beta check runs static check", READINESS_FILES["check_beta"], "desktop_static_check.py"),
