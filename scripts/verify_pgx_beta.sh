@@ -16,6 +16,7 @@ python app/env_check_test.py
 python app/docs_static_check.py
 python app/verify_pgx_beta_extra_static_check.py
 python app/collect_debug_info_static_check.py
+python app/validation_report_static_check.py
 python app/verification_readiness.py
 
 echo "PGX beta verification checks passed. You can start GUI validation."
