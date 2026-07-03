@@ -1,6 +1,6 @@
 # Musubi LoRA Factory
 
-PGX向けのmusubi-tuner用ローカルGUIです。
+PGX向けのmusubi-tuner用ローカルデスクトップGUIです。
 
 現在の優先ターゲットは **Z-Image / Z-Image-Turbo運用** です。
 
@@ -8,17 +8,16 @@ Z-Imageで最初に試す場合は、まず [PGX Z-Image setup notes](docs/pgx_z
 
 目的:
 - データセット選択
-- JoyCaption/LLM整形用のキャプション生成パイプライン
-- caption一覧編集
+- caption確認
 - dataset.toml自動生成
 - musubi-tunerのcache/trainコマンドPreview
 - Preflight Check
 - musubi-tunerコマンド実行
-- リアルタイムログ表示とログ保存
+- リアルタイムログ表示
 - GPU状態表示
 - 完成LoRAをComfyUIへコピー
 
-> まだMVPです。まずZ-Image向けプロファイルを優先し、その後Wan2.2/FLUXへ広げます。
+> 初期版はPySide6の普通のデスクトップアプリとして作ります。ブラウザ/localhost前提ではありません。
 
 ## PGXでの起動
 
@@ -38,7 +37,7 @@ chmod +x scripts/setup.sh scripts/start.sh scripts/check.sh scripts/create_deskt
 ./scripts/start.sh
 ```
 
-ブラウザで表示されたURLを開きます。
+PySide6のデスクトップウィンドウが開きます。
 
 ## アイコンから起動
 
@@ -66,38 +65,22 @@ pip install -r requirements.txt
 cp configs/settings.example.toml configs/settings.toml
 python -m py_compile app/*.py
 python app/smoke_test.py
-python app/main.py
+python app/desktop_main.py
 ```
 
 ## 基本フロー
 
-1. `Dataset` で画像フォルダを指定
-2. `Check Dataset` で画像数・サイズ・caption有無を確認
-3. `Generate Captions` で `.txt` captionを生成
-4. `Caption Editor` でcaptionを確認・修正
-5. `Config` で `dataset.toml` を作成
-6. `Train` で Target model が `z-image` になっていることを確認
-7. `0. Preflight Check`
-8. `Preview Commands` で実行内容を確認
-9. `Run 1: Latent Cache`
-10. `Run 2: Text Cache`
-11. `Run 3: Train`
-12. `Export` で完成LoRAをComfyUIへコピー
-
-## Caption
-
-`joycaption_command` を設定するとJoyCaptionを外部コマンドとして呼び出します。
-
-```toml
-joycaption_command = "python /opt/JoyCaption/caption.py --image {image}"
-```
-
-LLMはOpenAI互換APIを想定しています。
-
-```toml
-llm_endpoint = "http://localhost:8000/v1/chat/completions"
-llm_model = "qwen-caption-helper"
-```
+1. `System` で Environment Check / GPU Status を確認
+2. `Dataset` で画像フォルダを指定
+3. `Check Dataset` で画像数・サイズ・caption有無を確認
+4. `Config` で `dataset.toml` を作成
+5. `Train` で Target model が `z-image` になっていることを確認
+6. `0. Preflight Check`
+7. `Preview Commands` で実行内容を確認
+8. `Run 1: Latent Cache`
+9. `Run 2: Text Cache`
+10. `Run 3: Train`
+11. `Export` で完成LoRAをComfyUIへコピー
 
 ## Z-Image paths
 
@@ -128,9 +111,3 @@ wan_t5 = "/home/ono/models/wan/models_t5_umt5-xxl-enc-bf16.pth"
 wan_dit = "/home/ono/models/wan/wan2.2_low_noise.safetensors"
 wan_dit_high_noise = "/home/ono/models/wan/wan2.2_high_noise.safetensors"
 ```
-
-## Logs
-
-実行ログは `logs/` に保存されます。
-
-GUI上部の `Recent Logs` から直近ログを確認できます。
