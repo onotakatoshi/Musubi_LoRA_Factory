@@ -4,6 +4,12 @@ from pathlib import Path
 
 import gradio as gr
 
+from caption_editor import (
+    bulk_replace_caption_rows,
+    load_caption_rows,
+    remove_words_caption_rows,
+    save_caption_rows,
+)
 from pipeline import (
     AppConfig,
     build_dataset_toml,
@@ -29,6 +35,22 @@ def ui_check_dataset(dataset_dir: str) -> str:
 def ui_generate_captions(dataset_dir: str, lora_type: str, caption_mode: str) -> str:
     cfg = load_config()
     return generate_captions_placeholder(Path(dataset_dir), lora_type, caption_mode, cfg)
+
+
+def ui_load_captions(dataset_dir: str) -> list[list[str]]:
+    return load_caption_rows(Path(dataset_dir))
+
+
+def ui_save_captions(dataset_dir: str, rows: list[list[str]]) -> str:
+    return save_caption_rows(Path(dataset_dir), rows)
+
+
+def ui_bulk_replace(rows: list[list[str]], find_text: str, replace_text: str) -> list[list[str]]:
+    return bulk_replace_caption_rows(rows, find_text, replace_text)
+
+
+def ui_remove_words(rows: list[list[str]], words_csv: str) -> list[list[str]]:
+    return remove_words_caption_rows(rows, words_csv)
 
 
 def ui_build_dataset_toml(dataset_dir: str, output_dir: str, resolution: int) -> str:
@@ -79,14 +101,31 @@ with gr.Blocks(title="Musubi LoRA Factory") as demo:
         check_btn.click(ui_check_dataset, inputs=[dataset_dir], outputs=[dataset_log])
         caption_btn.click(ui_generate_captions, inputs=[dataset_dir, lora_type, caption_mode], outputs=[dataset_log])
 
-    with gr.Tab("2. Config"):
+    with gr.Tab("2. Caption Editor"):
+        gr.Markdown("caption txtを一覧で確認・編集します。画像名は変更しないでください。")
+        load_caption_btn = gr.Button("Load Captions")
+        caption_table = gr.Dataframe(headers=["image", "caption"], datatype=["str", "str"], interactive=True)
+        with gr.Row():
+            find_text = gr.Textbox(label="Find", placeholder="background")
+            replace_text = gr.Textbox(label="Replace", placeholder="")
+        replace_btn = gr.Button("Bulk Replace")
+        remove_words = gr.Textbox(label="Remove words CSV", placeholder="hair, clothes, background, woman, man")
+        remove_btn = gr.Button("Remove Words")
+        save_caption_btn = gr.Button("Save Captions")
+        caption_editor_log = gr.Textbox(label="Log", lines=4)
+        load_caption_btn.click(ui_load_captions, inputs=[dataset_dir], outputs=[caption_table])
+        replace_btn.click(ui_bulk_replace, inputs=[caption_table, find_text, replace_text], outputs=[caption_table])
+        remove_btn.click(ui_remove_words, inputs=[caption_table, remove_words], outputs=[caption_table])
+        save_caption_btn.click(ui_save_captions, inputs=[dataset_dir, caption_table], outputs=[caption_editor_log])
+
+    with gr.Tab("3. Config"):
         output_dir = gr.Textbox(label="Output folder", placeholder="/home/ono/outputs/lora/Eye_Blue_v1_wan22")
         resolution = gr.Dropdown([512, 768, 1024], value=512, label="Resolution")
         build_btn = gr.Button("Build dataset.toml")
         dataset_toml = gr.Textbox(label="dataset.toml path")
         build_btn.click(ui_build_dataset_toml, inputs=[dataset_dir, output_dir, resolution], outputs=[dataset_toml])
 
-    with gr.Tab("3. Train"):
+    with gr.Tab("4. Train"):
         target_model = gr.Dropdown(
             ["wan2.2", "z-image", "flux", "hunyuanvideo", "framepack"],
             value="wan2.2",
@@ -103,7 +142,7 @@ with gr.Blocks(title="Musubi LoRA Factory") as demo:
         cache_btn.click(ui_cache, inputs=[dataset_toml, target_model], outputs=[train_log])
         train_btn.click(ui_train, inputs=[dataset_toml, target_model, rank, alpha, epochs, lr, output_name], outputs=[train_log])
 
-    with gr.Tab("4. Export"):
+    with gr.Tab("5. Export"):
         lora_path = gr.Textbox(label="LoRA file path", placeholder="/home/ono/outputs/lora/eye_lora_wan22.safetensors")
         copy_btn = gr.Button("Copy to ComfyUI")
         export_log = gr.Textbox(label="Log", lines=8)
