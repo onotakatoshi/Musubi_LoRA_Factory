@@ -9,5 +9,6 @@ comfyui_loras_dir = "/home/ono/ComfyUI/models/loras"
 
 [caption]
 mode = "joycaption_llm"
+joycaption_command = ""
 llm_endpoint = "http://localhost:8000/v1/chat/completions"
 llm_model = "qwen-caption-helper"
