@@ -15,6 +15,7 @@ REQUIRED_I18N_KEYS = [
     "tab_system",
     "tab_dataset",
     "tab_caption",
+    "tab_preview",
     "tab_config",
     "tab_train",
     "tab_export",
@@ -68,6 +69,7 @@ def main() -> int:
     import caption_table_widget  # noqa: F401
     import dataset_diagnostics  # noqa: F401
     import desktop_main  # noqa: F401
+    import image_caption_browser  # noqa: F401
     import training_estimator  # noqa: F401
 
     print("Desktop static check OK")
