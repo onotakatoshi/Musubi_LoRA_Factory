@@ -9,7 +9,10 @@ def main() -> int:
     assert "Z-Image" in text
     assert "Enabled profiles" in text
     assert "Implemented adapters" in text
+    assert "VerificationReadiness" in text
+    assert "verification_readiness.py" in text
     assert "Next PGX action" in text
+    assert "python app/verification_readiness.py" in text
     assert missing_required_files() == []
     print("Beta status test OK")
     return 0
