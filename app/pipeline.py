@@ -8,6 +8,8 @@ from pathlib import Path
 import toml
 from PIL import Image
 
+from captioning import caption_one_image
+
 IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".webp"}
 
 
@@ -20,6 +22,7 @@ class AppConfig:
     comfyui_loras_dir: Path
     llm_endpoint: str
     llm_model: str
+    joycaption_command: str
 
     @classmethod
     def from_file(cls, path: Path) -> "AppConfig":
@@ -35,6 +38,7 @@ class AppConfig:
             comfyui_loras_dir=Path(data["paths"]["comfyui_loras_dir"]),
             llm_endpoint=data["caption"].get("llm_endpoint", ""),
             llm_model=data["caption"].get("llm_model", ""),
+            joycaption_command=data["caption"].get("joycaption_command", ""),
         )
 
 
@@ -77,42 +81,54 @@ def check_dataset(dataset_dir: Path) -> str:
     return "\n".join(lines)
 
 
-def prompt_for_lora_type(lora_type: str) -> str:
-    prompts = {
-        "eye": "Describe only the eyes: iris color, eyelids, eyelashes, eye shape, gaze, makeup. Do not mention hair, face, clothes, background, age, or gender.",
-        "mouth": "Describe only the mouth and lips: lip shape, expression, teeth visibility, smile, lipstick. Do not mention eyes, hair, clothes, background, age, or gender.",
-        "face": "Describe only face identity features and expression. Avoid clothes and background.",
-        "hair": "Describe only hair: length, style, texture, color, bangs. Avoid face, clothes, and background.",
-        "hand": "Describe only hands: pose, fingers, nails, gesture. Avoid face, clothes, and background.",
-        "style": "Describe visual style, lighting, rendering, color palette, and artistic features.",
-        "clothing": "Describe only clothing: garment type, fabric, pattern, color, accessories. Avoid face and background.",
-    }
-    return prompts.get(lora_type, prompts["style"])
-
-
-def generate_captions_placeholder(dataset_dir: Path, lora_type: str, caption_mode: str, cfg: AppConfig) -> str:
-    """MVP placeholder.
-
-    次の段階で JoyCaption 実行と OpenAI互換LLM API 呼び出しを実装する。
-    まずは既存txtが無い画像に、対象別の仮キャプションを書く。
-    """
+def generate_captions(dataset_dir: Path, lora_type: str, caption_mode: str, cfg: AppConfig, overwrite: bool = False) -> str:
     imgs = image_files(dataset_dir)
     if not imgs:
         return "画像が見つかりません。"
-    base = prompt_for_lora_type(lora_type)
+
     created = 0
+    skipped = 0
+    failed: list[str] = []
+    previews: list[str] = []
+
     for img in imgs:
         txt = img.with_suffix(".txt")
-        if txt.exists():
+        if txt.exists() and not overwrite:
+            skipped += 1
             continue
-        txt.write_text(f"{lora_type} detail, high quality, sharp focus\n", encoding="utf-8")
-        created += 1
-    return (
-        f"caption placeholder作成: {created}件\n"
-        f"mode: {caption_mode}\n"
-        f"次に実装する指示:\n{base}\n"
-        "JoyCaption → LLM整形は次フェーズで接続します。"
-    )
+        try:
+            result = caption_one_image(
+                img,
+                lora_type=lora_type,
+                mode=caption_mode,
+                joycaption_command=cfg.joycaption_command,
+                llm_endpoint=cfg.llm_endpoint,
+                llm_model=cfg.llm_model,
+            )
+            txt.write_text(result.cleaned_caption + "\n", encoding="utf-8")
+            created += 1
+            if len(previews) < 5:
+                previews.append(f"{img.name}: {result.cleaned_caption}")
+        except Exception as exc:
+            failed.append(f"{img.name}: {exc}")
+
+    lines = [
+        f"caption作成: {created}件",
+        f"skip: {skipped}件",
+        f"mode: {caption_mode}",
+    ]
+    if previews:
+        lines.append("\nPreview:")
+        lines += [f"- {p}" for p in previews]
+    if failed:
+        lines.append("\n失敗:")
+        lines += [f"- {f}" for f in failed[:20]]
+    return "\n".join(lines)
+
+
+# Backward-compatible name used by app/main.py
+def generate_captions_placeholder(dataset_dir: Path, lora_type: str, caption_mode: str, cfg: AppConfig) -> str:
+    return generate_captions(dataset_dir, lora_type, caption_mode, cfg, overwrite=False)
 
 
 def build_dataset_toml(dataset_dir: Path, output_dir: Path, resolution: int) -> str:
@@ -140,7 +156,6 @@ def run_command(cmd: list[str], cwd: Path | None = None) -> str:
 
 
 def run_cache_placeholder(dataset_toml: Path, target_model: str, cfg: AppConfig) -> str:
-    # 実運用時は target_model ごとに musubi-tuner の cache scripts を呼び分ける。
     return (
         "CACHE DRY RUN\n"
         f"target_model: {target_model}\n"
