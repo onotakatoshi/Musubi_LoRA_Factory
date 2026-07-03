@@ -24,5 +24,8 @@ jobs:
       - name: Compile desktop app and support modules
         run: python -m py_compile app/*.py
 
+      - name: Run desktop static check
+        run: python app/desktop_static_check.py
+
       - name: Run smoke test
         run: python app/smoke_test.py
