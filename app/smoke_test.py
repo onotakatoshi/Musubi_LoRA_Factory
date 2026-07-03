@@ -12,12 +12,17 @@ from PIL import Image
 
 from caption_editor import bulk_replace_caption_rows, load_caption_rows, remove_words_caption_rows, save_caption_rows
 from command_preview import preview_from_settings
+from i18n import normalize_language, tr
 from pipeline import build_dataset_toml, check_dataset
+from recommended_defaults import DEFAULTS, help_text, status_text
 
 
 def write_test_settings(path: Path, musubi_repo: Path) -> None:
     path.write_text(
         f"""
+[ui]
+language = "日本語"
+
 [musubi]
 repo_path = "{musubi_repo}"
 python_path = "python"
@@ -49,6 +54,14 @@ wan_dit_high_noise = "/tmp/models/wan/dit_high_noise.safetensors"
 
 
 def main() -> int:
+    assert normalize_language(None) == "日本語"
+    assert tr("日本語", "tab_settings") == "設定"
+    assert tr("English", "tab_settings") == "Settings"
+    assert "推奨デフォルト" in status_text("rank", DEFAULTS["rank"], "日本語")
+    assert "ユーザー設定" in status_text("rank", 32, "日本語")
+    assert "Recommended default" in status_text("lr", DEFAULTS["lr"], "English")
+    assert "0.00005" in help_text("lr", "日本語")
+
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
         dataset = root / "dataset"
