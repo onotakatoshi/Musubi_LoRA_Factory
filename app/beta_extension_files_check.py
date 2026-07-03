@@ -13,6 +13,7 @@ FILES = [
     "app/validation_report_test.py",
     "app/create_sample_dataset.py",
     "app/create_sample_dataset_static_check.py",
+    "app/beta_extension_files_check.py",
     "app/collect_debug_info.py",
     "app/collect_debug_info_static_check.py",
     "app/pgx_next_steps.py",
