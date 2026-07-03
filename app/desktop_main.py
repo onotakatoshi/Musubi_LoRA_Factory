@@ -4,7 +4,7 @@ import sys
 from pathlib import Path
 from typing import Callable
 
-from PySide6.QtCore import QProcess, Qt
+from PySide6.QtCore import Qt
 from PySide6.QtGui import QTextCursor
 from PySide6.QtWidgets import (
     QApplication,
@@ -43,11 +43,11 @@ from pipeline import AppConfig, build_dataset_toml, check_dataset, copy_lora_to_
 from preflight import run_preflight
 from project_io import default_project_path, load_project, project_data, save_project
 from recommended_defaults import DEFAULTS, help_text as default_help_text, status_text as default_status_text
-from runner import split_command_sections
 from settings_detect import detect_zimage_files, validate_settings_paths
 from settings_io import load_settings, nested_get, save_settings
 from state_check import config_status, dataset_status, train_ready_status
 from step_guides import guide
+from training_engine import TrainingEngine
 from training_estimator import estimate_training_load
 from training_presets import get_preset, preset_names, preset_summary
 from training_review import training_review
@@ -89,8 +89,11 @@ class DesktopApp(QMainWindow):
     def __init__(self) -> None:
         super().__init__()
         self.resize(1240, 860)
-        self.process: QProcess | None = None
         self.command_preview_text = ""
+        self.training_engine = TrainingEngine()
+        self.training_engine.log_received.connect(self._append_training_log)
+        self.training_engine.state_changed.connect(self._set_training_state)
+        self.training_engine.all_finished.connect(self._training_all_finished)
         self.settings = load_settings(SETTINGS_PATH)
         self.lang = normalize_language(nested_get(self.settings, "ui", "language", "日本語"))
         self._rebuild_ui()
@@ -134,8 +137,7 @@ class DesktopApp(QMainWindow):
         row = QHBoxLayout(); row.addWidget(widget); row.addWidget(label); row.addWidget(reset); return row
 
     def _reset_default(self, name: str, widget: QSpinBox | QDoubleSpinBox, label: QLabel) -> None:
-        widget.setValue(DEFAULTS[name])
-        label.setText(default_status_text(name, widget.value(), self.lang))
+        widget.setValue(DEFAULTS[name]); label.setText(default_status_text(name, widget.value(), self.lang))
 
     def _pick_dir(self, target: QLineEdit) -> None:
         path = QFileDialog.getExistingDirectory(self, self.t("select_folder"), target.text() or str(Path.home()))
@@ -271,6 +273,7 @@ class DesktopApp(QMainWindow):
         row2.addWidget(self._button(self.t("run_latent_cache"), lambda: self._run_section("latent_cache")))
         row2.addWidget(self._button(self.t("run_text_cache"), lambda: self._run_section("text_cache")))
         row2.addWidget(self._button(self.t("run_train"), lambda: self._run_section("train")))
+        row2.addWidget(self._button("全部実行", self._run_all_training))
         row2.addWidget(self._button(self.t("stop"), self._stop_process))
         row2.addWidget(self._button(self.t("analyze_log"), lambda: self.analysis_log.setPlainText(analyze_log(self.run_log.toPlainText()))))
         row2.addStretch(); box.addLayout(row2)
@@ -396,28 +399,41 @@ class DesktopApp(QMainWindow):
     def _preview_commands(self) -> None:
         text = preview_from_settings(SETTINGS_PATH, self.dataset_toml.text(), self._current_profile_id(), self.rank.value(), self.alpha.value(), self.epochs.value(), self.lr.value(), self.output_name.text(), self._current_task())
         self.command_preview_text = text; self.command_preview.setPlainText(text)
+        self.train_status.setPlainText(self.training_engine.prepare(text))
 
     def _run_section(self, section: str) -> None:
-        if self.process and self.process.state() != QProcess.ProcessState.NotRunning:
-            QMessageBox.warning(self, self.t("job_running"), self.t("job_running_message")); return
-        command = split_command_sections(self.command_preview_text).get(section, "").strip()
-        if not command:
-            QMessageBox.warning(self, self.t("no_command"), self.t("no_command_message")); return
-        self.run_log.clear(); self.run_log.append(f"{self.t('start')}: {command}\n")
-        self.process = QProcess(self); self.process.setProgram("bash"); self.process.setArguments(["-lc", command])
-        self.process.readyReadStandardOutput.connect(self._read_process_output); self.process.readyReadStandardError.connect(self._read_process_output)
-        self.process.finished.connect(lambda code, _status: self.run_log.append(f"\n{self.t('done')}: exit code {code}" if code == 0 else f"\n{self.t('failed')}: exit code {code}"))
-        self.process.start()
+        result = self.training_engine.run_one(section)
+        if result.startswith("NG:"):
+            QMessageBox.warning(self, self.t("no_command"), result)
+        else:
+            self.train_status.setPlainText(result)
 
-    def _read_process_output(self) -> None:
-        if not self.process: return
-        data = bytes(self.process.readAllStandardOutput()).decode(errors="replace"); err = bytes(self.process.readAllStandardError()).decode(errors="replace")
-        if data: self.run_log.moveCursor(QTextCursor.MoveOperation.End); self.run_log.insertPlainText(data)
-        if err: self.run_log.moveCursor(QTextCursor.MoveOperation.End); self.run_log.insertPlainText(err)
+    def _run_all_training(self) -> None:
+        result = self.training_engine.run_all()
+        if result.startswith("NG:"):
+            QMessageBox.warning(self, self.t("no_command"), result)
+        else:
+            self.train_status.setPlainText(result)
+
+    def _append_training_log(self, text: str) -> None:
+        if not hasattr(self, "run_log"):
+            return
+        self.run_log.moveCursor(QTextCursor.MoveOperation.End)
+        self.run_log.insertPlainText(text)
+        self.run_log.moveCursor(QTextCursor.MoveOperation.End)
+
+    def _set_training_state(self, text: str) -> None:
+        if hasattr(self, "train_status"):
+            self.train_status.setPlainText(text)
+
+    def _training_all_finished(self) -> None:
+        if hasattr(self, "analysis_log"):
+            self.analysis_log.setPlainText("学習パイプラインが完了しました。書き出しタブでLoRAをComfyUIへコピーしてください。")
 
     def _stop_process(self) -> None:
-        if self.process and self.process.state() != QProcess.ProcessState.NotRunning:
-            self.process.terminate(); self.run_log.append(f"\n{self.t('stop_requested')}")
+        self.training_engine.stop()
+        if hasattr(self, "run_log"):
+            self.run_log.append(f"\n{self.t('stop_requested')}")
 
     def _copy_lora(self) -> None:
         try:
