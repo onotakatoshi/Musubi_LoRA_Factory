@@ -11,6 +11,7 @@ Z-Imageで最初に試す場合は、まず [PGX Z-Image setup notes](docs/pgx_z
 - caption診断
 - caption一覧編集
 - caption一括置換 / 一括削除
+- 画像プレビューを見ながらcaption最終確認
 - dataset.toml自動生成
 - musubi-tunerのcache/trainコマンドPreview
 - Preflight Check
@@ -79,14 +80,15 @@ python app/desktop_main.py
 4. `データセット確認` で画像数・サイズ・caption有無・重複を確認
 5. `Caption診断` でcaptionの不足やノイズ語を確認
 6. `Caption編集` でcaptionを一覧編集、一括置換、一括削除
-7. `設定生成` で `dataset.toml` を作成
-8. `学習` で Target model が `z-image` になっていることを確認
-9. `0. 事前チェック`
-10. `コマンド確認` で実行内容を確認
-11. `1. Latent Cache実行`
-12. `2. Text Cache実行`
-13. `3. 学習実行`
-14. `書き出し` で完成LoRAをComfyUIへコピー
+7. `画像プレビュー` で画像を見ながらcaptionを最終確認
+8. `設定生成` で `dataset.toml` を作成
+9. `学習` で Target model が `z-image` になっていることを確認
+10. `0. 事前チェック`
+11. `コマンド確認` で実行内容を確認
+12. `1. Latent Cache実行`
+13. `2. Text Cache実行`
+14. `3. 学習実行`
+15. `書き出し` で完成LoRAをComfyUIへコピー
 
 ## Z-Image paths
 
