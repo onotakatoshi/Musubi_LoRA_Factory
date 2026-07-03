@@ -4,6 +4,7 @@ from pathlib import Path
 
 import toml
 
+from model_adapters import get_adapter
 from model_registry import get_profile
 
 
@@ -22,7 +23,7 @@ def run_preflight(settings_path: Path, dataset_toml: str, target_model: str, tas
         "# Preflight Check",
         "",
         "Ver 1.0 は Z-Image / Z-Image-Turbo 用LoRA作成に限定しています。",
-        "内部構造は今後のモデルプロファイル追加を前提にしています。",
+        "パス検証はモデルアダプタ経由です。Musubi Tuner対応モデルを後から追加しやすい構造にしています。",
         "",
     ]
 
@@ -62,24 +63,30 @@ def run_preflight(settings_path: Path, dataset_toml: str, target_model: str, tas
         lines.append("❌ dataset.toml: not set")
     lines.append("")
 
-    if profile.id == "z-image":
-        lines.append("## Z-Image model paths")
-        lines.append(_status_path("zimage_vae", model_paths.get("zimage_vae", "")))
-        lines.append(_status_path("zimage_text_encoder", model_paths.get("zimage_text_encoder", "")))
-        lines.append(_status_path("zimage_dit", model_paths.get("zimage_dit", "")))
-        base_weights = model_paths.get("zimage_base_weights", "")
-        if base_weights:
-            lines.append(_status_path("zimage_base_weights", base_weights))
-        else:
-            lines.append("ℹ️ zimage_base_weights: optional / not set")
-        lines.append("")
+    try:
+        adapter = get_adapter(profile.id)
+    except NotImplementedError as exc:
+        lines.append(f"❌ {exc}")
+        text = "\n".join(lines)
+        return text + "\n\nResult: ❌ このモデルのPreflightはまだ実装していません。"
 
+    lines.append(f"## {profile.display_name} model paths")
+    missing = set(adapter.validate_model_paths(model_paths))
+    for key in adapter.required_setting_keys():
+        label = f"model_paths.{key}"
+        lines.append(_status_path(key, model_paths.get(key, "")) if label not in missing else f"❌ {label}: not set")
+    for key in adapter.optional_setting_keys():
+        value = model_paths.get(key, "")
+        if value:
+            lines.append(_status_path(key, value))
+        else:
+            lines.append(f"ℹ️ model_paths.{key}: optional / not set")
+    lines.append("")
+
+    if profile.id == "z-image":
         lines.append("## Z-Image note")
         lines.append("- Turbo系そのものを直接学習するより、BaseまたはDe-Turbo系DiTを学習対象にする想定です。")
         lines.append("- 生成時にZ-Image-TurboワークフローへLoRAを適用する運用を優先します。")
-        lines.append("")
-    else:
-        lines.append(f"❌ {profile.display_name} のPreflightはまだ実装していません。")
         lines.append("")
 
     text = "\n".join(lines)
