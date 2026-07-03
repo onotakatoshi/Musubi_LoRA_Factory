@@ -8,6 +8,7 @@ from pathlib import Path
 
 from PySide6.QtCore import QObject, QProcess, QTimer, Signal
 
+from command_path_guard import command_paths_ok
 from runner import split_command_sections, validate_command_preview
 
 
@@ -159,11 +160,21 @@ class TrainingEngine(QObject):
         suffix = f"\nLogs: {self._log_dir}" if self._log_dir else "\nLogs: not configured"
         return validation + suffix
 
+    def _guard_before_run(self) -> str | None:
+        ok, report = command_paths_ok(self.sections)
+        if ok:
+            return None
+        self._emit_log("\n===== COMMAND PATH GUARD FAILED =====\n" + report + "\n")
+        return report
+
     def run_one(self, stage: str) -> str:
         if self.is_running():
             return "NG: another training process is already running"
         if stage not in self.sections or not self.sections[stage].strip():
             return f"NG: command section not found: {stage}"
+        guard = self._guard_before_run()
+        if guard:
+            return "NG: 実行前パス検証に失敗しました。\n" + guard
         self.queue = []
         self._start_stage(stage)
         return f"OK: started {stage}"
@@ -175,6 +186,9 @@ class TrainingEngine(QObject):
         missing = [stage for stage in required if not self.sections.get(stage, "").strip()]
         if missing:
             return "NG: missing command sections: " + ", ".join(missing)
+        guard = self._guard_before_run()
+        if guard:
+            return "NG: 実行前パス検証に失敗しました。\n" + guard
         self.queue = required[1:]
         self._start_stage(required[0])
         return "OK: started full training pipeline"
