@@ -16,6 +16,8 @@ REQUIRED_FILES = [
     "app/command_preview.py",
     "app/command_path_guard.py",
     "app/command_path_guard_test.py",
+    "app/stage_guidance.py",
+    "app/stage_guidance_test.py",
     "app/preflight.py",
     "app/env_check.py",
     "app/musubi_runtime_check.py",
@@ -64,6 +66,7 @@ def beta_status() -> str:
     lines.append("## Core engine")
     lines.append("- TrainingEngine: Latent Cache / Text Cache / Train")
     lines.append("- CommandPathGuard: final path validation before run")
+    lines.append("- StageGuidance: success/failure next actions in run log")
     lines.append("- MusubiRuntimeCheck: configured musubi python / accelerate / scripts check")
     lines.append("- OutputDetector: latest LoRA .safetensors detection")
     lines.append("- ExportValidator: pre-copy validation for ComfyUI export")
