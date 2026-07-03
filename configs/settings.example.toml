@@ -12,3 +12,9 @@ mode = "joycaption_llm"
 joycaption_command = ""
 llm_endpoint = "http://localhost:8000/v1/chat/completions"
 llm_model = "qwen-caption-helper"
+
+[model_paths]
+wan_vae = "/home/ono/models/wan/Wan2.1_VAE.pth"
+wan_t5 = "/home/ono/models/wan/models_t5_umt5-xxl-enc-bf16.pth"
+wan_dit = "/home/ono/models/wan/wan2.2_low_noise.safetensors"
+wan_dit_high_noise = "/home/ono/models/wan/wan2.2_high_noise.safetensors"
