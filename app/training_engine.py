@@ -134,6 +134,7 @@ class TrainingEngine(QObject):
         self._active_stage: str | None = None
         self._log_dir: Path | None = None
         self._log_file: Path | None = None
+        self._startup_error_handled = False
         self._ticker = QTimer(self)
         self._ticker.setInterval(1000)
         self._ticker.timeout.connect(self._tick)
@@ -150,6 +151,7 @@ class TrainingEngine(QObject):
         self.queue = []
         self._stop_requested = False
         self._active_stage = None
+        self._startup_error_handled = False
         self._log_dir = Path(log_dir) if log_dir else infer_log_dir_from_sections(self.sections)
         if self._log_dir:
             self._log_dir.mkdir(parents=True, exist_ok=True)
@@ -204,6 +206,7 @@ class TrainingEngine(QObject):
     def _start_stage(self, stage: str) -> None:
         command = self.sections[stage].strip()
         self._active_stage = stage
+        self._startup_error_handled = False
         self._log_file = self._new_log_file(stage)
         self.state.mark_running(stage, self._log_file)
         self.state_changed.emit(self.state.text())
@@ -214,8 +217,12 @@ class TrainingEngine(QObject):
         self.process.setArguments(["-lc", command])
         self.process.readyReadStandardOutput.connect(self._read_output)
         self.process.readyReadStandardError.connect(self._read_output)
+        self.process.errorOccurred.connect(lambda error, s=stage: self._on_process_error(s, error))
         self.process.finished.connect(lambda code, _status, s=stage: self._on_finished(s, code))
         self.process.start()
+        if not self.process.waitForStarted(3000):
+            self._on_process_start_timeout(stage)
+            return
         self._ticker.start()
 
     def _read_output(self) -> None:
@@ -239,7 +246,34 @@ class TrainingEngine(QObject):
             self._emit_log("\n===== FORCE KILL =====\n")
             self.process.kill()
 
+    def _on_process_start_timeout(self, stage: str) -> None:
+        if self._startup_error_handled:
+            return
+        self._startup_error_handled = True
+        self.queue = []
+        self._active_stage = None
+        self.state.mark_failed(stage, -1, "process did not start within 3 seconds")
+        self._emit_log(f"\n===== FAILED {stage}: process did not start =====\n")
+        self.state_changed.emit(self.state.text())
+        self.stage_finished.emit(stage, -1)
+
+    def _on_process_error(self, stage: str, error) -> None:
+        if self._startup_error_handled:
+            return
+        if self.process and self.process.state() != QProcess.ProcessState.NotRunning:
+            return
+        self._startup_error_handled = True
+        self.queue = []
+        self._active_stage = None
+        message = f"QProcess error: {error}"
+        self.state.mark_failed(stage, -1, message)
+        self._emit_log(f"\n===== FAILED {stage}: {message} =====\n")
+        self.state_changed.emit(self.state.text())
+        self.stage_finished.emit(stage, -1)
+
     def _on_finished(self, stage: str, exit_code: int) -> None:
+        if self._startup_error_handled and exit_code != 0:
+            return
         self._ticker.stop()
         self._kill_timer.stop()
         self._read_output()
