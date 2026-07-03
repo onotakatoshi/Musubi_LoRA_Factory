@@ -29,11 +29,13 @@ def main() -> int:
         root = Path(tmp)
         missing = check_musubi_runtime(root / "missing-python", root / "repo")
         assert "musubi python not found" in missing
+        assert "Result: NG" in missing
 
         py = root / "python"
         _fake_python(py)
         missing_repo = check_musubi_runtime(py, root / "missing-repo")
         assert "musubi repo not found" in missing_repo
+        assert "Result: NG" in missing_repo
 
         repo = root / "musubi-tuner"
         repo.mkdir()
