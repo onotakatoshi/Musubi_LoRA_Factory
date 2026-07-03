@@ -68,8 +68,8 @@ HELP = {
     "lora_type": "何を学習したいかです。eyeなら目を学習する前提でcaptionを整理します。",
     "output_folder": "dataset.toml、cache、学習済みLoRAを置く出力フォルダです。",
     "dataset_toml": "Build dataset.tomlで作られるmusubi-tuner用設定ファイルです。",
-    "target_model": "どのモデル向けLoRAを作るかです。Ver 1.0ではZ-Image / Z-Image-Turboのみ表示します。内部構造は将来のモデル追加に対応しています。",
-    "task_profile": "選択したモデルプロファイルに対応するmusubi-tuner taskです。Ver 1.0では z-image 固定です。",
+    "target_model": "どのモデル向けLoRAを作るかです。Ver 1.0ではZ-Imageだけ表示しますが、内部構造は今後のMusubi Tuner対応モデル追加を前提にしています。",
+    "task_profile": "選択したモデルプロファイルに対応するMusubi Tunerのtaskです。Ver 1.0では自動的にz-imageになります。",
     "output_name": "保存されるLoRA名です。",
 }
 
@@ -112,26 +112,42 @@ class DesktopApp(QMainWindow):
         self.setCentralWidget(tabs)
 
     def _line(self, text: str = "") -> QLineEdit:
-        w = QLineEdit(); w.setText(text); return w
+        w = QLineEdit()
+        w.setText(text)
+        return w
 
     def _log(self) -> QTextEdit:
-        w = QTextEdit(); w.setReadOnly(True); return w
+        w = QTextEdit()
+        w.setReadOnly(True)
+        return w
 
     def _button(self, text: str, fn: Callable[[], None]) -> QPushButton:
-        b = QPushButton(text); b.clicked.connect(fn); return b
+        b = QPushButton(text)
+        b.clicked.connect(fn)
+        return b
 
     def _browse_dir_row(self, edit: QLineEdit) -> QHBoxLayout:
-        row = QHBoxLayout(); row.addWidget(edit); row.addWidget(self._button(self.t("browse"), lambda: self._pick_dir(edit))); return row
+        row = QHBoxLayout()
+        row.addWidget(edit)
+        row.addWidget(self._button(self.t("browse"), lambda: self._pick_dir(edit)))
+        return row
 
     def _browse_file_row(self, edit: QLineEdit) -> QHBoxLayout:
-        row = QHBoxLayout(); row.addWidget(edit); row.addWidget(self._button(self.t("browse"), lambda: self._pick_file(edit))); return row
+        row = QHBoxLayout()
+        row.addWidget(edit)
+        row.addWidget(self._button(self.t("browse"), lambda: self._pick_file(edit)))
+        return row
 
     def _default_spin_row(self, name: str, widget: QSpinBox | QDoubleSpinBox) -> QHBoxLayout:
         label = QLabel(default_status_text(name, widget.value(), self.lang))
         reset_text = "Reset" if self.lang == "English" else "デフォルトに戻す"
         reset = self._button(reset_text, lambda: self._reset_default(name, widget, label))
         widget.valueChanged.connect(lambda _value: label.setText(default_status_text(name, widget.value(), self.lang)))
-        row = QHBoxLayout(); row.addWidget(widget); row.addWidget(label); row.addWidget(reset); return row
+        row = QHBoxLayout()
+        row.addWidget(widget)
+        row.addWidget(label)
+        row.addWidget(reset)
+        return row
 
     def _reset_default(self, name: str, widget: QSpinBox | QDoubleSpinBox, label: QLabel) -> None:
         widget.setValue(DEFAULTS[name])
@@ -139,17 +155,25 @@ class DesktopApp(QMainWindow):
 
     def _pick_dir(self, target: QLineEdit) -> None:
         path = QFileDialog.getExistingDirectory(self, self.t("select_folder"), target.text() or str(Path.home()))
-        if path: target.setText(path)
+        if path:
+            target.setText(path)
 
     def _pick_file(self, target: QLineEdit) -> None:
         path, _ = QFileDialog.getOpenFileName(self, self.t("select_file"), target.text() or str(Path.home()))
-        if path: target.setText(path)
+        if path:
+            target.setText(path)
 
     def _settings_tab(self) -> QWidget:
         box = QVBoxLayout()
-        guide_box = QTextEdit(); guide_box.setReadOnly(True); guide_box.setPlainText(self.t("settings_intro")); guide_box.setMaximumHeight(100); box.addWidget(guide_box)
+        guide_box = QTextEdit()
+        guide_box.setReadOnly(True)
+        guide_box.setPlainText(self.t("settings_intro"))
+        guide_box.setMaximumHeight(100)
+        box.addWidget(guide_box)
         form = QFormLayout()
-        self.set_language = QComboBox(); self.set_language.addItems(SUPPORTED_LANGUAGES); self.set_language.setCurrentText(self.lang)
+        self.set_language = QComboBox()
+        self.set_language.addItems(SUPPORTED_LANGUAGES)
+        self.set_language.setCurrentText(self.lang)
         form.addRow(HelpLabel(self.t("language"), "UIの表示言語です。デフォルトは日本語です。"), self.set_language)
         self.set_musubi_repo = self._line(nested_get(self.settings, "musubi", "repo_path"))
         form.addRow(HelpLabel(self.t("label_musubi_repo"), HELP["musubi_repo"]), self._browse_dir_row(self.set_musubi_repo))
@@ -176,36 +200,58 @@ class DesktopApp(QMainWindow):
         row.addWidget(self._button(self.t("save_settings"), self._save_settings))
         row.addWidget(self._button(self.t("reload_settings"), self._reload_settings_fields))
         row.addWidget(self._button(self.t("environment_check"), lambda: self.settings_log.setPlainText(check_environment(SETTINGS_PATH))))
-        row.addStretch(); box.addLayout(row)
-        self.settings_log = self._log(); self.settings_log.setMaximumHeight(210); box.addWidget(self.settings_log)
-        w = QWidget(); w.setLayout(box); return w
+        row.addStretch()
+        box.addLayout(row)
+        self.settings_log = self._log()
+        self.settings_log.setMaximumHeight(210)
+        box.addWidget(self.settings_log)
+        w = QWidget()
+        w.setLayout(box)
+        return w
 
     def _system_tab(self) -> QWidget:
         box = QVBoxLayout()
-        intro = QTextEdit(); intro.setReadOnly(True); intro.setPlainText(self.t("system_intro")); intro.setMaximumHeight(90); box.addWidget(intro)
+        intro = QTextEdit()
+        intro.setReadOnly(True)
+        intro.setPlainText(self.t("system_intro"))
+        intro.setMaximumHeight(90)
+        box.addWidget(intro)
         row = QHBoxLayout()
         row.addWidget(self._button(self.t("environment_check"), lambda: self.system_log.setPlainText(check_environment(SETTINGS_PATH))))
         row.addWidget(self._button(self.t("gpu_status"), lambda: self.system_log.setPlainText(gpu_preflight_warning())))
-        row.addStretch(); box.addLayout(row)
-        self.system_log = self._log(); box.addWidget(self.system_log)
-        w = QWidget(); w.setLayout(box); return w
+        row.addStretch()
+        box.addLayout(row)
+        self.system_log = self._log()
+        box.addWidget(self.system_log)
+        w = QWidget()
+        w.setLayout(box)
+        return w
 
     def _dataset_tab(self) -> QWidget:
         box = QVBoxLayout()
-        guide_box = QTextEdit(); guide_box.setReadOnly(True); guide_box.setPlainText(guide("dataset")); guide_box.setMaximumHeight(190); box.addWidget(guide_box)
+        guide_box = QTextEdit()
+        guide_box.setReadOnly(True)
+        guide_box.setPlainText(guide("dataset"))
+        guide_box.setMaximumHeight(190)
+        box.addWidget(guide_box)
         form = QFormLayout()
         self.dataset_dir = self._line(str(Path(nested_get(self.settings, "paths", "datasets_dir")) / "Eye_Blue_v1"))
         form.addRow(HelpLabel(self.t("label_dataset_folder"), HELP["dataset_folder"]), self._browse_dir_row(self.dataset_dir))
-        self.lora_type = QComboBox(); self.lora_type.addItems(preset_names())
+        self.lora_type = QComboBox()
+        self.lora_type.addItems(preset_names())
         form.addRow(HelpLabel(self.t("label_lora_type"), HELP["lora_type"]), self.lora_type)
         box.addLayout(form)
         buttons = QHBoxLayout()
         buttons.addWidget(self._button(self.t("check_dataset"), self._check_dataset))
         buttons.addWidget(self._button(self.t("diagnose_captions"), self._diagnose_captions))
         buttons.addWidget(self._button(self.t("check_current_step"), self._dataset_status))
-        buttons.addStretch(); box.addLayout(buttons)
-        self.dataset_log = self._log(); box.addWidget(self.dataset_log)
-        w = QWidget(); w.setLayout(box); return w
+        buttons.addStretch()
+        box.addLayout(buttons)
+        self.dataset_log = self._log()
+        box.addWidget(self.dataset_log)
+        w = QWidget()
+        w.setLayout(box)
+        return w
 
     def _caption_tab(self) -> QWidget:
         return CaptionTableWidget(lambda: self.dataset_dir.text(), lambda: self.lang)
@@ -215,11 +261,18 @@ class DesktopApp(QMainWindow):
 
     def _config_tab(self) -> QWidget:
         box = QVBoxLayout()
-        guide_box = QTextEdit(); guide_box.setReadOnly(True); guide_box.setPlainText(guide("config")); guide_box.setMaximumHeight(160); box.addWidget(guide_box)
+        guide_box = QTextEdit()
+        guide_box.setReadOnly(True)
+        guide_box.setPlainText(guide("config"))
+        guide_box.setMaximumHeight(160)
+        box.addWidget(guide_box)
         form = QFormLayout()
         self.output_dir = self._line(str(Path(nested_get(self.settings, "paths", "outputs_dir")) / "Eye_Blue_v1_zimage"))
         form.addRow(HelpLabel(self.t("label_output_folder"), HELP["output_folder"]), self._browse_dir_row(self.output_dir))
-        self.resolution = QSpinBox(); self.resolution.setRange(256, 2048); self.resolution.setSingleStep(64); self.resolution.setValue(DEFAULTS["resolution"])
+        self.resolution = QSpinBox()
+        self.resolution.setRange(256, 2048)
+        self.resolution.setSingleStep(64)
+        self.resolution.setValue(DEFAULTS["resolution"])
         form.addRow(HelpLabel(self.t("label_resolution"), default_help_text("resolution", self.lang)), self._default_spin_row("resolution", self.resolution))
         self.dataset_toml = self._line("")
         form.addRow(HelpLabel(self.t("label_dataset_toml"), HELP["dataset_toml"]), self.dataset_toml)
@@ -227,27 +280,54 @@ class DesktopApp(QMainWindow):
         buttons = QHBoxLayout()
         buttons.addWidget(self._button(self.t("build_dataset_toml"), self._build_dataset_toml))
         buttons.addWidget(self._button(self.t("check_current_step"), lambda: self.config_log.setPlainText(config_status(self.dataset_toml.text()))))
-        buttons.addStretch(); box.addLayout(buttons)
-        self.config_log = self._log(); box.addWidget(self.config_log)
-        w = QWidget(); w.setLayout(box); return w
+        buttons.addStretch()
+        box.addLayout(buttons)
+        self.config_log = self._log()
+        box.addWidget(self.config_log)
+        w = QWidget()
+        w.setLayout(box)
+        return w
 
     def _train_tab(self) -> QWidget:
         box = QVBoxLayout()
-        guide_box = QTextEdit(); guide_box.setReadOnly(True); guide_box.setPlainText(guide("train")); guide_box.setMaximumHeight(210); box.addWidget(guide_box)
+        guide_box = QTextEdit()
+        guide_box.setReadOnly(True)
+        guide_box.setPlainText(guide("train"))
+        guide_box.setMaximumHeight(210)
+        box.addWidget(guide_box)
         form = QFormLayout()
-        self.target_model = QComboBox(); self.target_model.addItems(available_model_labels()); self.target_model.setCurrentText(label_for_profile(v1_default_profile().id)); self.target_model.currentTextChanged.connect(self._sync_task_profile)
-        form.addRow(HelpLabel(self.t("label_target_model"), HELP["target_model"]), self.target_model)
-        self.task = QComboBox(); self.task.addItem(task_for_profile(self._current_model_id()))
+        default_profile = v1_default_profile()
+        self.target_model = QComboBox()
+        self.target_model.addItems(available_model_labels())
+        self.target_model.setCurrentText(label_for_profile(default_profile.id))
+        self.target_model.currentTextChanged.connect(self._sync_profile_task)
+        form.addRow(HelpLabel(self.t("label_target_model"), help_for_profile(default_profile.id, self.lang)), self.target_model)
+        self.task = QLineEdit(default_profile.task)
+        self.task.setReadOnly(True)
         form.addRow(HelpLabel(self.t("label_task_profile"), HELP["task_profile"]), self.task)
-        self.preset = QComboBox(); self.preset.addItems(preset_names()); self.preset.setCurrentText(self.lora_type.currentText())
-        form.addRow(HelpLabel("Preset", "用途別のZ-Image推奨設定です。"), self.preset)
-        self.rank = QSpinBox(); self.rank.setRange(4, 128); self.rank.setSingleStep(4); self.rank.setValue(DEFAULTS["rank"])
+        self.preset = QComboBox()
+        self.preset.addItems(preset_names())
+        self.preset.setCurrentText(self.lora_type.currentText())
+        form.addRow(HelpLabel("Preset", "用途別の推奨設定です。Ver 1.0ではZ-Image用プリセットです。"), self.preset)
+        self.rank = QSpinBox()
+        self.rank.setRange(4, 128)
+        self.rank.setSingleStep(4)
+        self.rank.setValue(DEFAULTS["rank"])
         form.addRow(HelpLabel(self.t("label_rank"), default_help_text("rank", self.lang)), self._default_spin_row("rank", self.rank))
-        self.alpha = QSpinBox(); self.alpha.setRange(4, 128); self.alpha.setSingleStep(4); self.alpha.setValue(DEFAULTS["alpha"])
+        self.alpha = QSpinBox()
+        self.alpha.setRange(4, 128)
+        self.alpha.setSingleStep(4)
+        self.alpha.setValue(DEFAULTS["alpha"])
         form.addRow(HelpLabel(self.t("label_alpha"), default_help_text("alpha", self.lang)), self._default_spin_row("alpha", self.alpha))
-        self.epochs = QSpinBox(); self.epochs.setRange(1, 100); self.epochs.setValue(DEFAULTS["epochs"])
+        self.epochs = QSpinBox()
+        self.epochs.setRange(1, 100)
+        self.epochs.setValue(DEFAULTS["epochs"])
         form.addRow(HelpLabel(self.t("label_epochs"), default_help_text("epochs", self.lang)), self._default_spin_row("epochs", self.epochs))
-        self.lr = QDoubleSpinBox(); self.lr.setDecimals(8); self.lr.setRange(0.000001, 0.01); self.lr.setSingleStep(0.00001); self.lr.setValue(DEFAULTS["lr"])
+        self.lr = QDoubleSpinBox()
+        self.lr.setDecimals(8)
+        self.lr.setRange(0.000001, 0.01)
+        self.lr.setSingleStep(0.00001)
+        self.lr.setValue(DEFAULTS["lr"])
         form.addRow(HelpLabel(self.t("label_lr"), default_help_text("lr", self.lang)), self._default_spin_row("lr", self.lr))
         self.output_name = self._line("eye_lora_zimage")
         form.addRow(HelpLabel(self.t("label_output_name"), HELP["output_name"]), self.output_name)
@@ -257,62 +337,114 @@ class DesktopApp(QMainWindow):
         project_row.addWidget(self._button("学習前レビュー", self._training_review))
         project_row.addWidget(self._button("Project保存", self._save_project))
         project_row.addWidget(self._button("Project読み込み", self._load_project))
-        project_row.addStretch(); box.addLayout(project_row)
+        project_row.addStretch()
+        box.addLayout(project_row)
         row1 = QHBoxLayout()
         row1.addWidget(self._button(self.t("preflight_check"), self._preflight))
         row1.addWidget(self._button(self.t("preview_commands"), self._preview_commands))
         row1.addWidget(self._button(self.t("estimate_training_load"), self._estimate_training_load))
         row1.addWidget(self._button(self.t("check_current_step"), lambda: self.train_status.setPlainText(train_ready_status(self.command_preview_text))))
-        row1.addStretch(); box.addLayout(row1)
-        self.train_status = self._log(); self.train_status.setMaximumHeight(150); box.addWidget(self.train_status)
-        self.command_preview = self._log(); self.command_preview.setMaximumHeight(180); box.addWidget(QLabel(self.t("command_preview"))); box.addWidget(self.command_preview)
+        row1.addStretch()
+        box.addLayout(row1)
+        self.train_status = self._log()
+        self.train_status.setMaximumHeight(150)
+        box.addWidget(self.train_status)
+        self.command_preview = self._log()
+        self.command_preview.setMaximumHeight(180)
+        box.addWidget(QLabel(self.t("command_preview")))
+        box.addWidget(self.command_preview)
         row2 = QHBoxLayout()
         row2.addWidget(self._button(self.t("run_latent_cache"), lambda: self._run_section("latent_cache")))
         row2.addWidget(self._button(self.t("run_text_cache"), lambda: self._run_section("text_cache")))
         row2.addWidget(self._button(self.t("run_train"), lambda: self._run_section("train")))
         row2.addWidget(self._button(self.t("stop"), self._stop_process))
         row2.addWidget(self._button(self.t("analyze_log"), lambda: self.analysis_log.setPlainText(analyze_log(self.run_log.toPlainText()))))
-        row2.addStretch(); box.addLayout(row2)
-        self.run_log = self._log(); box.addWidget(QLabel(self.t("run_log"))); box.addWidget(self.run_log)
-        self.analysis_log = self._log(); self.analysis_log.setMaximumHeight(140); box.addWidget(QLabel(self.t("error_analysis"))); box.addWidget(self.analysis_log)
-        self._sync_task_profile()
-        w = QWidget(); w.setLayout(box); return w
+        row2.addStretch()
+        box.addLayout(row2)
+        self.run_log = self._log()
+        box.addWidget(QLabel(self.t("run_log")))
+        box.addWidget(self.run_log)
+        self.analysis_log = self._log()
+        self.analysis_log.setMaximumHeight(140)
+        box.addWidget(QLabel(self.t("error_analysis")))
+        box.addWidget(self.analysis_log)
+        w = QWidget()
+        w.setLayout(box)
+        return w
 
     def _export_tab(self) -> QWidget:
         box = QVBoxLayout()
-        guide_box = QTextEdit(); guide_box.setReadOnly(True); guide_box.setPlainText(guide("export")); guide_box.setMaximumHeight(160); box.addWidget(guide_box)
+        guide_box = QTextEdit()
+        guide_box.setReadOnly(True)
+        guide_box.setPlainText(guide("export"))
+        guide_box.setMaximumHeight(160)
+        box.addWidget(guide_box)
         self.lora_path = self._line(str(Path(nested_get(self.settings, "paths", "outputs_dir")) / "Eye_Blue_v1_zimage" / "eye_lora_zimage.safetensors"))
         box.addLayout(self._browse_file_row(self.lora_path))
         box.addWidget(self._button(self.t("copy_to_comfyui"), self._copy_lora))
-        self.export_log = self._log(); box.addWidget(self.export_log)
-        w = QWidget(); w.setLayout(box); return w
+        self.export_log = self._log()
+        box.addWidget(self.export_log)
+        w = QWidget()
+        w.setLayout(box)
+        return w
+
+    def _current_profile_id(self) -> str:
+        return profile_id_from_label(self.target_model.currentText())
+
+    def _current_task(self) -> str:
+        return task_for_profile(self._current_profile_id())
+
+    def _sync_profile_task(self) -> None:
+        if hasattr(self, "task"):
+            self.task.setText(self._current_task())
 
     def _settings_values(self) -> dict[str, str]:
-        return {"musubi_repo": self.set_musubi_repo.text(), "musubi_python": self.set_musubi_python.text(), "datasets_dir": self.set_datasets_dir.text(), "outputs_dir": self.set_outputs_dir.text(), "comfyui_loras_dir": self.set_comfyui_loras_dir.text(), "zimage_dit": self.set_zimage_dit.text(), "zimage_vae": self.set_zimage_vae.text(), "zimage_text_encoder": self.set_zimage_text_encoder.text()}
+        return {
+            "musubi_repo": self.set_musubi_repo.text(),
+            "musubi_python": self.set_musubi_python.text(),
+            "datasets_dir": self.set_datasets_dir.text(),
+            "outputs_dir": self.set_outputs_dir.text(),
+            "comfyui_loras_dir": self.set_comfyui_loras_dir.text(),
+            "zimage_dit": self.set_zimage_dit.text(),
+            "zimage_vae": self.set_zimage_vae.text(),
+            "zimage_text_encoder": self.set_zimage_text_encoder.text(),
+        }
 
     def _validate_settings(self) -> None:
         self.settings_log.setPlainText(validate_settings_paths(self._settings_values()))
 
     def _detect_zimage_files(self) -> None:
         model_dir = QFileDialog.getExistingDirectory(self, self.t("select_zimage_folder"), str(Path.home()))
-        if not model_dir: return
+        if not model_dir:
+            return
         found = detect_zimage_files(Path(model_dir))
-        if found.get("zimage_dit"): self.set_zimage_dit.setText(found["zimage_dit"])
-        if found.get("zimage_vae"): self.set_zimage_vae.setText(found["zimage_vae"])
-        if found.get("zimage_text_encoder"): self.set_zimage_text_encoder.setText(found["zimage_text_encoder"])
+        if found.get("zimage_dit"):
+            self.set_zimage_dit.setText(found["zimage_dit"])
+        if found.get("zimage_vae"):
+            self.set_zimage_vae.setText(found["zimage_vae"])
+        if found.get("zimage_text_encoder"):
+            self.set_zimage_text_encoder.setText(found["zimage_text_encoder"])
         self.settings_log.setPlainText(f"# {self.t('detected_zimage_files')}\n\nDiT: {found.get('zimage_dit') or self.t('not_found')}\nVAE: {found.get('zimage_vae') or self.t('not_found')}\nText Encoder: {found.get('zimage_text_encoder') or self.t('not_found')}\n\n{self.t('confirm_save_after_detect')}")
 
     def _settings_data_from_fields(self) -> dict:
         data = load_settings(SETTINGS_PATH)
         data.setdefault("ui", {})["language"] = self.set_language.currentText()
-        data["musubi"]["repo_path"] = self.set_musubi_repo.text(); data["musubi"]["python_path"] = self.set_musubi_python.text()
-        data["paths"]["datasets_dir"] = self.set_datasets_dir.text(); data["paths"]["outputs_dir"] = self.set_outputs_dir.text(); data["paths"]["comfyui_loras_dir"] = self.set_comfyui_loras_dir.text()
-        data["model_paths"]["zimage_dit"] = self.set_zimage_dit.text(); data["model_paths"]["zimage_vae"] = self.set_zimage_vae.text(); data["model_paths"]["zimage_text_encoder"] = self.set_zimage_text_encoder.text(); data["model_paths"]["zimage_base_weights"] = self.set_zimage_base_weights.text()
+        data["musubi"]["repo_path"] = self.set_musubi_repo.text()
+        data["musubi"]["python_path"] = self.set_musubi_python.text()
+        data["paths"]["datasets_dir"] = self.set_datasets_dir.text()
+        data["paths"]["outputs_dir"] = self.set_outputs_dir.text()
+        data["paths"]["comfyui_loras_dir"] = self.set_comfyui_loras_dir.text()
+        data["model_paths"]["zimage_dit"] = self.set_zimage_dit.text()
+        data["model_paths"]["zimage_vae"] = self.set_zimage_vae.text()
+        data["model_paths"]["zimage_text_encoder"] = self.set_zimage_text_encoder.text()
+        data["model_paths"]["zimage_base_weights"] = self.set_zimage_base_weights.text()
         return data
 
     def _save_settings(self) -> None:
         try:
-            data = self._settings_data_from_fields(); save_settings(SETTINGS_PATH, data); self.settings = data
+            data = self._settings_data_from_fields()
+            save_settings(SETTINGS_PATH, data)
+            self.settings = data
             self.lang = normalize_language(nested_get(data, "ui", "language", "日本語"))
             self._rebuild_ui()
             self.settings_log.setPlainText(f"{self.t('settings_saved')}: {SETTINGS_PATH}\n\n" + check_environment(SETTINGS_PATH))
@@ -320,30 +452,9 @@ class DesktopApp(QMainWindow):
             self.settings_log.setPlainText(f"NG: {type(exc).__name__}: {exc}")
 
     def _reload_settings_fields(self) -> None:
-        self.settings = load_settings(SETTINGS_PATH); self.lang = normalize_language(nested_get(self.settings, "ui", "language", "日本語")); self._rebuild_ui()
-
-    def _current_model_id(self) -> str:
-        if not hasattr(self, "target_model"):
-            return v1_default_profile().id
-        return profile_id_from_label(self.target_model.currentText())
-
-    def _current_task(self) -> str:
-        if not hasattr(self, "task"):
-            return task_for_profile(self._current_model_id())
-        return self.task.currentText()
-
-    def _sync_task_profile(self) -> None:
-        if not hasattr(self, "task"):
-            return
-        profile_id = self._current_model_id()
-        task = task_for_profile(profile_id)
-        self.task.blockSignals(True)
-        self.task.clear()
-        self.task.addItem(task)
-        self.task.setCurrentText(task)
-        self.task.blockSignals(False)
-        if hasattr(self, "train_status"):
-            self.train_status.setPlainText(help_for_profile(profile_id, self.lang))
+        self.settings = load_settings(SETTINGS_PATH)
+        self.lang = normalize_language(nested_get(self.settings, "ui", "language", "日本語"))
+        self._rebuild_ui()
 
     def _check_dataset(self) -> None:
         self.dataset_log.setPlainText(check_dataset(Path(self.dataset_dir.text()), self.lang))
@@ -357,38 +468,43 @@ class DesktopApp(QMainWindow):
     def _build_dataset_toml(self) -> None:
         try:
             path = build_dataset_toml(Path(self.dataset_dir.text()), Path(self.output_dir.text()), self.resolution.value())
-            self.dataset_toml.setText(path); self.config_log.setPlainText(f"OK: {path}")
+            self.dataset_toml.setText(path)
+            self.config_log.setPlainText(f"OK: {path}")
         except Exception as exc:
             self.config_log.setPlainText(f"NG: {type(exc).__name__}: {exc}")
 
     def _apply_preset(self) -> None:
         p = get_preset(self.preset.currentText())
         self.lora_type.setCurrentText(p.lora_type)
-        self.rank.setValue(p.rank); self.alpha.setValue(p.alpha); self.epochs.setValue(p.epochs); self.lr.setValue(p.lr); self.resolution.setValue(p.resolution)
+        self.rank.setValue(p.rank)
+        self.alpha.setValue(p.alpha)
+        self.epochs.setValue(p.epochs)
+        self.lr.setValue(p.lr)
+        self.resolution.setValue(p.resolution)
         self.output_name.setText(f"{p.name}_lora_zimage")
         self.train_status.setPlainText(preset_summary(p.name, self.lang))
 
     def _training_review(self) -> None:
-        self.train_status.setPlainText(training_review(Path(self.dataset_dir.text()), self.lora_type.currentText(), self.rank.value(), self.alpha.value(), self.epochs.value(), self.lr.value(), self.resolution.value(), self.dataset_toml.text(), self._current_model_id(), self.lang))
+        self.train_status.setPlainText(training_review(Path(self.dataset_dir.text()), self.lora_type.currentText(), self.rank.value(), self.alpha.value(), self.epochs.value(), self.lr.value(), self.resolution.value(), self.dataset_toml.text(), self._current_profile_id(), self.lang))
 
     def _save_project(self) -> None:
         path, _ = QFileDialog.getSaveFileName(self, "Save project", str(default_project_path(self.output_dir.text())), "TOML (*.toml)")
-        if not path: return
-        data = project_data(self.dataset_dir.text(), self.output_dir.text(), self.dataset_toml.text(), self._current_model_id(), self._current_task(), self.rank.value(), self.alpha.value(), self.epochs.value(), self.lr.value(), self.output_name.text(), self.resolution.value())
+        if not path:
+            return
+        data = project_data(self.dataset_dir.text(), self.output_dir.text(), self.dataset_toml.text(), self._current_profile_id(), self._current_task(), self.rank.value(), self.alpha.value(), self.epochs.value(), self.lr.value(), self.output_name.text(), self.resolution.value())
         self.train_status.setPlainText(save_project(Path(path), data))
 
     def _load_project(self) -> None:
         path, _ = QFileDialog.getOpenFileName(self, "Load project", str(Path.home()), "TOML (*.toml)")
-        if not path: return
+        if not path:
+            return
         data = load_project(Path(path))
         self.dataset_dir.setText(str(data.get("dataset_dir", self.dataset_dir.text())))
         self.output_dir.setText(str(data.get("output_dir", self.output_dir.text())))
         self.dataset_toml.setText(str(data.get("dataset_toml", self.dataset_toml.text())))
-        loaded_profile_id = str(data.get("target_model", self._current_model_id()))
-        loaded_label = label_for_profile(loaded_profile_id)
-        if self.target_model.findText(loaded_label) >= 0:
-            self.target_model.setCurrentText(loaded_label)
-        self._sync_task_profile()
+        profile_id = str(data.get("target_model", self._current_profile_id()))
+        self.target_model.setCurrentText(label_for_profile(profile_id))
+        self.task.setText(task_for_profile(profile_id))
         self.rank.setValue(int(data.get("rank", self.rank.value())))
         self.alpha.setValue(int(data.get("alpha", self.alpha.value())))
         self.epochs.setValue(int(data.get("epochs", self.epochs.value())))
@@ -398,47 +514,63 @@ class DesktopApp(QMainWindow):
         self.train_status.setPlainText(f"Loaded project: {path}")
 
     def _preflight(self) -> None:
-        self.train_status.setPlainText(run_preflight(SETTINGS_PATH, self.dataset_toml.text(), self._current_model_id(), self._current_task()))
+        self.train_status.setPlainText(run_preflight(SETTINGS_PATH, self.dataset_toml.text(), self._current_profile_id(), self._current_task()))
 
     def _estimate_training_load(self) -> None:
         self.train_status.setPlainText(estimate_training_load(Path(self.dataset_dir.text()), self.epochs.value(), self.rank.value(), self.resolution.value(), self.lang))
 
     def _preview_commands(self) -> None:
-        text = preview_from_settings(SETTINGS_PATH, self.dataset_toml.text(), self._current_model_id(), self.rank.value(), self.alpha.value(), self.epochs.value(), self.lr.value(), self.output_name.text(), self._current_task())
-        self.command_preview_text = text; self.command_preview.setPlainText(text)
+        text = preview_from_settings(SETTINGS_PATH, self.dataset_toml.text(), self._current_profile_id(), self.rank.value(), self.alpha.value(), self.epochs.value(), self.lr.value(), self.output_name.text(), self._current_task())
+        self.command_preview_text = text
+        self.command_preview.setPlainText(text)
 
     def _run_section(self, section: str) -> None:
         if self.process and self.process.state() != QProcess.ProcessState.NotRunning:
-            QMessageBox.warning(self, self.t("job_running"), self.t("job_running_message")); return
+            QMessageBox.warning(self, self.t("job_running"), self.t("job_running_message"))
+            return
         command = split_command_sections(self.command_preview_text).get(section, "").strip()
         if not command:
-            QMessageBox.warning(self, self.t("no_command"), self.t("no_command_message")); return
-        self.run_log.clear(); self.run_log.append(f"{self.t('start')}: {command}\n")
-        self.process = QProcess(self); self.process.setProgram("bash"); self.process.setArguments(["-lc", command])
-        self.process.readyReadStandardOutput.connect(self._read_process_output); self.process.readyReadStandardError.connect(self._read_process_output)
+            QMessageBox.warning(self, self.t("no_command"), self.t("no_command_message"))
+            return
+        self.run_log.clear()
+        self.run_log.append(f"{self.t('start')}: {command}\n")
+        self.process = QProcess(self)
+        self.process.setProgram("bash")
+        self.process.setArguments(["-lc", command])
+        self.process.readyReadStandardOutput.connect(self._read_process_output)
+        self.process.readyReadStandardError.connect(self._read_process_output)
         self.process.finished.connect(lambda code, _status: self.run_log.append(f"\n{self.t('done')}: exit code {code}" if code == 0 else f"\n{self.t('failed')}: exit code {code}"))
         self.process.start()
 
     def _read_process_output(self) -> None:
-        if not self.process: return
-        data = bytes(self.process.readAllStandardOutput()).decode(errors="replace"); err = bytes(self.process.readAllStandardError()).decode(errors="replace")
-        if data: self.run_log.moveCursor(QTextCursor.MoveOperation.End); self.run_log.insertPlainText(data)
-        if err: self.run_log.moveCursor(QTextCursor.MoveOperation.End); self.run_log.insertPlainText(err)
+        if not self.process:
+            return
+        data = bytes(self.process.readAllStandardOutput()).decode(errors="replace")
+        err = bytes(self.process.readAllStandardError()).decode(errors="replace")
+        if data:
+            self.run_log.moveCursor(QTextCursor.MoveOperation.End)
+            self.run_log.insertPlainText(data)
+        if err:
+            self.run_log.moveCursor(QTextCursor.MoveOperation.End)
+            self.run_log.insertPlainText(err)
 
     def _stop_process(self) -> None:
         if self.process and self.process.state() != QProcess.ProcessState.NotRunning:
-            self.process.terminate(); self.run_log.append(f"\n{self.t('stop_requested')}")
+            self.process.terminate()
+            self.run_log.append(f"\n{self.t('stop_requested')}")
 
     def _copy_lora(self) -> None:
         try:
-            cfg = AppConfig.from_file(SETTINGS_PATH); self.export_log.setPlainText(copy_lora_to_comfyui(Path(self.lora_path.text()), cfg))
+            cfg = AppConfig.from_file(SETTINGS_PATH)
+            self.export_log.setPlainText(copy_lora_to_comfyui(Path(self.lora_path.text()), cfg))
         except Exception as exc:
             self.export_log.setPlainText(f"NG: {type(exc).__name__}: {exc}")
 
 
 def main() -> int:
     app = QApplication(sys.argv)
-    win = DesktopApp(); win.show()
+    win = DesktopApp()
+    win.show()
     return app.exec()
 
 
