@@ -11,6 +11,10 @@ from recommended_defaults import DEFAULTS, help_text, status_text
 
 ROOT = Path(__file__).resolve().parents[1]
 DESKTOP_MAIN = ROOT / "app" / "desktop_main.py"
+TRAINING_ENGINE = ROOT / "app" / "training_engine.py"
+COMMANDS = ROOT / "app" / "commands.py"
+COMMAND_PATH_GUARD = ROOT / "app" / "command_path_guard.py"
+ENV_CHECK = ROOT / "app" / "env_check.py"
 
 REQUIRED_I18N_KEYS = [
     "app_title", "tab_settings", "tab_system", "tab_dataset", "tab_caption", "tab_preview", "tab_config", "tab_train", "tab_export",
@@ -95,6 +99,45 @@ def _check_desktop_uses_training_engine() -> None:
     assert "全部実行" in text
 
 
+def _check_training_engine_hardening() -> None:
+    text = TRAINING_ENGINE.read_text(encoding="utf-8")
+    assert "from command_path_guard import command_paths_ok" in text
+    assert "infer_log_dir_from_sections" in text
+    assert "waitForStarted(3000)" in text
+    assert "errorOccurred.connect" in text
+    assert "terminate()" in text
+    assert "kill()" in text
+    assert "COMMAND PATH GUARD FAILED" in text
+    assert "Logs:" in text
+
+
+def _check_commands_use_musubi_python() -> None:
+    text = COMMANDS.read_text(encoding="utf-8")
+    assert "accelerate_launch" in text
+    assert "-m" in text and "accelerate.commands.launch" in text
+    assert "accelerate launch" not in text
+    assert "zimage_cache_latents.py" in text
+    assert "zimage_cache_text_encoder_outputs.py" in text
+    assert "zimage_train_network.py" in text
+
+
+def _check_command_path_guard() -> None:
+    text = COMMAND_PATH_GUARD.read_text(encoding="utf-8")
+    assert "STAGES" in text
+    assert "cwd" in text
+    assert "python not found" in text
+    assert "script not found" in text
+    assert "--dataset_config" in text
+    assert "--output_dir" in text
+    assert "from training_engine" not in text, "command_path_guard must not import training_engine"
+
+
+def _check_env_runtime_check() -> None:
+    text = ENV_CHECK.read_text(encoding="utf-8")
+    assert "from musubi_runtime_check import check_musubi_runtime" in text
+    assert "## musubi runtime" in text
+
+
 def _check_desktop_uses_output_detector() -> None:
     text = DESKTOP_MAIN.read_text(encoding="utf-8")
     assert "from output_detector import find_latest_lora, output_summary" in text
@@ -128,15 +171,21 @@ def main() -> int:
     _check_model_adapters()
     _check_desktop_uses_model_ui()
     _check_desktop_uses_training_engine()
+    _check_training_engine_hardening()
+    _check_commands_use_musubi_python()
+    _check_command_path_guard()
+    _check_env_runtime_check()
     _check_desktop_uses_output_detector()
 
     import caption_diagnostics  # noqa: F401
     import caption_table_widget  # noqa: F401
+    import command_path_guard  # noqa: F401
     import dataset_diagnostics  # noqa: F401
     import desktop_main  # noqa: F401
     import image_caption_browser  # noqa: F401
     import model_adapters  # noqa: F401
     import model_ui  # noqa: F401
+    import musubi_runtime_check  # noqa: F401
     import output_detector  # noqa: F401
     import project_io  # noqa: F401
     import training_engine  # noqa: F401
