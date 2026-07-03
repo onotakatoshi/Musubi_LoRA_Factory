@@ -15,8 +15,11 @@ from caption_editor import bulk_replace_caption_rows, load_caption_rows, remove_
 from command_preview import preview_from_settings
 from i18n import normalize_language, tr
 from pipeline import build_dataset_toml, check_dataset
+from project_io import load_project, project_data, save_project
 from recommended_defaults import DEFAULTS, help_text, status_text
 from training_estimator import estimate_training_load
+from training_presets import get_preset, preset_summary
+from training_review import training_review
 
 
 def write_test_settings(path: Path, musubi_repo: Path) -> None:
@@ -63,6 +66,8 @@ def main() -> int:
     assert "ユーザー設定" in status_text("rank", 32, "日本語")
     assert "Recommended default" in status_text("lr", DEFAULTS["lr"], "English")
     assert "0.00005" in help_text("lr", "日本語")
+    assert get_preset("eye").rank == 16
+    assert "Rank=16" in preset_summary("eye", "日本語")
 
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
@@ -101,6 +106,17 @@ def main() -> int:
 
         dataset_toml = Path(build_dataset_toml(dataset, output, 512))
         assert dataset_toml.exists()
+
+        review = training_review(dataset, "eye", 16, 16, 10, 0.00005, 512, str(dataset_toml), "z-image", "日本語")
+        assert "学習前レビュー" in review
+        assert "Rank / Alpha: 16 / 16" in review
+
+        project_path = output / "project.toml"
+        pdata = project_data(str(dataset), str(output), str(dataset_toml), "z-image", "z-image", 16, 16, 10, 0.00005, "eye_lora_zimage", 512)
+        assert "Saved project" in save_project(project_path, pdata)
+        loaded = load_project(project_path)
+        assert loaded["target_model"] == "z-image"
+        assert int(loaded["rank"]) == 16
 
         settings = root / "settings.toml"
         write_test_settings(settings, musubi_repo)
