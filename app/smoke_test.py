@@ -14,8 +14,10 @@ from caption_diagnostics import diagnose_captions
 from caption_editor import bulk_replace_caption_rows, load_caption_rows, remove_words_caption_rows, save_caption_rows
 from command_preview import preview_from_settings
 from i18n import normalize_language, tr
+from model_adapters import adapter_ids, get_adapter
 from model_registry import enabled_profiles, get_profile, profile_ids, profile_summary
 from pipeline import build_dataset_toml, check_dataset
+from preflight import run_preflight
 from project_io import load_project, project_data, save_project
 from recommended_defaults import DEFAULTS, help_text, status_text
 from training_estimator import estimate_training_load
@@ -59,6 +61,44 @@ wan_dit_high_noise = "/tmp/models/wan/dit_high_noise.safetensors"
     )
 
 
+def write_existing_path_settings(path: Path, musubi_repo: Path, model_dir: Path) -> None:
+    z_dit = model_dir / "z_image_base_or_deturbo.safetensors"
+    z_vae = model_dir / "ae.safetensors"
+    z_text = model_dir / "text_encoder.safetensors"
+    for p in [z_dit, z_vae, z_text]:
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text("dummy", encoding="utf-8")
+    path.write_text(
+        f"""
+[ui]
+language = "日本語"
+
+[musubi]
+repo_path = "{musubi_repo}"
+python_path = "{sys.executable}"
+
+[paths]
+datasets_dir = "{model_dir.parent / 'datasets'}"
+outputs_dir = "{model_dir.parent / 'outputs'}"
+comfyui_loras_dir = "{model_dir.parent / 'ComfyUI' / 'models' / 'loras'}"
+
+[caption]
+mode = "manual"
+joycaption_command = ""
+llm_endpoint = ""
+llm_model = ""
+
+[model_paths]
+zimage_dit = "{z_dit}"
+zimage_vae = "{z_vae}"
+zimage_text_encoder = "{z_text}"
+zimage_base_weights = ""
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+
 def main() -> int:
     assert normalize_language(None) == "日本語"
     assert tr("日本語", "tab_settings") == "設定"
@@ -75,6 +115,8 @@ def main() -> int:
     assert get_profile("wan2.2").enabled_in_v1 is False
     assert "Z-Image" in profile_summary("z-image", "日本語")
     assert [p.id for p in enabled_profiles()] == ["z-image"]
+    assert adapter_ids() == ["z-image"]
+    assert get_adapter("z-image").validate_model_paths({}) == ["model_paths.zimage_vae", "model_paths.zimage_dit", "model_paths.zimage_text_encoder"]
 
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
@@ -138,6 +180,7 @@ def main() -> int:
             output_name="smoke_zimage",
             task="z-image",
         )
+        assert "モデルアダプタ" in preview
         assert "cd " in preview
         assert "zimage_cache_latents.py" in preview
         assert "zimage_train_network.py" in preview
@@ -153,6 +196,17 @@ def main() -> int:
             task="t2v-A14B",
         )
         assert "非対応" in wan_preview
+
+        missing_preflight = run_preflight(settings, str(dataset_toml), "z-image", "z-image")
+        assert "モデルアダプタ" in missing_preflight
+        assert "not found" in missing_preflight
+        assert "Result: ❌" in missing_preflight
+
+        valid_settings = root / "valid_settings.toml"
+        write_existing_path_settings(valid_settings, musubi_repo, root / "models" / "z-image")
+        ok_preflight = run_preflight(valid_settings, str(dataset_toml), "z-image", "z-image")
+        assert "Result: ✅" in ok_preflight
+        assert "zimage_dit" in ok_preflight
 
     print("Smoke test OK")
     return 0
