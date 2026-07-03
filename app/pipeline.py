@@ -6,7 +6,6 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import toml
-from PIL import Image
 
 from captioning import caption_one_image
 
@@ -51,39 +50,10 @@ def image_files(dataset_dir: Path) -> list[Path]:
     return sorted(p for p in dataset_dir.iterdir() if p.suffix.lower() in IMAGE_EXTS)
 
 
-def check_dataset(dataset_dir: Path) -> str:
-    if not dataset_dir.exists():
-        return f"NG: フォルダが存在しません: {dataset_dir}"
-    imgs = image_files(dataset_dir)
-    if not imgs:
-        return "NG: 画像が見つかりません。"
+def check_dataset(dataset_dir: Path, lang: str = "日本語") -> str:
+    from dataset_diagnostics import diagnose_dataset
 
-    problems: list[str] = []
-    size_counts: dict[str, int] = {}
-    caption_missing = 0
-    for img_path in imgs:
-        try:
-            with Image.open(img_path) as im:
-                size_counts[f"{im.width}x{im.height}"] = size_counts.get(f"{im.width}x{im.height}", 0) + 1
-                if min(im.width, im.height) < 512:
-                    problems.append(f"小さめ: {img_path.name} {im.width}x{im.height}")
-        except Exception as exc:
-            problems.append(f"読込失敗: {img_path.name}: {exc}")
-        if not img_path.with_suffix(".txt").exists():
-            caption_missing += 1
-
-    lines = [
-        f"画像数: {len(imgs)}",
-        f"caption未作成: {caption_missing}",
-        "サイズ内訳:",
-    ]
-    lines += [f"- {k}: {v}" for k, v in sorted(size_counts.items())]
-    if problems:
-        lines.append("\n注意:")
-        lines += [f"- {p}" for p in problems[:30]]
-        if len(problems) > 30:
-            lines.append(f"...他 {len(problems)-30} 件")
-    return "\n".join(lines)
+    return diagnose_dataset(dataset_dir, lang=lang)
 
 
 def generate_captions(dataset_dir: Path, lora_type: str, caption_mode: str, cfg: AppConfig, overwrite: bool = False) -> str:
