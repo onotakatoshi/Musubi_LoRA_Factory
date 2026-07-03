@@ -102,9 +102,22 @@ caption不足や重複があれば直します。
 7. `2. Text Cache実行`
 8. `3. 学習実行`
 
+または `全部実行` で Latent Cache → Text Cache → Train を連続実行します。
+
 ログにERRORが出た場合は `ログ解析` を押します。
 
-## 10. 書き出し tab
+## 10. LoRA output check
+
+学習後、必要に応じてターミナルから出力LoRAを確認できます。
+
+```bash
+source .venv/bin/activate
+python app/find_lora_output.py /path/to/output_dir --name eye_lora_zimage
+```
+
+見つかった `.safetensors` を書き出しタブのLoRAパスに指定します。
+
+## 11. 書き出し tab
 
 1. 完成したLoRA `.safetensors` を選択
 2. `ComfyUIへコピー`
