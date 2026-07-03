@@ -30,7 +30,26 @@ cd Musubi_LoRA_Factory
 
 またはデスクトップアイコンをダブルクリックします。
 
-## 3. Settings tab
+設定ファイルがない場合は example から自動作成されます。仮想環境がない場合は、起動時に setup が実行されます。
+
+## 3. Pre-check from terminal
+
+PGXで試す前に、ターミナルから以下を実行すると問題箇所を確認できます。
+
+```bash
+./scripts/check.sh
+```
+
+チェックは以下の順番で実行されます。
+
+1. PySide6 import
+2. Python syntax
+3. Startup structure
+4. Desktop static check
+5. Smoke test
+6. Environment check
+
+## 4. Settings tab
 
 設定タブで以下を指定します。
 
@@ -49,7 +68,7 @@ cd Musubi_LoRA_Factory
 2. `設定を保存`
 3. `環境チェック`
 
-## 4. Dataset tab
+## 5. Dataset tab
 
 1. Dataset folderを選択
 2. `データセット確認`
@@ -57,26 +76,26 @@ cd Musubi_LoRA_Factory
 
 caption不足や重複があれば直します。
 
-## 5. Caption編集 tab
+## 6. Caption編集 tab
 
 1. `Captionを読み込み`
 2. 必要なら一括置換 / 語句削除
 3. `Captionを保存`
 
-## 6. 画像プレビュー tab
+## 7. 画像プレビュー tab
 
 1. `画像を読み込み`
 2. 画像を見ながらcaptionを確認
 3. 必要ならcaptionを修正
 4. `現在のCaptionを保存`
 
-## 7. 設定生成 tab
+## 8. 設定生成 tab
 
 1. Output folderを確認
 2. Resolutionを確認
 3. `dataset.tomlを作成`
 
-## 8. 学習 tab
+## 9. 学習 tab
 
 1. Target modelが `Z-Image / Z-Image-Turbo` であることを確認
 2. `Preset適用`
@@ -89,7 +108,7 @@ caption不足や重複があれば直します。
 
 ログにERRORが出た場合は `ログ解析` を押します。
 
-## 9. 書き出し tab
+## 10. 書き出し tab
 
 1. 完成したLoRA `.safetensors` を選択
 2. `ComfyUIへコピー`
