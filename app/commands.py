@@ -11,6 +11,8 @@ class ModelPaths:
     t5: str = ""
     dit: str = ""
     dit_high_noise: str = ""
+    text_encoder: str = ""
+    base_weights: str = ""
 
 
 def q(value: str | Path) -> str:
@@ -92,6 +94,117 @@ def wan_train_command(
     return " ".join(parts)
 
 
+def zimage_cache_latents_command(musubi_python: Path, dataset_toml: Path, paths: ModelPaths) -> str:
+    return " ".join([
+        q(musubi_python),
+        "src/musubi_tuner/zimage_cache_latents.py",
+        "--dataset_config", q(dataset_toml),
+        "--vae", q(paths.vae),
+    ])
+
+
+def zimage_cache_text_command(musubi_python: Path, dataset_toml: Path, paths: ModelPaths, batch_size: int = 16, fp8_llm: bool = True) -> str:
+    parts = [
+        q(musubi_python),
+        "src/musubi_tuner/zimage_cache_text_encoder_outputs.py",
+        "--dataset_config", q(dataset_toml),
+        "--text_encoder", q(paths.text_encoder),
+        "--batch_size", str(batch_size),
+    ]
+    if fp8_llm:
+        parts.append("--fp8_llm")
+    return " ".join(parts)
+
+
+def zimage_train_command(
+    dataset_toml: Path,
+    paths: ModelPaths,
+    output_dir: Path,
+    output_name: str,
+    rank: int,
+    alpha: int,
+    epochs: int,
+    lr: float,
+    mixed_precision: str = "bf16",
+    optimizer: str = "adamw8bit",
+    fp8_base: bool = True,
+    fp8_scaled: bool = True,
+    fp8_llm: bool = True,
+    blocks_to_swap: int = 0,
+) -> str:
+    parts = [
+        "accelerate", "launch",
+        "--num_cpu_threads_per_process", "1",
+        "--mixed_precision", mixed_precision,
+        "src/musubi_tuner/zimage_train_network.py",
+        "--dit", q(paths.dit),
+        "--vae", q(paths.vae),
+        "--text_encoder", q(paths.text_encoder),
+        "--dataset_config", q(dataset_toml),
+        "--sdpa",
+        "--mixed_precision", mixed_precision,
+        "--timestep_sampling", "shift",
+        "--weighting_scheme", "none",
+        "--discrete_flow_shift", "2.0",
+        "--optimizer_type", optimizer,
+        "--learning_rate", str(lr),
+        "--gradient_checkpointing",
+        "--max_data_loader_n_workers", "2",
+        "--persistent_data_loader_workers",
+        "--network_module", "networks.lora_zimage",
+        "--network_dim", str(rank),
+        "--network_alpha", str(alpha),
+        "--max_train_epochs", str(epochs),
+        "--save_every_n_epochs", "1",
+        "--seed", "42",
+        "--output_dir", q(output_dir),
+        "--output_name", q(output_name),
+    ]
+    if fp8_base:
+        parts.append("--fp8_base")
+    if fp8_scaled:
+        parts.append("--fp8_scaled")
+    if fp8_llm:
+        parts.append("--fp8_llm")
+    if blocks_to_swap > 0:
+        parts.extend(["--blocks_to_swap", str(blocks_to_swap)])
+    if paths.base_weights:
+        parts.extend(["--base_weights", q(paths.base_weights)])
+    return " ".join(parts)
+
+
+def build_zimage_preview(
+    musubi_python: Path,
+    dataset_toml: Path,
+    output_dir: Path,
+    output_name: str,
+    paths: ModelPaths,
+    rank: int,
+    alpha: int,
+    epochs: int,
+    lr: float,
+) -> str:
+    return "\n".join([
+        "# 1. Latent cache",
+        zimage_cache_latents_command(musubi_python, dataset_toml, paths),
+        "",
+        "# 2. Text encoder cache",
+        zimage_cache_text_command(musubi_python, dataset_toml, paths),
+        "",
+        "# 3. Train LoRA",
+        zimage_train_command(
+            dataset_toml=dataset_toml,
+            paths=paths,
+            output_dir=output_dir,
+            output_name=output_name,
+            rank=rank,
+            alpha=alpha,
+            epochs=epochs,
+            lr=lr,
+        ),
+    ])
+
+
 def build_command_preview(
     target_model: str,
     musubi_python: Path,
@@ -106,10 +219,23 @@ def build_command_preview(
     lr: float,
     task: str = "t2v-A14B",
 ) -> str:
+    if target_model == "z-image":
+        return build_zimage_preview(
+            musubi_python=musubi_python,
+            dataset_toml=dataset_toml,
+            output_dir=output_dir,
+            output_name=output_name,
+            paths=paths,
+            rank=rank,
+            alpha=alpha,
+            epochs=epochs,
+            lr=lr,
+        )
+
     if target_model != "wan2.2":
         return (
             f"# {target_model} command template is not implemented yet.\n"
-            "# Next target: add Z-Image / FLUX / HunyuanVideo profiles."
+            "# Next target: add FLUX / HunyuanVideo profiles."
         )
 
     commands = [
