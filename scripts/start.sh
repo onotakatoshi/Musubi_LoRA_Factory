@@ -14,4 +14,4 @@ if [ ! -f configs/settings.toml ]; then
 fi
 
 source .venv/bin/activate
-python app/main.py
+python app/desktop_main.py
