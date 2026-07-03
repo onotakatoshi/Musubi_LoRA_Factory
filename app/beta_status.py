@@ -87,9 +87,9 @@ def beta_status() -> str:
         lines.append("OK: required beta files exist")
     lines.append("")
     lines.append("## Next PGX action")
-    lines.append("1. ./scripts/update.sh")
-    lines.append("2. ./scripts/verify_pgx_beta.sh")
-    lines.append("3. ./scripts/start.sh or desktop icon")
+    lines.append("1. bash ./scripts/update.sh")
+    lines.append("2. bash ./scripts/verify_pgx_beta.sh")
+    lines.append("3. bash ./scripts/start.sh or desktop icon")
     lines.append("4. Follow docs/pgx_beta_runbook.md")
     return "\n".join(lines)
 
