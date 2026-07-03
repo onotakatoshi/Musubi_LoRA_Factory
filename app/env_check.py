@@ -6,6 +6,9 @@ from pathlib import Path
 
 import toml
 
+from model_adapters import get_adapter
+from model_registry import get_profile
+
 
 def _path_status(label: str, value: str, must_exist: bool = True) -> str:
     if not value:
@@ -27,8 +30,21 @@ def _run_version(cmd: list[str]) -> str:
     return first[0] if first else f"exit code {proc.returncode}"
 
 
-def check_environment(settings_path: Path) -> str:
-    lines = ["# Environment Check", ""]
+def _check_musubi_scripts(repo: Path, profile_id: str) -> list[str]:
+    src = repo / "src" / "musubi_tuner"
+    lines = [_path_status("src/musubi_tuner", str(src))]
+    if profile_id == "z-image":
+        lines.append(_path_status("zimage_train_network.py", str(src / "zimage_train_network.py")))
+        lines.append(_path_status("zimage_cache_latents.py", str(src / "zimage_cache_latents.py")))
+        lines.append(_path_status("zimage_cache_text_encoder_outputs.py", str(src / "zimage_cache_text_encoder_outputs.py")))
+    else:
+        lines.append(f"ℹ️ script check for {profile_id}: not implemented yet")
+    return lines
+
+
+def check_environment(settings_path: Path, profile_id: str = "z-image") -> str:
+    profile = get_profile(profile_id)
+    lines = ["# Environment Check", "", f"Profile: {profile.display_name}", ""]
     lines.append(f"Python: {sys.version.split()[0]}")
     lines.append(f"nvidia-smi: {_run_version(['nvidia-smi'])}")
     lines.append(f"accelerate: {_run_version(['accelerate', '--version'])}")
@@ -49,21 +65,22 @@ def check_environment(settings_path: Path) -> str:
     lines.append(_path_status("python_path", musubi.get("python_path", "")))
     repo = Path(musubi.get("repo_path", "")) if musubi.get("repo_path") else None
     if repo:
-        lines.append(_path_status("src/musubi_tuner", str(repo / "src" / "musubi_tuner")))
-        lines.append(_path_status("zimage_train_network.py", str(repo / "src" / "musubi_tuner" / "zimage_train_network.py")))
-        lines.append(_path_status("zimage_cache_latents.py", str(repo / "src" / "musubi_tuner" / "zimage_cache_latents.py")))
-        lines.append(_path_status("zimage_cache_text_encoder_outputs.py", str(repo / "src" / "musubi_tuner" / "zimage_cache_text_encoder_outputs.py")))
+        lines.extend(_check_musubi_scripts(repo, profile.id))
     lines.append("")
 
-    lines.append("## Z-Image model files")
-    lines.append(_path_status("zimage_dit", model_paths.get("zimage_dit", "")))
-    lines.append(_path_status("zimage_vae", model_paths.get("zimage_vae", "")))
-    lines.append(_path_status("zimage_text_encoder", model_paths.get("zimage_text_encoder", "")))
-    base_weights = model_paths.get("zimage_base_weights", "")
-    if base_weights:
-        lines.append(_path_status("zimage_base_weights", base_weights))
-    else:
-        lines.append("ℹ️ zimage_base_weights: optional / not set")
+    try:
+        adapter = get_adapter(profile.id)
+        lines.append(f"## {profile.display_name} model files")
+        for key in adapter.required_setting_keys():
+            lines.append(_path_status(key, model_paths.get(key, "")))
+        for key in adapter.optional_setting_keys():
+            value = model_paths.get(key, "")
+            if value:
+                lines.append(_path_status(key, value))
+            else:
+                lines.append(f"ℹ️ {key}: optional / not set")
+    except NotImplementedError as exc:
+        lines.append(f"❌ {exc}")
     lines.append("")
 
     lines.append("## Output paths")
@@ -76,7 +93,7 @@ def check_environment(settings_path: Path) -> str:
     if "❌" in text:
         text += "\n\nResult: ❌ 不足があります。上の❌を直してからGUIでPreflight Checkしてください。"
     else:
-        text += "\n\nResult: ✅ Z-Image LoRA作成の前提ファイルは揃っています。"
+        text += f"\n\nResult: ✅ {profile.display_name} LoRA作成の前提ファイルは揃っています。"
     return text
 
 
