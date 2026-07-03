@@ -12,6 +12,7 @@ source .venv/bin/activate
 
 python app/launcher_check.py
 python app/command_preview_test.py
+python app/command_path_guard_test.py
 python app/project_roundtrip_test.py
 python app/training_engine_test.py
 python app/output_detector_test.py
