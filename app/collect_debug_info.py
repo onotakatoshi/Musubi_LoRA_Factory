@@ -6,6 +6,7 @@ import sys
 from pathlib import Path
 
 from beta_status import beta_status
+from pgx_next_steps import pgx_next_steps
 from verification_readiness import verification_readiness
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -40,6 +41,9 @@ def collect_debug_info() -> str:
     lines.append("")
     lines.append("## Verification readiness")
     lines.append(verification_readiness())
+    lines.append("")
+    lines.append("## PGX next steps")
+    lines.append(pgx_next_steps())
     return "\n".join(lines)
 
 
