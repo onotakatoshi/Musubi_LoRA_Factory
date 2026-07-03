@@ -5,9 +5,7 @@ from pathlib import Path
 import toml
 
 from commands import ModelPaths, build_command_preview
-
-SUPPORTED_TARGET_MODEL = "z-image"
-SUPPORTED_TASK = "z-image"
+from model_registry import get_profile
 
 
 def _paths_for_zimage(model_paths: dict) -> ModelPaths:
@@ -30,10 +28,11 @@ def preview_from_settings(
     output_name: str,
     task: str,
 ) -> str:
-    if target_model != SUPPORTED_TARGET_MODEL:
-        return "NG: Ver 1.0 は Z-Image 専用です。Target model は z-image 固定です。"
-    if task != SUPPORTED_TASK:
-        return "NG: Ver 1.0 は Z-Image 専用です。Task/profile は z-image 固定です。"
+    profile = get_profile(target_model)
+    if not profile.enabled_in_v1:
+        return f"NG: Ver 1.0 では {profile.display_name} は非対応です。Z-Image / Z-Image-Turbo の検証後に追加します。"
+    if task != profile.task:
+        return f"NG: Ver 1.0 の {profile.display_name} profile は task={profile.task} 固定です。"
     if not settings_path.exists():
         return f"NG: settings.toml がありません: {settings_path}"
     if not dataset_toml:
@@ -44,8 +43,11 @@ def preview_from_settings(
     model_paths = data.get("model_paths", {})
     dataset_path = Path(dataset_toml)
     output_dir = dataset_path.parent
-    paths = _paths_for_zimage(model_paths)
 
+    if profile.id != "z-image":
+        return f"NG: {profile.display_name} のコマンド生成はまだ実装していません。"
+
+    paths = _paths_for_zimage(model_paths)
     missing = []
     if not paths.vae:
         missing.append("model_paths.zimage_vae")
@@ -57,7 +59,7 @@ def preview_from_settings(
         return "NG: settings.toml の以下を設定してください。\n" + "\n".join(f"- {m}" for m in missing)
 
     command = build_command_preview(
-        target_model=SUPPORTED_TARGET_MODEL,
+        target_model=profile.id,
         musubi_python=Path(musubi.get("python_path", "python")),
         musubi_repo=Path(musubi.get("repo_path", ".")),
         dataset_toml=dataset_path,
@@ -68,12 +70,13 @@ def preview_from_settings(
         alpha=alpha,
         epochs=epochs,
         lr=lr,
-        task=SUPPORTED_TASK,
+        task=profile.task,
     )
 
     return (
         "# Command Preview\n"
         "# Ver 1.0 は Z-Image / Z-Image-Turbo 用LoRA作成に限定しています。\n"
+        "# ただし内部構造はモデルプロファイル追加を前提にしています。\n"
         "# 内容を確認し、問題なければPGX上で順番に実行してください。\n\n"
         + command
     )
