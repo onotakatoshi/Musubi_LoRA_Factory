@@ -140,15 +140,15 @@ def ui_copy(lora_path: str) -> str:
 
 
 with gr.Blocks(title="Musubi LoRA Factory") as demo:
-    gr.Markdown("# Musubi LoRA Factory\nPGX向けmusubi-tuner GUI")
+    gr.Markdown("# Musubi LoRA Factory\nPGX向けmusubi-tuner GUI — Z-Image優先")
 
     with gr.Row():
         with gr.Column(scale=2):
             gr.Markdown(workflow_markdown(1))
         with gr.Column(scale=1):
             guide_dataset_dir = gr.Textbox(label="Dataset folder for guide", placeholder="/home/ono/datasets/lora/Eye_Blue_v1")
-            guide_dataset_toml = gr.Textbox(label="dataset.toml for guide", placeholder="/home/ono/outputs/lora/Eye_Blue_v1_wan22/dataset.toml")
-            guide_lora_path = gr.Textbox(label="LoRA path for guide", placeholder="/home/ono/outputs/lora/eye_lora_wan22.safetensors")
+            guide_dataset_toml = gr.Textbox(label="dataset.toml for guide", placeholder="/home/ono/outputs/lora/Eye_Blue_v1_zimage/dataset.toml")
+            guide_lora_path = gr.Textbox(label="LoRA path for guide", placeholder="/home/ono/outputs/lora/eye_lora_zimage.safetensors")
             guide_btn = gr.Button("Show Next Action")
             guide_text = gr.Markdown("次にやること: Datasetフォルダを指定して、`Show Next Action` を押してください。")
             guide_btn.click(ui_next_action, inputs=[guide_dataset_dir, guide_dataset_toml, guide_lora_path], outputs=[guide_text])
@@ -164,7 +164,7 @@ with gr.Blocks(title="Musubi LoRA Factory") as demo:
         logs_btn.click(ui_recent_logs, outputs=[logs_status])
 
     with gr.Tab("1. Dataset"):
-        gr.Markdown("## Step 1: Dataset\nまず画像フォルダを指定します。目標は、512x512の高品質画像100枚です。")
+        gr.Markdown("## Step 1: Dataset\nまず画像フォルダを指定します。最初のZ-Imageテストは、512x512の高品質画像20〜100枚で十分です。")
         dataset_dir = gr.Textbox(label="Dataset folder", placeholder="/home/ono/datasets/lora/Eye_Blue_v1")
         lora_type = gr.Dropdown(
             ["eye", "mouth", "face", "hair", "hand", "style", "clothing"],
@@ -201,25 +201,25 @@ with gr.Blocks(title="Musubi LoRA Factory") as demo:
 
     with gr.Tab("3. Config"):
         gr.Markdown("## Step 4: Config\ncaptionを確認したら、musubi-tuner用のdataset.tomlを作ります。")
-        output_dir = gr.Textbox(label="Output folder", placeholder="/home/ono/outputs/lora/Eye_Blue_v1_wan22")
+        output_dir = gr.Textbox(label="Output folder", placeholder="/home/ono/outputs/lora/Eye_Blue_v1_zimage")
         resolution = gr.Dropdown([512, 768, 1024], value=512, label="Resolution")
         build_btn = gr.Button("Build dataset.toml")
         dataset_toml = gr.Textbox(label="dataset.toml path")
         build_btn.click(ui_build_dataset_toml, inputs=[dataset_dir, output_dir, resolution], outputs=[dataset_toml])
 
     with gr.Tab("4. Train"):
-        gr.Markdown("## Step 5: Train\nPreflight → Preview Commands → Latent Cache → Text Cache → Train の順に進めます。ログはリアルタイム表示され、`logs/`にも保存されます。")
+        gr.Markdown("## Step 5: Train\nZ-Image優先です。Preflight → Preview Commands → Latent Cache → Text Cache → Train の順に進めます。ログはリアルタイム表示され、`logs/`にも保存されます。")
         target_model = gr.Dropdown(
-            ["wan2.2", "z-image", "flux", "hunyuanvideo", "framepack"],
-            value="wan2.2",
+            ["z-image", "wan2.2", "flux", "hunyuanvideo", "framepack"],
+            value="z-image",
             label="Target model",
         )
-        task = gr.Dropdown(["t2v-A14B", "i2v-A14B", "t2v-1.3B"], value="t2v-A14B", label="Wan task/profile")
+        task = gr.Dropdown(["z-image", "t2v-A14B", "i2v-A14B", "t2v-1.3B"], value="z-image", label="Task/profile")
         rank = gr.Slider(4, 128, value=16, step=4, label="Rank")
         alpha = gr.Slider(4, 128, value=16, step=4, label="Alpha")
         epochs = gr.Slider(1, 50, value=10, step=1, label="Epochs")
         lr = gr.Number(value=0.00005, label="Learning rate")
-        output_name = gr.Textbox(value="eye_lora_wan22", label="Output name")
+        output_name = gr.Textbox(value="eye_lora_zimage", label="Output name")
         preflight_btn = gr.Button("0. Preflight Check")
         preview_btn = gr.Button("Preview Commands")
         with gr.Row():
@@ -241,7 +241,7 @@ with gr.Blocks(title="Musubi LoRA Factory") as demo:
 
     with gr.Tab("5. Export"):
         gr.Markdown("## Step 6: Export\n完成したLoRAをComfyUIのlorasフォルダへコピーします。")
-        lora_path = gr.Textbox(label="LoRA file path", placeholder="/home/ono/outputs/lora/eye_lora_wan22.safetensors")
+        lora_path = gr.Textbox(label="LoRA file path", placeholder="/home/ono/outputs/lora/Eye_Blue_v1_zimage/eye_lora_zimage.safetensors")
         copy_btn = gr.Button("Copy to ComfyUI")
         export_log = gr.Textbox(label="Log", lines=8)
         copy_btn.click(ui_copy, inputs=[lora_path], outputs=[export_log])
