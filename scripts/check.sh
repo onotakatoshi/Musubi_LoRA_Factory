@@ -17,30 +17,36 @@ fi
 
 source .venv/bin/activate
 
-step "1/7 PySide6 import check"
+step "1/9 PySide6 import check"
 python - <<'PY'
 from PySide6.QtWidgets import QApplication
 print('PySide6 import OK')
 PY
 
-step "2/7 Python syntax check"
+step "2/9 Python syntax check"
 python -m py_compile app/*.py
 
 echo "py_compile OK"
 
-step "3/7 Startup structure check"
+step "3/9 Startup structure check"
 python app/startup_check.py
 
-step "4/7 Desktop static check"
+step "4/9 Launcher script check"
+python app/launcher_check.py
+
+step "5/9 Desktop static check"
 python app/desktop_static_check.py
 
-step "5/7 Command preview validation test"
+step "6/9 Command preview validation test"
 python app/command_preview_test.py
 
-step "6/7 Smoke test"
+step "7/9 Project roundtrip test"
+python app/project_roundtrip_test.py
+
+step "8/9 Smoke test"
 python app/smoke_test.py
 
-step "7/7 Environment check"
+step "9/9 Environment check"
 python app/env_check.py
 
 echo
