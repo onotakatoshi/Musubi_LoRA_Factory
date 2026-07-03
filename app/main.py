@@ -20,6 +20,7 @@ from pipeline import (
     run_cache_placeholder,
     run_train_placeholder,
 )
+from preflight import run_preflight
 from runner import CommandRunnerError, run_preview_section
 from workflow import next_action, workflow_markdown
 
@@ -67,6 +68,10 @@ def ui_build_dataset_toml(dataset_dir: str, output_dir: str, resolution: int) ->
 def ui_cache(dataset_toml: str, target_model: str) -> str:
     cfg = load_config()
     return run_cache_placeholder(Path(dataset_toml), target_model, cfg)
+
+
+def ui_preflight(dataset_toml: str, target_model: str, task: str) -> str:
+    return run_preflight(SETTINGS_PATH, dataset_toml, target_model, task)
 
 
 def ui_command_preview(
@@ -179,7 +184,7 @@ with gr.Blocks(title="Musubi LoRA Factory") as demo:
         build_btn.click(ui_build_dataset_toml, inputs=[dataset_dir, output_dir, resolution], outputs=[dataset_toml])
 
     with gr.Tab("4. Train"):
-        gr.Markdown("## Step 5: Train\nまずコマンドを確認します。問題なければ Latent Cache → Text Cache → Train の順に実行します。")
+        gr.Markdown("## Step 5: Train\nPreflight → Preview Commands → Latent Cache → Text Cache → Train の順に進めます。")
         target_model = gr.Dropdown(
             ["wan2.2", "z-image", "flux", "hunyuanvideo", "framepack"],
             value="wan2.2",
@@ -191,12 +196,14 @@ with gr.Blocks(title="Musubi LoRA Factory") as demo:
         epochs = gr.Slider(1, 50, value=10, step=1, label="Epochs")
         lr = gr.Number(value=0.00005, label="Learning rate")
         output_name = gr.Textbox(value="eye_lora_wan22", label="Output name")
+        preflight_btn = gr.Button("0. Preflight Check")
         preview_btn = gr.Button("Preview Commands")
         with gr.Row():
             run_latent_btn = gr.Button("Run 1: Latent Cache")
             run_text_btn = gr.Button("Run 2: Text Cache")
             run_train_btn = gr.Button("Run 3: Train")
         train_log = gr.Textbox(label="Log / Command Preview", lines=24)
+        preflight_btn.click(ui_preflight, inputs=[dataset_toml, target_model, task], outputs=[train_log])
         preview_btn.click(ui_command_preview, inputs=[dataset_toml, target_model, rank, alpha, epochs, lr, output_name, task], outputs=[train_log])
         run_latent_btn.click(lambda text: ui_run_command_section(text, "latent_cache"), inputs=[train_log], outputs=[train_log])
         run_text_btn.click(lambda text: ui_run_command_section(text, "text_cache"), inputs=[train_log], outputs=[train_log])
