@@ -7,7 +7,7 @@ PGXでMusubi LoRA Factory Ver 1.0 betaを確認するための最短手順です
 初回:
 
 ```bash
-git clone https://github.com/onotatoshi/Musubi_LoRA_Factory.git
+git clone https://github.com/onotakatoshi/Musubi_LoRA_Factory.git
 cd Musubi_LoRA_Factory
 chmod +x scripts/*.sh
 ./scripts/setup.sh
