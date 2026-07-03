@@ -9,6 +9,9 @@ Verify beta:
   bash ./scripts/update.sh
   bash ./scripts/verify_pgx_beta.sh
 
+Check desktop launch without opening normal GUI:
+  bash ./scripts/check_desktop_launch.sh
+
 Start GUI:
   bash ./scripts/start.sh
 
