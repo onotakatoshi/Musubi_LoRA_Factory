@@ -10,7 +10,9 @@ fi
 
 source .venv/bin/activate
 
+python -m py_compile app/commands.py app/command_path_guard.py app/training_engine.py app/musubi_runtime_check.py app/env_check.py app/desktop_static_check.py
 python app/launcher_check.py
+python app/desktop_static_check.py
 python app/command_preview_test.py
 python app/command_path_guard_test.py
 python app/project_roundtrip_test.py
