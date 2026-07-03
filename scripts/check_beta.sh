@@ -10,7 +10,7 @@ fi
 
 source .venv/bin/activate
 
-python -m py_compile app/desktop_main.py app/commands.py app/command_path_guard.py app/training_engine.py app/musubi_runtime_check.py app/env_check.py app/export_validator.py app/desktop_static_check.py
+python -m py_compile app/desktop_main.py app/commands.py app/command_path_guard.py app/training_engine.py app/musubi_runtime_check.py app/env_check.py app/export_validator.py app/desktop_static_check.py app/verification_readiness.py
 python app/launcher_check.py
 python app/desktop_static_check.py
 python app/command_preview_test.py
@@ -19,7 +19,9 @@ python app/project_roundtrip_test.py
 python app/training_engine_test.py
 python app/output_detector_test.py
 python app/export_validator_test.py
+python app/verification_readiness_test.py
 python app/beta_status_test.py
 python app/beta_status.py
+python app/verification_readiness.py
 
 echo "Beta check OK"
