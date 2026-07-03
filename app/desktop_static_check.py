@@ -14,6 +14,7 @@ REQUIRED_I18N_KEYS = [
     "tab_settings",
     "tab_system",
     "tab_dataset",
+    "tab_caption",
     "tab_config",
     "tab_train",
     "tab_export",
@@ -64,6 +65,7 @@ def main() -> int:
 
     # Import modules that desktop_main depends on, without starting QApplication.
     import caption_diagnostics  # noqa: F401
+    import caption_table_widget  # noqa: F401
     import dataset_diagnostics  # noqa: F401
     import desktop_main  # noqa: F401
     import training_estimator  # noqa: F401
