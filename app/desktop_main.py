@@ -30,6 +30,7 @@ ROOT = APP_DIR.parent
 if str(APP_DIR) not in sys.path:
     sys.path.insert(0, str(APP_DIR))
 
+from caption_diagnostics import diagnose_captions
 from command_preview import preview_from_settings
 from env_check import check_environment
 from error_analyzer import analyze_log
@@ -43,6 +44,7 @@ from settings_detect import detect_zimage_files, validate_settings_paths
 from settings_io import load_settings, nested_get, save_settings
 from state_check import config_status, dataset_status, train_ready_status
 from step_guides import guide
+from training_estimator import estimate_training_load
 
 SETTINGS_PATH = ROOT / "configs" / "settings.toml"
 
@@ -191,6 +193,7 @@ class DesktopApp(QMainWindow):
         box.addLayout(form)
         buttons = QHBoxLayout()
         buttons.addWidget(self._button(self.t("check_dataset"), self._check_dataset))
+        buttons.addWidget(self._button(self.t("diagnose_captions"), self._diagnose_captions))
         buttons.addWidget(self._button(self.t("check_current_step"), self._dataset_status))
         buttons.addStretch(); box.addLayout(buttons)
         self.dataset_log = self._log(); box.addWidget(self.dataset_log)
@@ -236,6 +239,7 @@ class DesktopApp(QMainWindow):
         row1 = QHBoxLayout()
         row1.addWidget(self._button(self.t("preflight_check"), self._preflight))
         row1.addWidget(self._button(self.t("preview_commands"), self._preview_commands))
+        row1.addWidget(self._button(self.t("estimate_training_load"), self._estimate_training_load))
         row1.addWidget(self._button(self.t("check_current_step"), lambda: self.train_status.setPlainText(train_ready_status(self.command_preview_text))))
         row1.addStretch(); box.addLayout(row1)
         self.train_status = self._log(); self.train_status.setMaximumHeight(120); box.addWidget(self.train_status)
@@ -296,7 +300,10 @@ class DesktopApp(QMainWindow):
         self.settings = load_settings(SETTINGS_PATH); self.lang = normalize_language(nested_get(self.settings, "ui", "language", "日本語")); self._rebuild_ui()
 
     def _check_dataset(self) -> None:
-        self.dataset_log.setPlainText(check_dataset(Path(self.dataset_dir.text())))
+        self.dataset_log.setPlainText(check_dataset(Path(self.dataset_dir.text()), self.lang))
+
+    def _diagnose_captions(self) -> None:
+        self.dataset_log.setPlainText(diagnose_captions(Path(self.dataset_dir.text()), self.lora_type.currentText(), self.lang))
 
     def _dataset_status(self) -> None:
         self.dataset_log.setPlainText(dataset_status(self.dataset_dir.text()))
@@ -310,6 +317,9 @@ class DesktopApp(QMainWindow):
 
     def _preflight(self) -> None:
         self.train_status.setPlainText(run_preflight(SETTINGS_PATH, self.dataset_toml.text(), self.target_model.currentText(), self.task.currentText()))
+
+    def _estimate_training_load(self) -> None:
+        self.train_status.setPlainText(estimate_training_load(Path(self.dataset_dir.text()), self.epochs.value(), self.rank.value(), self.resolution.value(), self.lang))
 
     def _preview_commands(self) -> None:
         text = preview_from_settings(SETTINGS_PATH, self.dataset_toml.text(), self.target_model.currentText(), self.rank.value(), self.alpha.value(), self.epochs.value(), self.lr.value(), self.output_name.text(), self.task.currentText())
