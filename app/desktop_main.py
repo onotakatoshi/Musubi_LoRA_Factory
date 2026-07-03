@@ -35,6 +35,7 @@ from caption_table_widget import CaptionTableWidget
 from command_preview import preview_from_settings
 from env_check import check_environment
 from error_analyzer import analyze_log
+from export_validator import validate_lora_for_export
 from gpu_monitor import gpu_preflight_warning
 from i18n import SUPPORTED_LANGUAGES, normalize_language, tr
 from image_caption_browser import ImageCaptionBrowser
@@ -116,37 +117,56 @@ class DesktopApp(QMainWindow):
         self.setCentralWidget(tabs)
 
     def _line(self, text: str = "") -> QLineEdit:
-        w = QLineEdit(); w.setText(text); return w
+        w = QLineEdit()
+        w.setText(text)
+        return w
 
     def _log(self) -> QTextEdit:
-        w = QTextEdit(); w.setReadOnly(True); return w
+        w = QTextEdit()
+        w.setReadOnly(True)
+        return w
 
     def _button(self, text: str, fn: Callable[[], None]) -> QPushButton:
-        b = QPushButton(text); b.clicked.connect(fn); return b
+        b = QPushButton(text)
+        b.clicked.connect(fn)
+        return b
 
     def _browse_dir_row(self, edit: QLineEdit) -> QHBoxLayout:
-        row = QHBoxLayout(); row.addWidget(edit); row.addWidget(self._button(self.t("browse"), lambda: self._pick_dir(edit))); return row
+        row = QHBoxLayout()
+        row.addWidget(edit)
+        row.addWidget(self._button(self.t("browse"), lambda: self._pick_dir(edit)))
+        return row
 
     def _browse_file_row(self, edit: QLineEdit) -> QHBoxLayout:
-        row = QHBoxLayout(); row.addWidget(edit); row.addWidget(self._button(self.t("browse"), lambda: self._pick_file(edit))); return row
+        row = QHBoxLayout()
+        row.addWidget(edit)
+        row.addWidget(self._button(self.t("browse"), lambda: self._pick_file(edit)))
+        return row
 
     def _default_spin_row(self, name: str, widget: QSpinBox | QDoubleSpinBox) -> QHBoxLayout:
         label = QLabel(default_status_text(name, widget.value(), self.lang))
         reset_text = "Reset" if self.lang == "English" else "デフォルトに戻す"
         reset = self._button(reset_text, lambda: self._reset_default(name, widget, label))
         widget.valueChanged.connect(lambda _value: label.setText(default_status_text(name, widget.value(), self.lang)))
-        row = QHBoxLayout(); row.addWidget(widget); row.addWidget(label); row.addWidget(reset); return row
+        row = QHBoxLayout()
+        row.addWidget(widget)
+        row.addWidget(label)
+        row.addWidget(reset)
+        return row
 
     def _reset_default(self, name: str, widget: QSpinBox | QDoubleSpinBox, label: QLabel) -> None:
-        widget.setValue(DEFAULTS[name]); label.setText(default_status_text(name, widget.value(), self.lang))
+        widget.setValue(DEFAULTS[name])
+        label.setText(default_status_text(name, widget.value(), self.lang))
 
     def _pick_dir(self, target: QLineEdit) -> None:
         path = QFileDialog.getExistingDirectory(self, self.t("select_folder"), target.text() or str(Path.home()))
-        if path: target.setText(path)
+        if path:
+            target.setText(path)
 
     def _pick_file(self, target: QLineEdit) -> None:
         path, _ = QFileDialog.getOpenFileName(self, self.t("select_file"), target.text() or str(Path.home()))
-        if path: target.setText(path)
+        if path:
+            target.setText(path)
 
     def _settings_tab(self) -> QWidget:
         box = QVBoxLayout()
@@ -288,7 +308,10 @@ class DesktopApp(QMainWindow):
         guide_box = QTextEdit(); guide_box.setReadOnly(True); guide_box.setPlainText(guide("export")); guide_box.setMaximumHeight(160); box.addWidget(guide_box)
         self.lora_path = self._line(str(Path(nested_get(self.settings, "paths", "outputs_dir")) / "Eye_Blue_v1_zimage" / "eye_lora_zimage.safetensors"))
         box.addLayout(self._browse_file_row(self.lora_path))
-        box.addWidget(self._button(self.t("copy_to_comfyui"), self._copy_lora))
+        row = QHBoxLayout()
+        row.addWidget(self._button("コピー前チェック", self._validate_export))
+        row.addWidget(self._button(self.t("copy_to_comfyui"), self._copy_lora))
+        row.addStretch(); box.addLayout(row)
         self.export_log = self._log(); box.addWidget(self.export_log)
         w = QWidget(); w.setLayout(box); return w
 
@@ -307,31 +330,49 @@ class DesktopApp(QMainWindow):
             self.train_status.setPlainText(help_for_profile(self._current_profile_id(), self.lang))
 
     def _settings_values(self) -> dict[str, str]:
-        return {"musubi_repo": self.set_musubi_repo.text(), "musubi_python": self.set_musubi_python.text(), "datasets_dir": self.set_datasets_dir.text(), "outputs_dir": self.set_outputs_dir.text(), "comfyui_loras_dir": self.set_comfyui_loras_dir.text(), "zimage_dit": self.set_zimage_dit.text(), "zimage_vae": self.set_zimage_vae.text(), "zimage_text_encoder": self.set_zimage_text_encoder.text(), "zimage_base_weights": self.set_zimage_base_weights.text()}
+        return {
+            "musubi_repo": self.set_musubi_repo.text(), "musubi_python": self.set_musubi_python.text(),
+            "datasets_dir": self.set_datasets_dir.text(), "outputs_dir": self.set_outputs_dir.text(),
+            "comfyui_loras_dir": self.set_comfyui_loras_dir.text(), "zimage_dit": self.set_zimage_dit.text(),
+            "zimage_vae": self.set_zimage_vae.text(), "zimage_text_encoder": self.set_zimage_text_encoder.text(),
+            "zimage_base_weights": self.set_zimage_base_weights.text(),
+        }
 
     def _validate_settings(self) -> None:
         self.settings_log.setPlainText(validate_settings_paths(self._settings_values(), self._current_profile_id()))
 
     def _detect_zimage_files(self) -> None:
         model_dir = QFileDialog.getExistingDirectory(self, self.t("select_zimage_folder"), str(Path.home()))
-        if not model_dir: return
+        if not model_dir:
+            return
         found = detect_zimage_files(Path(model_dir))
-        if found.get("zimage_dit"): self.set_zimage_dit.setText(found["zimage_dit"])
-        if found.get("zimage_vae"): self.set_zimage_vae.setText(found["zimage_vae"])
-        if found.get("zimage_text_encoder"): self.set_zimage_text_encoder.setText(found["zimage_text_encoder"])
+        if found.get("zimage_dit"):
+            self.set_zimage_dit.setText(found["zimage_dit"])
+        if found.get("zimage_vae"):
+            self.set_zimage_vae.setText(found["zimage_vae"])
+        if found.get("zimage_text_encoder"):
+            self.set_zimage_text_encoder.setText(found["zimage_text_encoder"])
         self.settings_log.setPlainText(f"# {self.t('detected_zimage_files')}\n\nDiT: {found.get('zimage_dit') or self.t('not_found')}\nVAE: {found.get('zimage_vae') or self.t('not_found')}\nText Encoder: {found.get('zimage_text_encoder') or self.t('not_found')}\n\n{self.t('confirm_save_after_detect')}")
 
     def _settings_data_from_fields(self) -> dict:
         data = load_settings(SETTINGS_PATH)
         data.setdefault("ui", {})["language"] = self.set_language.currentText()
-        data["musubi"]["repo_path"] = self.set_musubi_repo.text(); data["musubi"]["python_path"] = self.set_musubi_python.text()
-        data["paths"]["datasets_dir"] = self.set_datasets_dir.text(); data["paths"]["outputs_dir"] = self.set_outputs_dir.text(); data["paths"]["comfyui_loras_dir"] = self.set_comfyui_loras_dir.text()
-        data["model_paths"]["zimage_dit"] = self.set_zimage_dit.text(); data["model_paths"]["zimage_vae"] = self.set_zimage_vae.text(); data["model_paths"]["zimage_text_encoder"] = self.set_zimage_text_encoder.text(); data["model_paths"]["zimage_base_weights"] = self.set_zimage_base_weights.text()
+        data.setdefault("musubi", {})["repo_path"] = self.set_musubi_repo.text()
+        data["musubi"]["python_path"] = self.set_musubi_python.text()
+        data.setdefault("paths", {})["datasets_dir"] = self.set_datasets_dir.text()
+        data["paths"]["outputs_dir"] = self.set_outputs_dir.text()
+        data["paths"]["comfyui_loras_dir"] = self.set_comfyui_loras_dir.text()
+        data.setdefault("model_paths", {})["zimage_dit"] = self.set_zimage_dit.text()
+        data["model_paths"]["zimage_vae"] = self.set_zimage_vae.text()
+        data["model_paths"]["zimage_text_encoder"] = self.set_zimage_text_encoder.text()
+        data["model_paths"]["zimage_base_weights"] = self.set_zimage_base_weights.text()
         return data
 
     def _save_settings(self) -> None:
         try:
-            data = self._settings_data_from_fields(); save_settings(SETTINGS_PATH, data); self.settings = data
+            data = self._settings_data_from_fields()
+            save_settings(SETTINGS_PATH, data)
+            self.settings = data
             self.lang = normalize_language(nested_get(data, "ui", "language", "日本語"))
             self._rebuild_ui()
             self.settings_log.setPlainText(f"{self.t('settings_saved')}: {SETTINGS_PATH}\n\n" + check_environment(SETTINGS_PATH))
@@ -339,7 +380,9 @@ class DesktopApp(QMainWindow):
             self.settings_log.setPlainText(f"NG: {type(exc).__name__}: {exc}")
 
     def _reload_settings_fields(self) -> None:
-        self.settings = load_settings(SETTINGS_PATH); self.lang = normalize_language(nested_get(self.settings, "ui", "language", "日本語")); self._rebuild_ui()
+        self.settings = load_settings(SETTINGS_PATH)
+        self.lang = normalize_language(nested_get(self.settings, "ui", "language", "日本語"))
+        self._rebuild_ui()
 
     def _check_dataset(self) -> None:
         self.dataset_log.setPlainText(check_dataset(Path(self.dataset_dir.text()), self.lang))
@@ -353,14 +396,19 @@ class DesktopApp(QMainWindow):
     def _build_dataset_toml(self) -> None:
         try:
             path = build_dataset_toml(Path(self.dataset_dir.text()), Path(self.output_dir.text()), self.resolution.value())
-            self.dataset_toml.setText(path); self.config_log.setPlainText(f"OK: {path}")
+            self.dataset_toml.setText(path)
+            self.config_log.setPlainText(f"OK: {path}")
         except Exception as exc:
             self.config_log.setPlainText(f"NG: {type(exc).__name__}: {exc}")
 
     def _apply_preset(self) -> None:
         p = get_preset(self.preset.currentText())
         self.lora_type.setCurrentText(p.lora_type)
-        self.rank.setValue(p.rank); self.alpha.setValue(p.alpha); self.epochs.setValue(p.epochs); self.lr.setValue(p.lr); self.resolution.setValue(p.resolution)
+        self.rank.setValue(p.rank)
+        self.alpha.setValue(p.alpha)
+        self.epochs.setValue(p.epochs)
+        self.lr.setValue(p.lr)
+        self.resolution.setValue(p.resolution)
         self.output_name.setText(f"{p.name}_lora_zimage")
         self.train_status.setPlainText(preset_summary(p.name, self.lang))
 
@@ -369,13 +417,15 @@ class DesktopApp(QMainWindow):
 
     def _save_project(self) -> None:
         path, _ = QFileDialog.getSaveFileName(self, "Save project", str(default_project_path(self.output_dir.text())), "TOML (*.toml)")
-        if not path: return
+        if not path:
+            return
         data = project_data(self.dataset_dir.text(), self.output_dir.text(), self.dataset_toml.text(), self._current_profile_id(), self._current_task(), self.rank.value(), self.alpha.value(), self.epochs.value(), self.lr.value(), self.output_name.text(), self.resolution.value())
         self.train_status.setPlainText(save_project(Path(path), data))
 
     def _load_project(self) -> None:
         path, _ = QFileDialog.getOpenFileName(self, "Load project", str(Path.home()), "TOML (*.toml)")
-        if not path: return
+        if not path:
+            return
         data = load_project(Path(path))
         self.dataset_dir.setText(str(data.get("dataset_dir", self.dataset_dir.text())))
         self.output_dir.setText(str(data.get("output_dir", self.output_dir.text())))
@@ -399,7 +449,8 @@ class DesktopApp(QMainWindow):
 
     def _preview_commands(self) -> None:
         text = preview_from_settings(SETTINGS_PATH, self.dataset_toml.text(), self._current_profile_id(), self.rank.value(), self.alpha.value(), self.epochs.value(), self.lr.value(), self.output_name.text(), self._current_task())
-        self.command_preview_text = text; self.command_preview.setPlainText(text)
+        self.command_preview_text = text
+        self.command_preview.setPlainText(text)
         self.train_status.setPlainText(self.training_engine.prepare(text))
 
     def _run_section(self, section: str) -> None:
@@ -446,16 +497,31 @@ class DesktopApp(QMainWindow):
         if hasattr(self, "run_log"):
             self.run_log.append(f"\n{self.t('stop_requested')}")
 
+    def _validate_export(self) -> str:
+        try:
+            cfg = AppConfig.from_file(SETTINGS_PATH)
+            report = validate_lora_for_export(self.lora_path.text(), cfg.comfyui_loras_dir)
+        except Exception as exc:
+            report = f"NG: {type(exc).__name__}: {exc}"
+        self.export_log.setPlainText(report)
+        return report
+
     def _copy_lora(self) -> None:
         try:
-            cfg = AppConfig.from_file(SETTINGS_PATH); self.export_log.setPlainText(copy_lora_to_comfyui(Path(self.lora_path.text()), cfg))
+            report = self._validate_export()
+            if "Result: OK" not in report:
+                QMessageBox.warning(self, self.t("copy_to_comfyui"), report)
+                return
+            cfg = AppConfig.from_file(SETTINGS_PATH)
+            self.export_log.setPlainText(report + "\n\n" + copy_lora_to_comfyui(Path(self.lora_path.text()), cfg))
         except Exception as exc:
             self.export_log.setPlainText(f"NG: {type(exc).__name__}: {exc}")
 
 
 def main() -> int:
     app = QApplication(sys.argv)
-    win = DesktopApp(); win.show()
+    win = DesktopApp()
+    win.show()
     return app.exec()
 
 
