@@ -12,6 +12,7 @@ from caption_editor import (
 )
 from command_preview import preview_from_settings
 from error_analyzer import analyze_log
+from gpu_monitor import gpu_preflight_warning
 from pipeline import (
     AppConfig,
     build_dataset_toml,
@@ -32,6 +33,10 @@ SETTINGS_PATH = ROOT / "configs" / "settings.toml"
 
 def load_config() -> AppConfig:
     return AppConfig.from_file(SETTINGS_PATH)
+
+
+def ui_gpu_status() -> str:
+    return gpu_preflight_warning()
 
 
 def ui_check_dataset(dataset_dir: str) -> str:
@@ -142,6 +147,11 @@ with gr.Blocks(title="Musubi LoRA Factory") as demo:
             guide_btn = gr.Button("Show Next Action")
             guide_text = gr.Markdown("次にやること: Datasetフォルダを指定して、`Show Next Action` を押してください。")
             guide_btn.click(ui_next_action, inputs=[guide_dataset_dir, guide_dataset_toml, guide_lora_path], outputs=[guide_text])
+
+    with gr.Accordion("GPU Status", open=False):
+        gpu_btn = gr.Button("Refresh GPU Status")
+        gpu_status = gr.Markdown("GPU status will appear here.")
+        gpu_btn.click(ui_gpu_status, outputs=[gpu_status])
 
     with gr.Tab("1. Dataset"):
         gr.Markdown("## Step 1: Dataset\nまず画像フォルダを指定します。目標は、512x512の高品質画像100枚です。")
