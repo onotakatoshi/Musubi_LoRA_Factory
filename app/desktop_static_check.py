@@ -109,6 +109,10 @@ def _check_training_engine_hardening() -> None:
     assert "kill()" in text
     assert "COMMAND PATH GUARD FAILED" in text
     assert "Logs:" in text
+    assert "QProcessEnvironment" in text
+    assert "PYTHONUNBUFFERED" in text
+    assert "PYTHONIOENCODING" in text
+    assert "setProcessEnvironment" in text
 
 
 def _check_commands_use_musubi_python() -> None:
