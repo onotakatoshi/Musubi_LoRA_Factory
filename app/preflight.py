@@ -51,6 +51,21 @@ def run_preflight(settings_path: Path, dataset_toml: str, target_model: str, tas
         if task in {"t2v-A14B", "i2v-A14B"}:
             lines.append(_status_path("wan_dit_high_noise", model_paths.get("wan_dit_high_noise", "")))
         lines.append("")
+    elif target_model == "z-image":
+        lines.append("## Z-Image model paths")
+        lines.append(_status_path("zimage_vae", model_paths.get("zimage_vae", "")))
+        lines.append(_status_path("zimage_text_encoder", model_paths.get("zimage_text_encoder", "")))
+        lines.append(_status_path("zimage_dit", model_paths.get("zimage_dit", "")))
+        base_weights = model_paths.get("zimage_base_weights", "")
+        if base_weights:
+            lines.append(_status_path("zimage_base_weights", base_weights))
+        else:
+            lines.append("ℹ️ zimage_base_weights: optional / not set")
+        lines.append("")
+        lines.append("## Z-Image note")
+        lines.append("- Turbo系そのものを直接学習するより、BaseまたはDe-Turbo系DiTを学習対象にする想定です。")
+        lines.append("- 生成時にTurbo系ワークフローへLoRAを適用する運用を優先します。")
+        lines.append("")
     else:
         lines.append(f"## {target_model}")
         lines.append("⚠️ This target profile is not fully implemented yet.")
