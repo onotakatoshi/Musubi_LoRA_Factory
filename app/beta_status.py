@@ -30,6 +30,8 @@ REQUIRED_FILES = [
     "app/find_lora_output.py",
     "app/export_validator.py",
     "app/export_validator_test.py",
+    "app/verification_readiness.py",
+    "app/verification_readiness_test.py",
     "scripts/setup.sh",
     "scripts/start.sh",
     "scripts/start_desktop.sh",
@@ -65,6 +67,7 @@ def beta_status() -> str:
     lines.append("- MusubiRuntimeCheck: configured musubi python / accelerate / scripts check")
     lines.append("- OutputDetector: latest LoRA .safetensors detection")
     lines.append("- ExportValidator: pre-copy validation for ComfyUI export")
+    lines.append("- VerificationReadiness: PGX実機検証へ進める状態か判定")
     lines.append("")
     lines.append("## Required files")
     for rel in REQUIRED_FILES:
@@ -82,8 +85,9 @@ def beta_status() -> str:
     lines.append("1. ./scripts/update.sh")
     lines.append("2. ./scripts/check.sh")
     lines.append("3. ./scripts/check_beta.sh")
-    lines.append("4. ./scripts/start.sh or desktop icon")
-    lines.append("5. Follow docs/pgx_beta_runbook.md")
+    lines.append("4. python app/verification_readiness.py")
+    lines.append("5. ./scripts/start.sh or desktop icon")
+    lines.append("6. Follow docs/pgx_beta_runbook.md")
     return "\n".join(lines)
 
 
