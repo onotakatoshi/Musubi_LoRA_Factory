@@ -37,6 +37,7 @@ from env_check import check_environment
 from error_analyzer import analyze_log
 from gpu_monitor import gpu_preflight_warning
 from i18n import SUPPORTED_LANGUAGES, normalize_language, tr
+from image_caption_browser import ImageCaptionBrowser
 from pipeline import AppConfig, build_dataset_toml, check_dataset, copy_lora_to_comfyui
 from preflight import run_preflight
 from recommended_defaults import DEFAULTS, help_text as default_help_text, status_text as default_status_text
@@ -100,6 +101,7 @@ class DesktopApp(QMainWindow):
         tabs.addTab(self._system_tab(), self.t("tab_system"))
         tabs.addTab(self._dataset_tab(), self.t("tab_dataset"))
         tabs.addTab(self._caption_tab(), self.t("tab_caption"))
+        tabs.addTab(self._preview_tab(), self.t("tab_preview"))
         tabs.addTab(self._config_tab(), self.t("tab_config"))
         tabs.addTab(self._train_tab(), self.t("tab_train"))
         tabs.addTab(self._export_tab(), self.t("tab_export"))
@@ -203,6 +205,9 @@ class DesktopApp(QMainWindow):
 
     def _caption_tab(self) -> QWidget:
         return CaptionTableWidget(lambda: self.dataset_dir.text(), lambda: self.lang)
+
+    def _preview_tab(self) -> QWidget:
+        return ImageCaptionBrowser(lambda: self.dataset_dir.text(), lambda: self.lang)
 
     def _config_tab(self) -> QWidget:
         box = QVBoxLayout()
