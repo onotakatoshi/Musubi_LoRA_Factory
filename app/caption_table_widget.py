@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Callable
 
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
@@ -88,7 +89,7 @@ class CaptionTableWidget(QWidget):
                 image = row[0] if len(row) > 0 else ""
                 caption = row[1] if len(row) > 1 else ""
                 img_item = QTableWidgetItem(image)
-                img_item.setFlags(img_item.flags() & ~img_item.flags().ItemIsEditable)
+                img_item.setFlags(img_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
                 self.table.setItem(r, 0, img_item)
                 self.table.setItem(r, 1, QTableWidgetItem(caption))
             self.table.resizeColumnsToContents()
