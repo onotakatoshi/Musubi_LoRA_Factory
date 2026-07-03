@@ -26,6 +26,7 @@ from pipeline import (
 )
 from preflight import run_preflight
 from section_runner import stream_section
+from state_check import config_status, dataset_status, train_ready_status
 from step_guides import guide
 from stream_runner import stop_job
 from workflow import next_action, workflow_markdown
@@ -48,6 +49,18 @@ def ui_recent_logs() -> str:
 
 def ui_help(topic: str) -> str:
     return help_markdown(topic)
+
+
+def ui_dataset_status(dataset_dir: str) -> str:
+    return dataset_status(dataset_dir)
+
+
+def ui_config_status(dataset_toml: str) -> str:
+    return config_status(dataset_toml)
+
+
+def ui_train_ready_status(command_preview: str) -> str:
+    return train_ready_status(command_preview)
 
 
 def ui_check_dataset(dataset_dir: str) -> str:
@@ -183,10 +196,13 @@ with gr.Blocks(title="Musubi LoRA Factory") as demo:
         dataset_dir = gr.Textbox(label="Dataset folder", placeholder="/home/ono/datasets/lora/Eye_Blue_v1", info=HELP["dataset_dir"])
         lora_type = gr.Dropdown(["eye", "mouth", "face", "hair", "hand", "style", "clothing"], value="eye", label="LoRA type", info=HELP["lora_type"])
         caption_mode = gr.Dropdown(["joycaption_llm", "joycaption_only", "llm_only", "manual"], value="joycaption_llm", label="Caption mode", info=HELP["caption_mode"])
-        check_btn = gr.Button("Check Dataset")
-        caption_btn = gr.Button("Generate Captions")
+        with gr.Row():
+            check_btn = gr.Button("Check Dataset")
+            dataset_status_btn = gr.Button("Check Current Step")
+            caption_btn = gr.Button("Generate Captions")
         dataset_log = gr.Textbox(label="Log", lines=12, info="Check DatasetやGenerate Captionsの結果が表示されます。")
         check_btn.click(ui_check_dataset, inputs=[dataset_dir], outputs=[dataset_log])
+        dataset_status_btn.click(ui_dataset_status, inputs=[dataset_dir], outputs=[dataset_log])
         caption_btn.click(ui_generate_captions, inputs=[dataset_dir, lora_type, caption_mode], outputs=[dataset_log])
 
     with gr.Tab("2. Caption Editor"):
@@ -212,9 +228,13 @@ with gr.Blocks(title="Musubi LoRA Factory") as demo:
             gr.Markdown(guide("config"))
         output_dir = gr.Textbox(label="Output folder", placeholder="/home/ono/outputs/lora/Eye_Blue_v1_zimage", info=HELP["output_dir"])
         resolution = gr.Dropdown([512, 768, 1024], value=512, label="Resolution", info=HELP["resolution"])
-        build_btn = gr.Button("Build dataset.toml")
+        with gr.Row():
+            build_btn = gr.Button("Build dataset.toml")
+            config_status_btn = gr.Button("Check Current Step")
         dataset_toml = gr.Textbox(label="dataset.toml path", info="生成されたdataset.tomlのパスです。Trainタブで使います。")
+        config_status_log = gr.Markdown("Config status will appear here.")
         build_btn.click(ui_build_dataset_toml, inputs=[dataset_dir, output_dir, resolution], outputs=[dataset_toml])
+        config_status_btn.click(ui_config_status, inputs=[dataset_toml], outputs=[config_status_log])
 
     with gr.Tab("4. Train"):
         with gr.Accordion("このステップで何をする？", open=True):
@@ -228,8 +248,11 @@ with gr.Blocks(title="Musubi LoRA Factory") as demo:
         output_name = gr.Textbox(value="eye_lora_zimage", label="Output name", info=HELP["output_name"])
         preflight_btn = gr.Button("0. Preflight Check")
         preflight_log = gr.Textbox(label="Preflight", lines=10, info=HELP["preflight"])
-        preview_btn = gr.Button("Preview Commands")
+        with gr.Row():
+            preview_btn = gr.Button("Preview Commands")
+            train_status_btn = gr.Button("Check Current Step")
         command_preview = gr.Textbox(label="Command Preview", lines=16, info=HELP["preview"])
+        train_status_log = gr.Markdown("Train status will appear here.")
         with gr.Row():
             run_latent_btn = gr.Button("Run 1: Latent Cache")
             run_text_btn = gr.Button("Run 2: Text Cache")
@@ -241,6 +264,7 @@ with gr.Blocks(title="Musubi LoRA Factory") as demo:
         analysis_log = gr.Markdown("Error analysis will appear here.")
         preflight_btn.click(ui_preflight, inputs=[dataset_toml, target_model, task], outputs=[preflight_log])
         preview_btn.click(ui_command_preview, inputs=[dataset_toml, target_model, rank, alpha, epochs, lr, output_name, task], outputs=[command_preview])
+        train_status_btn.click(ui_train_ready_status, inputs=[command_preview], outputs=[train_status_log])
         run_latent_btn.click(lambda text: ui_stream_command_section(text, "latent_cache"), inputs=[command_preview], outputs=[run_log])
         run_text_btn.click(lambda text: ui_stream_command_section(text, "text_cache"), inputs=[command_preview], outputs=[run_log])
         run_train_btn.click(lambda text: ui_stream_command_section(text, "train"), inputs=[command_preview], outputs=[run_log])
