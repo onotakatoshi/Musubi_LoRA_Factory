@@ -11,6 +11,13 @@ ZIMAGE_SCRIPTS = [
 ]
 
 
+def _finish(lines: list[str]) -> str:
+    text = "\n".join(lines)
+    if "NG" in text:
+        return text + "\n\nResult: NG. musubi-tuner repo / python / accelerate を確認してください。"
+    return text + "\n\nResult: OK. musubi-tuner runtime is ready."
+
+
 def _run(cmd: list[str], cwd: Path | None = None, timeout: int = 20) -> tuple[int, str]:
     try:
         proc = subprocess.run(cmd, cwd=str(cwd) if cwd else None, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=timeout)
@@ -28,10 +35,10 @@ def check_musubi_runtime(musubi_python: str | Path, musubi_repo: str | Path, pro
 
     if not python_path.exists():
         lines.append(f"NG: musubi python not found: {python_path}")
-        return "\n".join(lines)
+        return _finish(lines)
     if not repo.exists():
         lines.append(f"NG: musubi repo not found: {repo}")
-        return "\n".join(lines)
+        return _finish(lines)
 
     code, out = _run([str(python_path), "--version"])
     lines.append(f"python --version: {'OK' if code == 0 else 'NG'}")
@@ -52,12 +59,7 @@ def check_musubi_runtime(musubi_python: str | Path, musubi_repo: str | Path, pro
     else:
         lines.append(f"NG: runtime check not implemented for profile: {profile_id}")
 
-    text = "\n".join(lines)
-    if "NG" in text:
-        text += "\n\nResult: NG. musubi-tuner repo / python / accelerate を確認してください。"
-    else:
-        text += "\n\nResult: OK. musubi-tuner runtime is ready."
-    return text
+    return _finish(lines)
 
 
 if __name__ == "__main__":
