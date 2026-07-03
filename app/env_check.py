@@ -8,6 +8,7 @@ import toml
 
 from model_adapters import get_adapter
 from model_registry import get_profile
+from musubi_runtime_check import check_musubi_runtime
 
 
 def _path_status(label: str, value: str, must_exist: bool = True) -> str:
@@ -45,9 +46,8 @@ def _check_musubi_scripts(repo: Path, profile_id: str) -> list[str]:
 def check_environment(settings_path: Path, profile_id: str = "z-image") -> str:
     profile = get_profile(profile_id)
     lines = ["# Environment Check", "", f"Profile: {profile.display_name}", ""]
-    lines.append(f"Python: {sys.version.split()[0]}")
+    lines.append(f"GUI Python: {sys.version.split()[0]}")
     lines.append(f"nvidia-smi: {_run_version(['nvidia-smi'])}")
-    lines.append(f"accelerate: {_run_version(['accelerate', '--version'])}")
     lines.append("")
 
     if not settings_path.exists():
@@ -67,6 +67,11 @@ def check_environment(settings_path: Path, profile_id: str = "z-image") -> str:
     if repo:
         lines.extend(_check_musubi_scripts(repo, profile.id))
     lines.append("")
+
+    if musubi.get("repo_path") and musubi.get("python_path"):
+        lines.append("## musubi runtime")
+        lines.append(check_musubi_runtime(musubi.get("python_path", ""), musubi.get("repo_path", ""), profile.id))
+        lines.append("")
 
     try:
         adapter = get_adapter(profile.id)
@@ -90,10 +95,10 @@ def check_environment(settings_path: Path, profile_id: str = "z-image") -> str:
     lines.append("")
 
     text = "\n".join(lines)
-    if "❌" in text:
-        text += "\n\nResult: ❌ 不足があります。上の❌を直してからGUIでPreflight Checkしてください。"
+    if "❌" in text or "Result: NG" in text:
+        text += "\n\nResult: ❌ 不足があります。上の❌/NGを直してからGUIでPreflight Checkしてください。"
     else:
-        text += f"\n\nResult: ✅ {profile.display_name} LoRA作成の前提ファイルは揃っています。"
+        text += f"\n\nResult: ✅ {profile.display_name} LoRA作成の前提ファイルと実行環境は揃っています。"
     return text
 
 
