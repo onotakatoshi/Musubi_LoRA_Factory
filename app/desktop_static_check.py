@@ -147,6 +147,16 @@ def _check_desktop_uses_output_detector() -> None:
     assert "書き出しタブのLoRAパスへ自動セット" in text
 
 
+def _check_desktop_uses_export_validator() -> None:
+    text = DESKTOP_MAIN.read_text(encoding="utf-8")
+    assert "from export_validator import validate_lora_for_export" in text
+    assert "コピー前チェック" in text
+    assert "def _validate_export" in text
+    assert "validate_lora_for_export" in text
+    assert "Result: OK" in text
+    assert "copy_lora_to_comfyui" in text
+
+
 def main() -> int:
     for lang in SUPPORTED_LANGUAGES:
         missing = [key for key in REQUIRED_I18N_KEYS if key not in TEXT[lang]]
@@ -176,12 +186,14 @@ def main() -> int:
     _check_command_path_guard()
     _check_env_runtime_check()
     _check_desktop_uses_output_detector()
+    _check_desktop_uses_export_validator()
 
     import caption_diagnostics  # noqa: F401
     import caption_table_widget  # noqa: F401
     import command_path_guard  # noqa: F401
     import dataset_diagnostics  # noqa: F401
     import desktop_main  # noqa: F401
+    import export_validator  # noqa: F401
     import image_caption_browser  # noqa: F401
     import model_adapters  # noqa: F401
     import model_ui  # noqa: F401
