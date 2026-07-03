@@ -14,6 +14,7 @@ from caption_diagnostics import diagnose_captions
 from caption_editor import bulk_replace_caption_rows, load_caption_rows, remove_words_caption_rows, save_caption_rows
 from command_preview import preview_from_settings
 from i18n import normalize_language, tr
+from model_registry import enabled_profiles, get_profile, profile_ids, profile_summary
 from pipeline import build_dataset_toml, check_dataset
 from project_io import load_project, project_data, save_project
 from recommended_defaults import DEFAULTS, help_text, status_text
@@ -68,6 +69,12 @@ def main() -> int:
     assert "0.00005" in help_text("lr", "日本語")
     assert get_preset("eye").rank == 16
     assert "Rank=16" in preset_summary("eye", "日本語")
+    assert profile_ids() == ["z-image"]
+    assert "wan2.2" in profile_ids(include_future=True)
+    assert get_profile("z-image").enabled_in_v1 is True
+    assert get_profile("wan2.2").enabled_in_v1 is False
+    assert "Z-Image" in profile_summary("z-image", "日本語")
+    assert [p.id for p in enabled_profiles()] == ["z-image"]
 
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
@@ -134,6 +141,18 @@ def main() -> int:
         assert "cd " in preview
         assert "zimage_cache_latents.py" in preview
         assert "zimage_train_network.py" in preview
+        wan_preview = preview_from_settings(
+            settings_path=settings,
+            dataset_toml=str(dataset_toml),
+            target_model="wan2.2",
+            rank=16,
+            alpha=16,
+            epochs=1,
+            lr=0.00005,
+            output_name="smoke_wan",
+            task="t2v-A14B",
+        )
+        assert "非対応" in wan_preview
 
     print("Smoke test OK")
     return 0
