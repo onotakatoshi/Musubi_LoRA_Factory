@@ -61,20 +61,23 @@ def ui_load_captions(dataset_dir: str) -> list[list[str]]:
     return load_caption_rows(Path(dataset_dir))
 
 
-def ui_save_captions(dataset_dir: str, rows: list[list[str]]) -> str:
+def ui_save_captions(dataset_dir: str, rows) -> str:
     return save_caption_rows(Path(dataset_dir), rows)
 
 
-def ui_bulk_replace(rows: list[list[str]], find_text: str, replace_text: str) -> list[list[str]]:
+def ui_bulk_replace(rows, find_text: str, replace_text: str) -> list[list[str]]:
     return bulk_replace_caption_rows(rows, find_text, replace_text)
 
 
-def ui_remove_words(rows: list[list[str]], words_csv: str) -> list[list[str]]:
+def ui_remove_words(rows, words_csv: str) -> list[list[str]]:
     return remove_words_caption_rows(rows, words_csv)
 
 
 def ui_build_dataset_toml(dataset_dir: str, output_dir: str, resolution: int) -> str:
-    return build_dataset_toml(Path(dataset_dir), Path(output_dir), resolution)
+    try:
+        return build_dataset_toml(Path(dataset_dir), Path(output_dir), resolution)
+    except Exception as exc:
+        return f"NG: {type(exc).__name__}: {exc}"
 
 
 def ui_cache(dataset_toml: str, target_model: str) -> str:
@@ -166,16 +169,8 @@ with gr.Blocks(title="Musubi LoRA Factory") as demo:
     with gr.Tab("1. Dataset"):
         gr.Markdown("## Step 1: Dataset\nまず画像フォルダを指定します。最初のZ-Imageテストは、512x512の高品質画像20〜100枚で十分です。")
         dataset_dir = gr.Textbox(label="Dataset folder", placeholder="/home/ono/datasets/lora/Eye_Blue_v1")
-        lora_type = gr.Dropdown(
-            ["eye", "mouth", "face", "hair", "hand", "style", "clothing"],
-            value="eye",
-            label="LoRA type",
-        )
-        caption_mode = gr.Dropdown(
-            ["joycaption_llm", "joycaption_only", "llm_only", "manual"],
-            value="joycaption_llm",
-            label="Caption mode",
-        )
+        lora_type = gr.Dropdown(["eye", "mouth", "face", "hair", "hand", "style", "clothing"], value="eye", label="LoRA type")
+        caption_mode = gr.Dropdown(["joycaption_llm", "joycaption_only", "llm_only", "manual"], value="joycaption_llm", label="Caption mode")
         check_btn = gr.Button("Check Dataset")
         caption_btn = gr.Button("Generate Captions")
         dataset_log = gr.Textbox(label="Log", lines=12)
@@ -208,12 +203,8 @@ with gr.Blocks(title="Musubi LoRA Factory") as demo:
         build_btn.click(ui_build_dataset_toml, inputs=[dataset_dir, output_dir, resolution], outputs=[dataset_toml])
 
     with gr.Tab("4. Train"):
-        gr.Markdown("## Step 5: Train\nZ-Image優先です。Preflight → Preview Commands → Latent Cache → Text Cache → Train の順に進めます。ログはリアルタイム表示され、`logs/`にも保存されます。")
-        target_model = gr.Dropdown(
-            ["z-image", "wan2.2", "flux", "hunyuanvideo", "framepack"],
-            value="z-image",
-            label="Target model",
-        )
+        gr.Markdown("## Step 5: Train\nZ-Image優先です。Preflight → Preview Commands → Latent Cache → Text Cache → Train の順に進めます。Preview欄は保持され、実行ログは別欄に出ます。")
+        target_model = gr.Dropdown(["z-image", "wan2.2", "flux", "hunyuanvideo", "framepack"], value="z-image", label="Target model")
         task = gr.Dropdown(["z-image", "t2v-A14B", "i2v-A14B", "t2v-1.3B"], value="z-image", label="Task/profile")
         rank = gr.Slider(4, 128, value=16, step=4, label="Rank")
         alpha = gr.Slider(4, 128, value=16, step=4, label="Alpha")
@@ -221,7 +212,9 @@ with gr.Blocks(title="Musubi LoRA Factory") as demo:
         lr = gr.Number(value=0.00005, label="Learning rate")
         output_name = gr.Textbox(value="eye_lora_zimage", label="Output name")
         preflight_btn = gr.Button("0. Preflight Check")
+        preflight_log = gr.Textbox(label="Preflight", lines=10)
         preview_btn = gr.Button("Preview Commands")
+        command_preview = gr.Textbox(label="Command Preview", lines=16)
         with gr.Row():
             run_latent_btn = gr.Button("Run 1: Latent Cache")
             run_text_btn = gr.Button("Run 2: Text Cache")
@@ -229,15 +222,15 @@ with gr.Blocks(title="Musubi LoRA Factory") as demo:
             stop_btn = gr.Button("Stop Current Section")
             analyze_btn = gr.Button("Analyze Log")
         stop_section = gr.Dropdown(["latent_cache", "text_cache", "train"], value="train", label="Stop target")
-        train_log = gr.Textbox(label="Log / Command Preview", lines=24)
+        run_log = gr.Textbox(label="Run Log", lines=24)
         analysis_log = gr.Markdown("Error analysis will appear here.")
-        preflight_btn.click(ui_preflight, inputs=[dataset_toml, target_model, task], outputs=[train_log])
-        preview_btn.click(ui_command_preview, inputs=[dataset_toml, target_model, rank, alpha, epochs, lr, output_name, task], outputs=[train_log])
-        run_latent_btn.click(lambda text: ui_stream_command_section(text, "latent_cache"), inputs=[train_log], outputs=[train_log])
-        run_text_btn.click(lambda text: ui_stream_command_section(text, "text_cache"), inputs=[train_log], outputs=[train_log])
-        run_train_btn.click(lambda text: ui_stream_command_section(text, "train"), inputs=[train_log], outputs=[train_log])
-        stop_btn.click(ui_stop, inputs=[stop_section], outputs=[train_log])
-        analyze_btn.click(ui_analyze_log, inputs=[train_log], outputs=[analysis_log])
+        preflight_btn.click(ui_preflight, inputs=[dataset_toml, target_model, task], outputs=[preflight_log])
+        preview_btn.click(ui_command_preview, inputs=[dataset_toml, target_model, rank, alpha, epochs, lr, output_name, task], outputs=[command_preview])
+        run_latent_btn.click(lambda text: ui_stream_command_section(text, "latent_cache"), inputs=[command_preview], outputs=[run_log])
+        run_text_btn.click(lambda text: ui_stream_command_section(text, "text_cache"), inputs=[command_preview], outputs=[run_log])
+        run_train_btn.click(lambda text: ui_stream_command_section(text, "train"), inputs=[command_preview], outputs=[run_log])
+        stop_btn.click(ui_stop, inputs=[stop_section], outputs=[run_log])
+        analyze_btn.click(ui_analyze_log, inputs=[run_log], outputs=[analysis_log])
 
     with gr.Tab("5. Export"):
         gr.Markdown("## Step 6: Export\n完成したLoRAをComfyUIのlorasフォルダへコピーします。")
