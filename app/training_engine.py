@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import shlex
 import time
 from dataclasses import dataclass, field
 from enum import Enum
@@ -101,6 +102,22 @@ class TrainingState:
         return "\n".join(lines)
 
 
+def infer_log_dir_from_sections(sections: dict[str, str]) -> Path | None:
+    train = sections.get(TrainingStage.TRAIN.value, "")
+    if not train:
+        return None
+    try:
+        tokens = shlex.split(train)
+    except ValueError:
+        return None
+    for i, token in enumerate(tokens):
+        if token == "--output_dir" and i + 1 < len(tokens):
+            return Path(tokens[i + 1]) / "logs"
+        if token.startswith("--output_dir="):
+            return Path(token.split("=", 1)[1]) / "logs"
+    return None
+
+
 class TrainingEngine(QObject):
     log_received = Signal(str)
     state_changed = Signal(str)
@@ -133,11 +150,12 @@ class TrainingEngine(QObject):
         self.queue = []
         self._stop_requested = False
         self._active_stage = None
-        self._log_dir = Path(log_dir) if log_dir else None
+        self._log_dir = Path(log_dir) if log_dir else infer_log_dir_from_sections(self.sections)
         if self._log_dir:
             self._log_dir.mkdir(parents=True, exist_ok=True)
         self.state_changed.emit(self.state.text())
-        return validation
+        suffix = f"\nLogs: {self._log_dir}" if self._log_dir else "\nLogs: not configured"
+        return validation + suffix
 
     def run_one(self, stage: str) -> str:
         if self.is_running():
