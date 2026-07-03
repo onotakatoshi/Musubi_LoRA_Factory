@@ -9,6 +9,7 @@ import toml
 from model_adapters import get_adapter
 from model_registry import get_profile
 from musubi_runtime_check import check_musubi_runtime
+from verification_readiness import verification_readiness
 
 
 def _path_status(label: str, value: str, must_exist: bool = True) -> str:
@@ -48,6 +49,10 @@ def check_environment(settings_path: Path, profile_id: str = "z-image") -> str:
     lines = ["# Environment Check", "", f"Profile: {profile.display_name}", ""]
     lines.append(f"GUI Python: {sys.version.split()[0]}")
     lines.append(f"nvidia-smi: {_run_version(['nvidia-smi'])}")
+    lines.append("")
+
+    lines.append("## Verification readiness")
+    lines.append(verification_readiness())
     lines.append("")
 
     if not settings_path.exists():
@@ -95,8 +100,8 @@ def check_environment(settings_path: Path, profile_id: str = "z-image") -> str:
     lines.append("")
 
     text = "\n".join(lines)
-    if "❌" in text or "Result: NG" in text:
-        text += "\n\nResult: ❌ 不足があります。上の❌/NGを直してからGUIでPreflight Checkしてください。"
+    if "❌" in text or "Result: NG" in text or "NOT READY:" in text:
+        text += "\n\nResult: ❌ 不足があります。上の❌/NG/NOT READYを直してからGUIでPreflight Checkしてください。"
     else:
         text += f"\n\nResult: ✅ {profile.display_name} LoRA作成の前提ファイルと実行環境は揃っています。"
     return text
