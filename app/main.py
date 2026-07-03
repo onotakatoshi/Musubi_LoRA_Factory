@@ -11,6 +11,7 @@ from caption_editor import (
     save_caption_rows,
 )
 from command_preview import preview_from_settings
+from error_analyzer import analyze_log
 from pipeline import (
     AppConfig,
     build_dataset_toml,
@@ -104,6 +105,10 @@ def ui_stream_command_section(command_preview: str, section: str):
 
 def ui_stop(section: str) -> str:
     return stop_job(section)
+
+
+def ui_analyze_log(log_text: str) -> str:
+    return analyze_log(log_text)
 
 
 def ui_train(
@@ -202,14 +207,17 @@ with gr.Blocks(title="Musubi LoRA Factory") as demo:
             run_text_btn = gr.Button("Run 2: Text Cache")
             run_train_btn = gr.Button("Run 3: Train")
             stop_btn = gr.Button("Stop Current Section")
+            analyze_btn = gr.Button("Analyze Log")
         stop_section = gr.Dropdown(["latent_cache", "text_cache", "train"], value="train", label="Stop target")
         train_log = gr.Textbox(label="Log / Command Preview", lines=24)
+        analysis_log = gr.Markdown("Error analysis will appear here.")
         preflight_btn.click(ui_preflight, inputs=[dataset_toml, target_model, task], outputs=[train_log])
         preview_btn.click(ui_command_preview, inputs=[dataset_toml, target_model, rank, alpha, epochs, lr, output_name, task], outputs=[train_log])
         run_latent_btn.click(lambda text: ui_stream_command_section(text, "latent_cache"), inputs=[train_log], outputs=[train_log])
         run_text_btn.click(lambda text: ui_stream_command_section(text, "text_cache"), inputs=[train_log], outputs=[train_log])
         run_train_btn.click(lambda text: ui_stream_command_section(text, "train"), inputs=[train_log], outputs=[train_log])
         stop_btn.click(ui_stop, inputs=[stop_section], outputs=[train_log])
+        analyze_btn.click(ui_analyze_log, inputs=[train_log], outputs=[analysis_log])
 
     with gr.Tab("5. Export"):
         gr.Markdown("## Step 6: Export\n完成したLoRAをComfyUIのlorasフォルダへコピーします。")
