@@ -9,6 +9,9 @@ def main() -> int:
     assert "Z-Image" in text
     assert "Enabled profiles" in text
     assert "Implemented adapters" in text
+    assert "StageGuidance" in text
+    assert "MusubiRuntimeCheck" in text
+    assert "musubi_runtime_check_test.py" in text
     assert "VerificationReadiness" in text
     assert "verification_readiness.py" in text
     assert "Next PGX action" in text
