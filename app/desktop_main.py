@@ -31,6 +31,7 @@ if str(APP_DIR) not in sys.path:
     sys.path.insert(0, str(APP_DIR))
 
 from caption_diagnostics import diagnose_captions
+from caption_table_widget import CaptionTableWidget
 from command_preview import preview_from_settings
 from env_check import check_environment
 from error_analyzer import analyze_log
@@ -98,6 +99,7 @@ class DesktopApp(QMainWindow):
         tabs.addTab(self._settings_tab(), self.t("tab_settings"))
         tabs.addTab(self._system_tab(), self.t("tab_system"))
         tabs.addTab(self._dataset_tab(), self.t("tab_dataset"))
+        tabs.addTab(self._caption_tab(), self.t("tab_caption"))
         tabs.addTab(self._config_tab(), self.t("tab_config"))
         tabs.addTab(self._train_tab(), self.t("tab_train"))
         tabs.addTab(self._export_tab(), self.t("tab_export"))
@@ -198,6 +200,9 @@ class DesktopApp(QMainWindow):
         buttons.addStretch(); box.addLayout(buttons)
         self.dataset_log = self._log(); box.addWidget(self.dataset_log)
         w = QWidget(); w.setLayout(box); return w
+
+    def _caption_tab(self) -> QWidget:
+        return CaptionTableWidget(lambda: self.dataset_dir.text(), lambda: self.lang)
 
     def _config_tab(self) -> QWidget:
         box = QVBoxLayout()
