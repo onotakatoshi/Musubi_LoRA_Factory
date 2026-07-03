@@ -1,11 +1,10 @@
 from __future__ import annotations
 
+import time
 from dataclasses import dataclass, field
 from enum import Enum
-from pathlib import Path
-from typing import Callable
 
-from PySide6.QtCore import QObject, QProcess, Signal
+from PySide6.QtCore import QObject, QProcess, QTimer, Signal
 
 from runner import split_command_sections, validate_command_preview
 
@@ -34,11 +33,13 @@ class TrainingState:
     current_stage: str | None = None
     last_exit_code: int | None = None
     last_error: str = ""
+    started_at: float | None = None
 
     def mark_running(self, stage: str) -> None:
         self.current_stage = stage
         self.statuses[stage] = StageStatus.RUNNING
         self.last_error = ""
+        self.started_at = time.time()
 
     def mark_done(self, stage: str) -> None:
         self.current_stage = None
@@ -55,6 +56,18 @@ class TrainingState:
         self.current_stage = None
         self.statuses[stage] = StageStatus.STOPPED
         self.last_error = "Stopped by user"
+
+    def elapsed_text(self) -> str:
+        if self.started_at is None:
+            return ""
+        elapsed = int(time.time() - self.started_at)
+        minutes, seconds = divmod(elapsed, 60)
+        hours, minutes = divmod(minutes, 60)
+        if hours:
+            return f"elapsed: {hours}h {minutes}m {seconds}s"
+        if minutes:
+            return f"elapsed: {minutes}m {seconds}s"
+        return f"elapsed: {seconds}s"
 
     def text(self) -> str:
         labels = {
@@ -73,6 +86,9 @@ class TrainingState:
         for key in [TrainingStage.LATENT_CACHE.value, TrainingStage.TEXT_CACHE.value, TrainingStage.TRAIN.value]:
             status = self.statuses[key]
             lines.append(f"{icons[status]} {labels[key]}: {status.value}")
+        elapsed = self.elapsed_text()
+        if elapsed and self.current_stage:
+            lines.append(elapsed)
         if self.last_exit_code is not None:
             lines.append(f"exit code: {self.last_exit_code}")
         if self.last_error:
@@ -93,6 +109,13 @@ class TrainingEngine(QObject):
         self.sections: dict[str, str] = {}
         self.queue: list[str] = []
         self._stop_requested = False
+        self._active_stage: str | None = None
+        self._ticker = QTimer(self)
+        self._ticker.setInterval(1000)
+        self._ticker.timeout.connect(self._tick)
+        self._kill_timer = QTimer(self)
+        self._kill_timer.setSingleShot(True)
+        self._kill_timer.timeout.connect(self._force_kill)
 
     def prepare(self, command_preview: str) -> str:
         validation = validate_command_preview(command_preview)
@@ -102,6 +125,7 @@ class TrainingEngine(QObject):
         self.state = TrainingState()
         self.queue = []
         self._stop_requested = False
+        self._active_stage = None
         self.state_changed.emit(self.state.text())
         return validation
 
@@ -129,23 +153,28 @@ class TrainingEngine(QObject):
         self._stop_requested = True
         self.queue = []
         if self.process and self.process.state() != QProcess.ProcessState.NotRunning:
+            self.log_received.emit("\n===== STOP REQUESTED =====\n")
             self.process.terminate()
+            self._kill_timer.start(5000)
 
     def is_running(self) -> bool:
         return self.process is not None and self.process.state() != QProcess.ProcessState.NotRunning
 
     def _start_stage(self, stage: str) -> None:
         command = self.sections[stage].strip()
+        self._active_stage = stage
         self.state.mark_running(stage)
         self.state_changed.emit(self.state.text())
         self.log_received.emit(f"\n===== START {stage} =====\n{command}\n")
         self.process = QProcess(self)
+        self.process.setProcessChannelMode(QProcess.ProcessChannelMode.SeparateChannels)
         self.process.setProgram("bash")
         self.process.setArguments(["-lc", command])
         self.process.readyReadStandardOutput.connect(self._read_output)
         self.process.readyReadStandardError.connect(self._read_output)
         self.process.finished.connect(lambda code, _status, s=stage: self._on_finished(s, code))
         self.process.start()
+        self._ticker.start()
 
     def _read_output(self) -> None:
         if not self.process:
@@ -157,12 +186,27 @@ class TrainingEngine(QObject):
         if err:
             self.log_received.emit(err)
 
+    def _tick(self) -> None:
+        if self.is_running():
+            self.state_changed.emit(self.state.text())
+        else:
+            self._ticker.stop()
+
+    def _force_kill(self) -> None:
+        if self.process and self.process.state() != QProcess.ProcessState.NotRunning:
+            self.log_received.emit("\n===== FORCE KILL =====\n")
+            self.process.kill()
+
     def _on_finished(self, stage: str, exit_code: int) -> None:
+        self._ticker.stop()
+        self._kill_timer.stop()
+        self._read_output()
         if self._stop_requested:
             self.state.mark_stopped(stage)
             self.log_received.emit(f"\n===== STOPPED {stage} =====\n")
             self.state_changed.emit(self.state.text())
             self.stage_finished.emit(stage, exit_code)
+            self._active_stage = None
             return
         if exit_code == 0:
             self.state.mark_done(stage)
@@ -173,10 +217,12 @@ class TrainingEngine(QObject):
                 next_stage = self.queue.pop(0)
                 self._start_stage(next_stage)
             else:
+                self._active_stage = None
                 self.all_finished.emit()
             return
         self.state.mark_failed(stage, exit_code, f"exit code {exit_code}")
         self.queue = []
+        self._active_stage = None
         self.log_received.emit(f"\n===== FAILED {stage}: exit code {exit_code} =====\n")
         self.state_changed.emit(self.state.text())
         self.stage_finished.emit(stage, exit_code)
