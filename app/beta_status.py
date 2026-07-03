@@ -40,6 +40,7 @@ REQUIRED_FILES = [
     "scripts/start_desktop.sh",
     "scripts/check.sh",
     "scripts/check_beta.sh",
+    "scripts/verify_pgx_beta.sh",
     "scripts/update.sh",
     "scripts/create_desktop_launcher.sh",
     "docs/pgx_beta_runbook.md",
@@ -87,11 +88,9 @@ def beta_status() -> str:
     lines.append("")
     lines.append("## Next PGX action")
     lines.append("1. ./scripts/update.sh")
-    lines.append("2. ./scripts/check.sh")
-    lines.append("3. ./scripts/check_beta.sh")
-    lines.append("4. python app/verification_readiness.py")
-    lines.append("5. ./scripts/start.sh or desktop icon")
-    lines.append("6. Follow docs/pgx_beta_runbook.md")
+    lines.append("2. ./scripts/verify_pgx_beta.sh")
+    lines.append("3. ./scripts/start.sh or desktop icon")
+    lines.append("4. Follow docs/pgx_beta_runbook.md")
     return "\n".join(lines)
 
 
