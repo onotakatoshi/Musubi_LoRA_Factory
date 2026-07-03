@@ -33,6 +33,7 @@ REQUIRED_FILES = [
     "app/find_lora_output.py",
     "app/export_validator.py",
     "app/export_validator_test.py",
+    "app/verify_pgx_beta_static_check.py",
     "app/verification_readiness.py",
     "app/verification_readiness_test.py",
     "scripts/setup.sh",
