@@ -19,10 +19,16 @@ REQUIRED_FILES = [
     "app/launcher_check.py",
     "app/command_preview_test.py",
     "app/project_roundtrip_test.py",
+    "app/training_engine.py",
+    "app/training_engine_test.py",
+    "app/output_detector.py",
+    "app/output_detector_test.py",
+    "app/find_lora_output.py",
     "scripts/setup.sh",
     "scripts/start.sh",
     "scripts/start_desktop.sh",
     "scripts/check.sh",
+    "scripts/check_beta.sh",
     "scripts/update.sh",
     "scripts/create_desktop_launcher.sh",
     "docs/pgx_beta_runbook.md",
@@ -47,6 +53,10 @@ def beta_status() -> str:
     lines.append(f"Enabled profiles: {', '.join(profile_ids())}")
     lines.append(f"Implemented adapters: {', '.join(adapter_ids())}")
     lines.append("")
+    lines.append("## Core engine")
+    lines.append("- TrainingEngine: Latent Cache / Text Cache / Train")
+    lines.append("- OutputDetector: latest LoRA .safetensors detection")
+    lines.append("")
     lines.append("## Required files")
     for rel in REQUIRED_FILES:
         lines.append(f"- {exists(rel)} {rel}")
@@ -62,8 +72,9 @@ def beta_status() -> str:
     lines.append("## Next PGX action")
     lines.append("1. ./scripts/update.sh")
     lines.append("2. ./scripts/check.sh")
-    lines.append("3. ./scripts/start.sh or desktop icon")
-    lines.append("4. Follow docs/pgx_beta_runbook.md")
+    lines.append("3. ./scripts/check_beta.sh")
+    lines.append("4. ./scripts/start.sh or desktop icon")
+    lines.append("5. Follow docs/pgx_beta_runbook.md")
     return "\n".join(lines)
 
 
