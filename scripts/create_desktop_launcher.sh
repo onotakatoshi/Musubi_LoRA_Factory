@@ -13,12 +13,14 @@ if [ ! -f "$ICON_PATH" ]; then
   ICON_PATH="utilities-terminal"
 fi
 
+chmod +x "$APP_DIR/scripts/start_desktop.sh" || true
+
 cat > "$DESKTOP_DIR/$LAUNCHER_NAME" <<EOF
 [Desktop Entry]
 Type=Application
 Name=Musubi LoRA Factory
 Comment=PGX local GUI for musubi-tuner LoRA training
-Exec=bash -lc 'cd "$APP_DIR" && ./scripts/start.sh'
+Exec=bash -lc 'cd "$APP_DIR" && ./scripts/start_desktop.sh'
 Icon=$ICON_PATH
 Terminal=true
 Categories=Development;Graphics;Utility;
