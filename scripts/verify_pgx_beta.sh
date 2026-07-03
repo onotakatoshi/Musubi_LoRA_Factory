@@ -19,6 +19,7 @@ python app/collect_debug_info_static_check.py
 python app/validation_report_static_check.py
 python app/desktop_launch_static_check.py
 python app/create_sample_dataset_static_check.py
+python app/create_sample_dataset.py /tmp/musubi_lora_factory_sample_dataset --count 2
 python app/beta_extension_files_check.py
 python app/desktop_launch_smoke_test.py
 python app/verification_readiness.py
