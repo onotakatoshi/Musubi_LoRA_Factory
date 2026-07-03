@@ -23,6 +23,18 @@ def in_repo(command: str, musubi_repo: Path) -> str:
     return f"cd {q(musubi_repo)} && {command}"
 
 
+def accelerate_launch(musubi_python: Path, mixed_precision: str) -> list[str]:
+    return [
+        q(musubi_python),
+        "-m",
+        "accelerate.commands.launch",
+        "--num_cpu_threads_per_process",
+        "1",
+        "--mixed_precision",
+        mixed_precision,
+    ]
+
+
 def wan_cache_latents_command(musubi_python: Path, musubi_repo: Path, dataset_toml: Path, paths: ModelPaths, i2v: bool = False) -> str:
     parts = [q(musubi_python), "src/musubi_tuner/wan_cache_latents.py", "--dataset_config", q(dataset_toml), "--vae", q(paths.vae)]
     if i2v:
@@ -36,6 +48,7 @@ def wan_cache_text_command(musubi_python: Path, musubi_repo: Path, dataset_toml:
 
 
 def wan_train_command(
+    musubi_python: Path,
     musubi_repo: Path,
     dataset_toml: Path,
     paths: ModelPaths,
@@ -51,7 +64,7 @@ def wan_train_command(
     wan22_dual_dit: bool = True,
 ) -> str:
     parts = [
-        "accelerate", "launch", "--num_cpu_threads_per_process", "1", "--mixed_precision", mixed_precision,
+        *accelerate_launch(musubi_python, mixed_precision),
         "src/musubi_tuner/wan_train_network.py", "--task", task, "--dit", q(paths.dit), "--dataset_config", q(dataset_toml),
         "--sdpa", "--mixed_precision", mixed_precision, "--optimizer_type", optimizer, "--learning_rate", str(lr),
         "--gradient_checkpointing", "--max_data_loader_n_workers", "2", "--persistent_data_loader_workers",
@@ -82,6 +95,7 @@ def zimage_cache_text_command(musubi_python: Path, musubi_repo: Path, dataset_to
 
 
 def zimage_train_command(
+    musubi_python: Path,
     musubi_repo: Path,
     dataset_toml: Path,
     paths: ModelPaths,
@@ -99,7 +113,7 @@ def zimage_train_command(
     blocks_to_swap: int = 0,
 ) -> str:
     parts = [
-        "accelerate", "launch", "--num_cpu_threads_per_process", "1", "--mixed_precision", mixed_precision,
+        *accelerate_launch(musubi_python, mixed_precision),
         "src/musubi_tuner/zimage_train_network.py", "--dit", q(paths.dit), "--vae", q(paths.vae), "--text_encoder", q(paths.text_encoder),
         "--dataset_config", q(dataset_toml), "--sdpa", "--mixed_precision", mixed_precision, "--timestep_sampling", "shift",
         "--weighting_scheme", "none", "--discrete_flow_shift", "2.0", "--optimizer_type", optimizer, "--learning_rate", str(lr),
@@ -130,7 +144,7 @@ def build_zimage_preview(musubi_python: Path, musubi_repo: Path, dataset_toml: P
         zimage_cache_text_command(musubi_python, musubi_repo, dataset_toml, paths),
         "",
         "# 3. Train LoRA",
-        zimage_train_command(musubi_repo=musubi_repo, dataset_toml=dataset_toml, paths=paths, output_dir=output_dir, output_name=output_name, rank=rank, alpha=alpha, epochs=epochs, lr=lr),
+        zimage_train_command(musubi_python=musubi_python, musubi_repo=musubi_repo, dataset_toml=dataset_toml, paths=paths, output_dir=output_dir, output_name=output_name, rank=rank, alpha=alpha, epochs=epochs, lr=lr),
     ])
 
 
@@ -147,5 +161,5 @@ def build_command_preview(target_model: str, musubi_python: Path, musubi_repo: P
         wan_cache_text_command(musubi_python, musubi_repo, dataset_toml, paths),
         "",
         "# 3. Train LoRA",
-        wan_train_command(musubi_repo=musubi_repo, dataset_toml=dataset_toml, paths=paths, output_dir=output_dir, output_name=output_name, task=task, rank=rank, alpha=alpha, epochs=epochs, lr=lr),
+        wan_train_command(musubi_python=musubi_python, musubi_repo=musubi_repo, dataset_toml=dataset_toml, paths=paths, output_dir=output_dir, output_name=output_name, task=task, rank=rank, alpha=alpha, epochs=epochs, lr=lr),
     ])
