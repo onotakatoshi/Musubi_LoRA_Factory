@@ -4,6 +4,7 @@ import ast
 from pathlib import Path
 
 from i18n import SUPPORTED_LANGUAGES, TEXT, tr
+from model_adapters import adapter_ids, get_adapter
 from model_registry import PROFILES, enabled_profiles, get_profile, profile_ids, profile_summary
 from model_ui import available_model_ids, available_model_labels, help_for_profile, label_for_profile, profile_id_from_label, task_for_profile, v1_default_profile
 from recommended_defaults import DEFAULTS, help_text, status_text
@@ -77,6 +78,15 @@ def _check_model_ui() -> None:
     assert "Z-Image" in help_for_profile("z-image", "English")
 
 
+def _check_model_adapters() -> None:
+    assert adapter_ids() == ["z-image"], "Only z-image adapter should be implemented for Ver 1.0"
+    adapter = get_adapter("z-image")
+    assert adapter.required_setting_keys() == ["zimage_vae", "zimage_dit", "zimage_text_encoder"]
+    assert "zimage_base_weights" in adapter.optional_setting_keys()
+    assert adapter.validate_model_paths({}) == ["model_paths.zimage_vae", "model_paths.zimage_dit", "model_paths.zimage_text_encoder"]
+    assert adapter.validate_model_paths({"zimage_vae": "a", "zimage_dit": "b", "zimage_text_encoder": "c"}) == []
+
+
 def _check_desktop_uses_model_ui() -> None:
     text = DESKTOP_MAIN.read_text(encoding="utf-8")
     assert "available_model_labels" in text, "desktop_main.py should use model_ui.available_model_labels"
@@ -107,6 +117,7 @@ def main() -> int:
 
     _check_model_registry()
     _check_model_ui()
+    _check_model_adapters()
     _check_desktop_uses_model_ui()
 
     import caption_diagnostics  # noqa: F401
@@ -114,6 +125,7 @@ def main() -> int:
     import dataset_diagnostics  # noqa: F401
     import desktop_main  # noqa: F401
     import image_caption_browser  # noqa: F401
+    import model_adapters  # noqa: F401
     import model_ui  # noqa: F401
     import project_io  # noqa: F401
     import training_estimator  # noqa: F401
