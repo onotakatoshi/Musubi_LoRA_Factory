@@ -95,6 +95,15 @@ def _check_desktop_uses_training_engine() -> None:
     assert "全部実行" in text
 
 
+def _check_desktop_uses_output_detector() -> None:
+    text = DESKTOP_MAIN.read_text(encoding="utf-8")
+    assert "from output_detector import find_latest_lora, output_summary" in text
+    assert "find_latest_lora" in text
+    assert "output_summary" in text
+    assert "self.lora_path.setText" in text
+    assert "書き出しタブのLoRAパスへ自動セット" in text
+
+
 def main() -> int:
     for lang in SUPPORTED_LANGUAGES:
         missing = [key for key in REQUIRED_I18N_KEYS if key not in TEXT[lang]]
@@ -119,6 +128,7 @@ def main() -> int:
     _check_model_adapters()
     _check_desktop_uses_model_ui()
     _check_desktop_uses_training_engine()
+    _check_desktop_uses_output_detector()
 
     import caption_diagnostics  # noqa: F401
     import caption_table_widget  # noqa: F401
@@ -127,6 +137,7 @@ def main() -> int:
     import image_caption_browser  # noqa: F401
     import model_adapters  # noqa: F401
     import model_ui  # noqa: F401
+    import output_detector  # noqa: F401
     import project_io  # noqa: F401
     import training_engine  # noqa: F401
     import training_estimator  # noqa: F401
