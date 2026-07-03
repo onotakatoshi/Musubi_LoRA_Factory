@@ -39,6 +39,7 @@ from gpu_monitor import gpu_preflight_warning
 from i18n import SUPPORTED_LANGUAGES, normalize_language, tr
 from image_caption_browser import ImageCaptionBrowser
 from model_ui import available_model_labels, help_for_profile, label_for_profile, profile_id_from_label, task_for_profile, v1_default_profile
+from output_detector import find_latest_lora, output_summary
 from pipeline import AppConfig, build_dataset_toml, check_dataset, copy_lora_to_comfyui
 from preflight import run_preflight
 from project_io import default_project_path, load_project, project_data, save_project
@@ -427,8 +428,18 @@ class DesktopApp(QMainWindow):
             self.train_status.setPlainText(text)
 
     def _training_all_finished(self) -> None:
+        latest = find_latest_lora(self.output_dir.text(), self.output_name.text()) if hasattr(self, "output_dir") else None
+        if latest is not None and hasattr(self, "lora_path"):
+            self.lora_path.setText(str(latest))
+        message = "学習パイプラインが完了しました。\n\n" + output_summary(self.output_dir.text(), self.output_name.text())
+        if latest is not None:
+            message += "\n\n書き出しタブのLoRAパスへ自動セットしました。ComfyUIへコピーしてください。"
+        else:
+            message += "\n\nLoRAが自動検出できない場合は、出力フォルダから .safetensors を手動で選択してください。"
         if hasattr(self, "analysis_log"):
-            self.analysis_log.setPlainText("学習パイプラインが完了しました。書き出しタブでLoRAをComfyUIへコピーしてください。")
+            self.analysis_log.setPlainText(message)
+        if hasattr(self, "export_log"):
+            self.export_log.setPlainText(message)
 
     def _stop_process(self) -> None:
         self.training_engine.stop()
