@@ -37,6 +37,7 @@ from gpu_monitor import gpu_preflight_warning
 from pipeline import AppConfig, build_dataset_toml, check_dataset, copy_lora_to_comfyui
 from preflight import run_preflight
 from runner import split_command_sections
+from settings_detect import detect_zimage_files, validate_settings_paths
 from settings_io import load_settings, nested_get, save_settings
 from state_check import config_status, dataset_status, train_ready_status
 from step_guides import guide
@@ -116,8 +117,8 @@ class DesktopApp(QMainWindow):
         guide_box.setReadOnly(True)
         guide_box.setPlainText(
             "Settings\n\n"
-            "ここで musubi-tuner、Z-Imageモデル、ComfyUI、出力先のパスを設定します。\n"
-            "保存すると configs/settings.toml に反映されます。通常はtomlを手で編集する必要はありません。"
+            "musubi-tuner、Z-Imageモデル、ComfyUI、出力先のパスを設定します。\n"
+            "Save Settings を押すと configs/settings.toml に保存されます。"
         )
         guide_box.setMaximumHeight(120)
         box.addWidget(guide_box)
@@ -127,14 +128,12 @@ class DesktopApp(QMainWindow):
         form.addRow(HelpLabel("musubi-tuner repo", "musubi-tunerをcloneしたフォルダです。src/musubi_tuner が中にある場所を指定します。"), self._browse_dir_row(self.set_musubi_repo))
         self.set_musubi_python = self._line(nested_get(self.settings, "musubi", "python_path"))
         form.addRow(HelpLabel("musubi python", "musubi-tuner用venvのpythonです。例: /home/ono/musubi-tuner/.venv/bin/python"), self._browse_file_row(self.set_musubi_python))
-
         self.set_datasets_dir = self._line(nested_get(self.settings, "paths", "datasets_dir"))
         form.addRow(HelpLabel("datasets dir", "LoRA学習用データセットを置く親フォルダです。"), self._browse_dir_row(self.set_datasets_dir))
         self.set_outputs_dir = self._line(nested_get(self.settings, "paths", "outputs_dir"))
         form.addRow(HelpLabel("outputs dir", "dataset.toml、cache、学習済みLoRAを置く親フォルダです。"), self._browse_dir_row(self.set_outputs_dir))
         self.set_comfyui_loras_dir = self._line(nested_get(self.settings, "paths", "comfyui_loras_dir"))
         form.addRow(HelpLabel("ComfyUI loras dir", "ComfyUIの models/loras フォルダです。Export時のコピー先です。"), self._browse_dir_row(self.set_comfyui_loras_dir))
-
         self.set_zimage_dit = self._line(nested_get(self.settings, "model_paths", "zimage_dit"))
         form.addRow(HelpLabel("Z-Image DiT", "Z-Imageの学習対象DiTです。初期はBaseまたはDe-Turbo系を想定します。"), self._browse_file_row(self.set_zimage_dit))
         self.set_zimage_vae = self._line(nested_get(self.settings, "model_paths", "zimage_vae"))
@@ -146,32 +145,28 @@ class DesktopApp(QMainWindow):
         box.addLayout(form)
 
         row = QHBoxLayout()
+        row.addWidget(self._button("Validate Settings", self._validate_settings))
+        row.addWidget(self._button("Detect Z-Image Files", self._detect_zimage_files))
         row.addWidget(self._button("Save Settings", self._save_settings))
         row.addWidget(self._button("Reload Settings", self._reload_settings_fields))
         row.addWidget(self._button("Environment Check", lambda: self.settings_log.setPlainText(check_environment(SETTINGS_PATH))))
         row.addStretch()
         box.addLayout(row)
         self.settings_log = self._log()
-        self.settings_log.setMaximumHeight(180)
+        self.settings_log.setMaximumHeight(210)
         box.addWidget(self.settings_log)
         w = QWidget(); w.setLayout(box); return w
 
     def _system_tab(self) -> QWidget:
         box = QVBoxLayout()
-        intro = QTextEdit()
-        intro.setReadOnly(True)
-        intro.setPlainText(
-            "Musubi LoRA Factory desktop app\n\n"
-            "This is the initial musubi-tuner GUI.\n"
-            "Use Settings first, then System -> Environment Check, then proceed from Dataset to Export."
-        )
-        intro.setMaximumHeight(100)
+        intro = QTextEdit(); intro.setReadOnly(True)
+        intro.setPlainText("Musubi LoRA Factory desktop app\n\nUse Settings first, then Environment Check, then Dataset to Export.")
+        intro.setMaximumHeight(90)
         box.addWidget(intro)
         row = QHBoxLayout()
         row.addWidget(self._button("Environment Check", lambda: self.system_log.setPlainText(check_environment(SETTINGS_PATH))))
         row.addWidget(self._button("GPU Status", lambda: self.system_log.setPlainText(gpu_preflight_warning())))
-        row.addStretch()
-        box.addLayout(row)
+        row.addStretch(); box.addLayout(row)
         self.system_log = self._log(); box.addWidget(self.system_log)
         w = QWidget(); w.setLayout(box); return w
 
@@ -180,8 +175,7 @@ class DesktopApp(QMainWindow):
         guide_box = QTextEdit(); guide_box.setReadOnly(True); guide_box.setPlainText(guide("dataset")); guide_box.setMaximumHeight(190)
         box.addWidget(guide_box)
         form = QFormLayout()
-        default_dataset = str(Path(nested_get(self.settings, "paths", "datasets_dir")) / "Eye_Blue_v1")
-        self.dataset_dir = self._line(default_dataset)
+        self.dataset_dir = self._line(str(Path(nested_get(self.settings, "paths", "datasets_dir")) / "Eye_Blue_v1"))
         form.addRow(HelpLabel("Dataset folder", "学習用画像を入れたフォルダです。画像と同じ名前の .txt がcaptionです。"), self._browse_dir_row(self.dataset_dir))
         self.lora_type = QComboBox(); self.lora_type.addItems(["eye", "mouth", "face", "hair", "hand", "style", "clothing"])
         form.addRow(HelpLabel("LoRA type", "何を学習したいかです。eyeなら目を学習する前提でcaptionを整理します。"), self.lora_type)
@@ -259,6 +253,40 @@ class DesktopApp(QMainWindow):
         box.addWidget(self._button("Copy to ComfyUI", self._copy_lora))
         self.export_log = self._log(); box.addWidget(self.export_log)
         w = QWidget(); w.setLayout(box); return w
+
+    def _settings_values(self) -> dict[str, str]:
+        return {
+            "musubi_repo": self.set_musubi_repo.text(),
+            "musubi_python": self.set_musubi_python.text(),
+            "datasets_dir": self.set_datasets_dir.text(),
+            "outputs_dir": self.set_outputs_dir.text(),
+            "comfyui_loras_dir": self.set_comfyui_loras_dir.text(),
+            "zimage_dit": self.set_zimage_dit.text(),
+            "zimage_vae": self.set_zimage_vae.text(),
+            "zimage_text_encoder": self.set_zimage_text_encoder.text(),
+        }
+
+    def _validate_settings(self) -> None:
+        self.settings_log.setPlainText(validate_settings_paths(self._settings_values()))
+
+    def _detect_zimage_files(self) -> None:
+        model_dir = QFileDialog.getExistingDirectory(self, "Select Z-Image model folder", str(Path.home()))
+        if not model_dir:
+            return
+        found = detect_zimage_files(Path(model_dir))
+        if found.get("zimage_dit"):
+            self.set_zimage_dit.setText(found["zimage_dit"])
+        if found.get("zimage_vae"):
+            self.set_zimage_vae.setText(found["zimage_vae"])
+        if found.get("zimage_text_encoder"):
+            self.set_zimage_text_encoder.setText(found["zimage_text_encoder"])
+        self.settings_log.setPlainText(
+            "# Detected Z-Image files\n\n"
+            f"DiT: {found.get('zimage_dit') or 'not found'}\n"
+            f"VAE: {found.get('zimage_vae') or 'not found'}\n"
+            f"Text Encoder: {found.get('zimage_text_encoder') or 'not found'}\n\n"
+            "内容を確認して Save Settings を押してください。"
+        )
 
     def _settings_data_from_fields(self) -> dict:
         data = load_settings(SETTINGS_PATH)
