@@ -1,0 +1,13 @@
+[musubi]
+repo_path = "/home/ono/musubi-tuner"
+python_path = "/home/ono/musubi-tuner/.venv/bin/python"
+
+[paths]
+datasets_dir = "/home/ono/datasets/lora"
+outputs_dir = "/home/ono/outputs/lora"
+comfyui_loras_dir = "/home/ono/ComfyUI/models/loras"
+
+[caption]
+mode = "joycaption_llm"
+llm_endpoint = "http://localhost:8000/v1/chat/completions"
+llm_model = "qwen-caption-helper"
