@@ -10,27 +10,39 @@ PGX向けのmusubi-tuner用ローカルGUIです。
 - musubi-tunerのcache/trainコマンドPreview
 - Preflight Check
 - musubi-tunerコマンド実行
+- リアルタイムログ表示とログ保存
+- GPU状態表示
 - 完成LoRAをComfyUIへコピー
 
 > まだMVPです。最初はWan2.2向けプロファイルを優先しています。
 
-## 起動
+## PGXでの起動
+
+```bash
+git clone https://github.com/onotakatoshi/Musubi_LoRA_Factory.git
+cd Musubi_LoRA_Factory
+chmod +x scripts/setup.sh scripts/start.sh
+./scripts/setup.sh
+```
+
+`configs/settings.toml` をPGX環境に合わせて編集します。
+
+その後、起動します。
+
+```bash
+./scripts/start.sh
+```
+
+ブラウザで表示されたURLを開きます。
+
+## 手動起動
 
 ```bash
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-python app/main.py
-```
-
-ブラウザで表示されたURLを開きます。
-
-## 初期設定
-
-`configs/settings.example.toml` を `configs/settings.toml` にコピーして、パスをPGX環境に合わせて変更してください。
-
-```bash
 cp configs/settings.example.toml configs/settings.toml
+python app/main.py
 ```
 
 ## 基本フロー
@@ -75,3 +87,9 @@ wan_dit_high_noise = "/home/ono/models/wan/wan2.2_high_noise.safetensors"
 ```
 
 最初に `0. Preflight Check` を押すと、不足しているパスが表示されます。
+
+## Logs
+
+実行ログは `logs/` に保存されます。
+
+GUI上部の `Recent Logs` から直近ログを確認できます。
