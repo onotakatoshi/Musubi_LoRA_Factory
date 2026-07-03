@@ -22,6 +22,10 @@ def _contains(path: Path, needle: str) -> bool:
     return path.exists() and needle in path.read_text(encoding="utf-8")
 
 
+def is_ready_report(report: str) -> bool:
+    return "READY: PGX実機でZ-Image LoRAの通し検証に進めます。" in report and "NOT READY:" not in report
+
+
 def verification_readiness() -> str:
     lines = ["# Verification Readiness", ""]
     blockers: list[str] = []
@@ -86,4 +90,4 @@ def verification_readiness() -> str:
 if __name__ == "__main__":
     report = verification_readiness()
     print(report)
-    raise SystemExit(0 if "READY:" in report else 1)
+    raise SystemExit(0 if is_ready_report(report) else 1)
