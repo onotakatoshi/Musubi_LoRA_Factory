@@ -9,6 +9,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 REQUIRED_FILES = [
     "app/desktop_main.py",
+    "app/desktop_static_check.py",
     "app/model_registry.py",
     "app/model_adapters.py",
     "app/model_ui.py",
@@ -61,6 +62,7 @@ def beta_status() -> str:
     lines.append("## Core engine")
     lines.append("- TrainingEngine: Latent Cache / Text Cache / Train")
     lines.append("- CommandPathGuard: final path validation before run")
+    lines.append("- MusubiRuntimeCheck: configured musubi python / accelerate / scripts check")
     lines.append("- OutputDetector: latest LoRA .safetensors detection")
     lines.append("- ExportValidator: pre-copy validation for ComfyUI export")
     lines.append("")
