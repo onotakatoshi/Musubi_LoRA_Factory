@@ -8,6 +8,9 @@ import toml
 
 def default_settings() -> dict[str, Any]:
     return {
+        "ui": {
+            "language": "日本語",
+        },
         "musubi": {
             "repo_path": "/home/ono/musubi-tuner",
             "python_path": "/home/ono/musubi-tuner/.venv/bin/python",
