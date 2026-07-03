@@ -37,6 +37,7 @@ from gpu_monitor import gpu_preflight_warning
 from i18n import SUPPORTED_LANGUAGES, normalize_language, tr
 from pipeline import AppConfig, build_dataset_toml, check_dataset, copy_lora_to_comfyui
 from preflight import run_preflight
+from recommended_defaults import DEFAULTS, help_text as default_help_text, status_text as default_status_text
 from runner import split_command_sections
 from settings_detect import detect_zimage_files, validate_settings_paths
 from settings_io import load_settings, nested_get, save_settings
@@ -58,14 +59,9 @@ HELP = {
     "dataset_folder": "学習用画像を入れたフォルダです。画像と同じ名前の .txt がcaptionです。",
     "lora_type": "何を学習したいかです。eyeなら目を学習する前提でcaptionを整理します。",
     "output_folder": "dataset.toml、cache、学習済みLoRAを置く出力フォルダです。",
-    "resolution": "学習解像度です。最初は512推奨です。",
     "dataset_toml": "Build dataset.tomlで作られるmusubi-tuner用設定ファイルです。",
     "target_model": "どのモデル向けLoRAを作るかです。初期版はz-image優先です。",
     "task_profile": "Z-Imageではz-imageを選びます。Wan用項目は後続です。",
-    "rank": "LoRAの表現力です。最初は16推奨です。",
-    "alpha": "LoRAの効きのスケールです。最初はRankと同じ値。",
-    "epochs": "データセットを何周学習するかです。最初は10程度。",
-    "lr": "学習率です。最初は0.00005推奨です。",
     "output_name": "保存されるLoRA名です。",
 }
 
@@ -119,6 +115,17 @@ class DesktopApp(QMainWindow):
 
     def _browse_file_row(self, edit: QLineEdit) -> QHBoxLayout:
         row = QHBoxLayout(); row.addWidget(edit); row.addWidget(self._button(self.t("browse"), lambda: self._pick_file(edit))); return row
+
+    def _default_spin_row(self, name: str, widget: QSpinBox | QDoubleSpinBox) -> QHBoxLayout:
+        label = QLabel(default_status_text(name, widget.value(), self.lang))
+        reset_text = "Reset" if self.lang == "English" else "デフォルトに戻す"
+        reset = self._button(reset_text, lambda: self._reset_default(name, widget, label))
+        widget.valueChanged.connect(lambda _value: label.setText(default_status_text(name, widget.value(), self.lang)))
+        row = QHBoxLayout(); row.addWidget(widget); row.addWidget(label); row.addWidget(reset); return row
+
+    def _reset_default(self, name: str, widget: QSpinBox | QDoubleSpinBox, label: QLabel) -> None:
+        widget.setValue(DEFAULTS[name])
+        label.setText(default_status_text(name, widget.value(), self.lang))
 
     def _pick_dir(self, target: QLineEdit) -> None:
         path = QFileDialog.getExistingDirectory(self, self.t("select_folder"), target.text() or str(Path.home()))
@@ -195,8 +202,8 @@ class DesktopApp(QMainWindow):
         form = QFormLayout()
         self.output_dir = self._line(str(Path(nested_get(self.settings, "paths", "outputs_dir")) / "Eye_Blue_v1_zimage"))
         form.addRow(HelpLabel(self.t("label_output_folder"), HELP["output_folder"]), self._browse_dir_row(self.output_dir))
-        self.resolution = QSpinBox(); self.resolution.setRange(256, 2048); self.resolution.setSingleStep(64); self.resolution.setValue(512)
-        form.addRow(HelpLabel(self.t("label_resolution"), HELP["resolution"]), self.resolution)
+        self.resolution = QSpinBox(); self.resolution.setRange(256, 2048); self.resolution.setSingleStep(64); self.resolution.setValue(DEFAULTS["resolution"])
+        form.addRow(HelpLabel(self.t("label_resolution"), default_help_text("resolution", self.lang)), self._default_spin_row("resolution", self.resolution))
         self.dataset_toml = self._line("")
         form.addRow(HelpLabel(self.t("label_dataset_toml"), HELP["dataset_toml"]), self.dataset_toml)
         box.addLayout(form)
@@ -215,14 +222,14 @@ class DesktopApp(QMainWindow):
         form.addRow(HelpLabel(self.t("label_target_model"), HELP["target_model"]), self.target_model)
         self.task = QComboBox(); self.task.addItems(["z-image", "t2v-A14B", "i2v-A14B", "t2v-1.3B"])
         form.addRow(HelpLabel(self.t("label_task_profile"), HELP["task_profile"]), self.task)
-        self.rank = QSpinBox(); self.rank.setRange(4, 128); self.rank.setSingleStep(4); self.rank.setValue(16)
-        form.addRow(HelpLabel(self.t("label_rank"), HELP["rank"]), self.rank)
-        self.alpha = QSpinBox(); self.alpha.setRange(4, 128); self.alpha.setSingleStep(4); self.alpha.setValue(16)
-        form.addRow(HelpLabel(self.t("label_alpha"), HELP["alpha"]), self.alpha)
-        self.epochs = QSpinBox(); self.epochs.setRange(1, 100); self.epochs.setValue(10)
-        form.addRow(HelpLabel(self.t("label_epochs"), HELP["epochs"]), self.epochs)
-        self.lr = QDoubleSpinBox(); self.lr.setDecimals(8); self.lr.setRange(0.000001, 0.01); self.lr.setValue(0.00005); self.lr.setSingleStep(0.00001)
-        form.addRow(HelpLabel(self.t("label_lr"), HELP["lr"]), self.lr)
+        self.rank = QSpinBox(); self.rank.setRange(4, 128); self.rank.setSingleStep(4); self.rank.setValue(DEFAULTS["rank"])
+        form.addRow(HelpLabel(self.t("label_rank"), default_help_text("rank", self.lang)), self._default_spin_row("rank", self.rank))
+        self.alpha = QSpinBox(); self.alpha.setRange(4, 128); self.alpha.setSingleStep(4); self.alpha.setValue(DEFAULTS["alpha"])
+        form.addRow(HelpLabel(self.t("label_alpha"), default_help_text("alpha", self.lang)), self._default_spin_row("alpha", self.alpha))
+        self.epochs = QSpinBox(); self.epochs.setRange(1, 100); self.epochs.setValue(DEFAULTS["epochs"])
+        form.addRow(HelpLabel(self.t("label_epochs"), default_help_text("epochs", self.lang)), self._default_spin_row("epochs", self.epochs))
+        self.lr = QDoubleSpinBox(); self.lr.setDecimals(8); self.lr.setRange(0.000001, 0.01); self.lr.setSingleStep(0.00001); self.lr.setValue(DEFAULTS["lr"])
+        form.addRow(HelpLabel(self.t("label_lr"), default_help_text("lr", self.lang)), self._default_spin_row("lr", self.lr))
         self.output_name = self._line("eye_lora_zimage")
         form.addRow(HelpLabel(self.t("label_output_name"), HELP["output_name"]), self.output_name)
         box.addLayout(form)
@@ -279,8 +286,7 @@ class DesktopApp(QMainWindow):
     def _save_settings(self) -> None:
         try:
             data = self._settings_data_from_fields(); save_settings(SETTINGS_PATH, data); self.settings = data
-            new_lang = normalize_language(nested_get(data, "ui", "language", "日本語"))
-            self.lang = new_lang
+            self.lang = normalize_language(nested_get(data, "ui", "language", "日本語"))
             self._rebuild_ui()
             self.settings_log.setPlainText(f"{self.t('settings_saved')}: {SETTINGS_PATH}\n\n" + check_environment(SETTINGS_PATH))
         except Exception as exc:
