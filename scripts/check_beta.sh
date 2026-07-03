@@ -13,6 +13,7 @@ source .venv/bin/activate
 python app/launcher_check.py
 python app/command_preview_test.py
 python app/project_roundtrip_test.py
+python app/training_engine_test.py
 python app/beta_status_test.py
 python app/beta_status.py
 
