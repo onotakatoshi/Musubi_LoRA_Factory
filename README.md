@@ -25,7 +25,7 @@ Z-Imageで最初に試す場合は、まず [PGX Z-Image setup notes](docs/pgx_z
 ```bash
 git clone https://github.com/onotakatoshi/Musubi_LoRA_Factory.git
 cd Musubi_LoRA_Factory
-chmod +x scripts/setup.sh scripts/start.sh scripts/check.sh
+chmod +x scripts/setup.sh scripts/start.sh scripts/check.sh scripts/create_desktop_launcher.sh
 ./scripts/setup.sh
 ./scripts/check.sh
 ```
@@ -39,6 +39,23 @@ chmod +x scripts/setup.sh scripts/start.sh scripts/check.sh
 ```
 
 ブラウザで表示されたURLを開きます。
+
+## アイコンから起動
+
+Linuxデスクトップ環境では、デスクトップアイコンを作れます。
+
+```bash
+./scripts/create_desktop_launcher.sh
+```
+
+作成されるもの:
+
+- `~/Desktop/Musubi LoRA Factory.desktop`
+- `~/.local/share/applications/Musubi LoRA Factory.desktop`
+
+GNOMEなどでは、初回だけデスクトップアイコンを右クリックして **Allow Launching** を選ぶ必要があります。
+
+以後は、アイコンをダブルクリックして起動できます。
 
 ## 手動起動
 
