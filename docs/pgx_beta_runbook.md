@@ -7,12 +7,11 @@ PGXでMusubi LoRA Factory Ver 1.0 betaを確認するための最短手順です
 初回:
 
 ```bash
-git clone https://github.com/onotakatoshi/Musubi_LoRA_Factory.git
+git clone https://github.com/onotatoshi/Musubi_LoRA_Factory.git
 cd Musubi_LoRA_Factory
 chmod +x scripts/*.sh
 ./scripts/setup.sh
-./scripts/check.sh
-./scripts/check_beta.sh
+./scripts/verify_pgx_beta.sh
 ./scripts/create_desktop_launcher.sh
 ```
 
@@ -21,7 +20,7 @@ chmod +x scripts/*.sh
 ```bash
 cd Musubi_LoRA_Factory
 ./scripts/update.sh
-./scripts/check_beta.sh
+./scripts/verify_pgx_beta.sh
 ```
 
 ## 2. Launch
@@ -36,15 +35,19 @@ cd Musubi_LoRA_Factory
 
 ## 3. Pre-check from terminal
 
-PGXで試す前に、ターミナルから以下を実行すると問題箇所を確認できます。
+PGXで試す前に、ターミナルから以下を実行します。
+
+```bash
+./scripts/verify_pgx_beta.sh
+```
+
+このスクリプトは以下をまとめて実行します。
 
 ```bash
 ./scripts/check.sh
 ./scripts/check_beta.sh
 python app/verification_readiness.py
 ```
-
-`check.sh` は基本検査、`check_beta.sh` はβ版として必要なランチャー・プロジェクト保存・コマンドPreview・実行直前ガード・Export検証・β状態の追加検査です。
 
 `verification_readiness.py` が `READY: PGX実機でZ-Image LoRAの通し検証に進めます。` と表示したら、GUIで実データ検証へ進めます。
 
