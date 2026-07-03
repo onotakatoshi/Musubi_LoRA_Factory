@@ -10,6 +10,7 @@ from PySide6.QtCore import QObject, QProcess, QProcessEnvironment, QTimer, Signa
 
 from command_path_guard import command_paths_ok
 from runner import split_command_sections, validate_command_preview
+from stage_guidance import guidance_for_stage, success_guidance_for_stage
 
 
 class TrainingStage(str, Enum):
@@ -217,6 +218,9 @@ class TrainingEngine(QObject):
                 f.write(text)
         self.log_received.emit(text)
 
+    def _active_log_path_text(self) -> str | None:
+        return str(self._log_file) if self._log_file else None
+
     def _process_environment(self) -> QProcessEnvironment:
         env = QProcessEnvironment.systemEnvironment()
         env.insert("PYTHONUNBUFFERED", "1")
@@ -275,6 +279,7 @@ class TrainingEngine(QObject):
         self._active_stage = None
         self.state.mark_failed(stage, -1, "process did not start within 3 seconds")
         self._emit_log(f"\n===== FAILED {stage}: process did not start =====\n")
+        self._emit_log("\n" + guidance_for_stage(stage, -1, self._active_log_path_text()) + "\n")
         self.state_changed.emit(self.state.text())
         self.stage_finished.emit(stage, -1)
 
@@ -289,6 +294,7 @@ class TrainingEngine(QObject):
         message = f"QProcess error: {error}"
         self.state.mark_failed(stage, -1, message)
         self._emit_log(f"\n===== FAILED {stage}: {message} =====\n")
+        self._emit_log("\n" + guidance_for_stage(stage, -1, self._active_log_path_text()) + "\n")
         self.state_changed.emit(self.state.text())
         self.stage_finished.emit(stage, -1)
 
@@ -301,6 +307,7 @@ class TrainingEngine(QObject):
         if self._stop_requested:
             self.state.mark_stopped(stage)
             self._emit_log(f"\n===== STOPPED {stage} =====\n")
+            self._emit_log("\n" + guidance_for_stage(stage, exit_code, self._active_log_path_text()) + "\n")
             self.state_changed.emit(self.state.text())
             self.stage_finished.emit(stage, exit_code)
             self._active_stage = None
@@ -308,6 +315,7 @@ class TrainingEngine(QObject):
         if exit_code == 0:
             self.state.mark_done(stage)
             self._emit_log(f"\n===== DONE {stage} =====\n")
+            self._emit_log("\n" + success_guidance_for_stage(stage, self._active_log_path_text()) + "\n")
             self.state_changed.emit(self.state.text())
             self.stage_finished.emit(stage, exit_code)
             if self.queue:
@@ -321,5 +329,6 @@ class TrainingEngine(QObject):
         self.queue = []
         self._active_stage = None
         self._emit_log(f"\n===== FAILED {stage}: exit code {exit_code} =====\n")
+        self._emit_log("\n" + guidance_for_stage(stage, exit_code, self._active_log_path_text()) + "\n")
         self.state_changed.emit(self.state.text())
         self.stage_finished.emit(stage, exit_code)
