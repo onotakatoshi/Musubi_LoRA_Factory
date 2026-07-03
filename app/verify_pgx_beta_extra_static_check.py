@@ -10,6 +10,9 @@ def main() -> int:
     text = VERIFY.read_text(encoding="utf-8")
     assert "python app/env_check_test.py" in text
     assert "python app/docs_static_check.py" in text
+    assert "python app/create_sample_dataset.py" in text
+    assert "/tmp/musubi_lora_factory_sample_dataset" in text
+    assert "python app/beta_extension_files_check.py" in text
     print("PGX beta extra verification script static check OK")
     return 0
 
