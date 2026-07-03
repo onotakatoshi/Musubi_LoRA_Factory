@@ -230,6 +230,7 @@ class TrainingEngine(QObject):
     def _start_stage(self, stage: str) -> None:
         command = self.sections[stage].strip()
         self._active_stage = stage
+        self._stop_requested = False
         self._startup_error_handled = False
         self._log_file = self._new_log_file(stage)
         self.state.mark_running(stage, self._log_file)
