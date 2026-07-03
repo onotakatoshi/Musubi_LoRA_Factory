@@ -18,3 +18,8 @@ wan_vae = "/home/ono/models/wan/Wan2.1_VAE.pth"
 wan_t5 = "/home/ono/models/wan/models_t5_umt5-xxl-enc-bf16.pth"
 wan_dit = "/home/ono/models/wan/wan2.2_low_noise.safetensors"
 wan_dit_high_noise = "/home/ono/models/wan/wan2.2_high_noise.safetensors"
+
+zimage_dit = "/home/ono/models/z-image/z_image_base_or_deturbo.safetensors"
+zimage_vae = "/home/ono/models/z-image/ae.safetensors"
+zimage_text_encoder = "/home/ono/models/z-image/qwen3_text_encoder_00001-of-00002.safetensors"
+zimage_base_weights = ""
