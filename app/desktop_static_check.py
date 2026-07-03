@@ -4,6 +4,7 @@ import ast
 from pathlib import Path
 
 from i18n import SUPPORTED_LANGUAGES, TEXT, tr
+from model_registry import PROFILES, enabled_profiles, get_profile, profile_ids, profile_summary
 from recommended_defaults import DEFAULTS, help_text, status_text
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -45,6 +46,23 @@ def _used_translation_keys() -> set[str]:
     return keys
 
 
+def _check_model_registry() -> None:
+    assert "z-image" in PROFILES, "z-image profile is required"
+    assert get_profile("z-image").enabled_in_v1 is True, "z-image must be enabled in Ver 1.0"
+    assert profile_ids() == ["z-image"], "Ver 1.0 should expose only z-image"
+    assert "wan2.2" in profile_ids(include_future=True), "wan2.2 future profile should remain registered"
+    assert get_profile("wan2.2").enabled_in_v1 is False, "wan2.2 must remain hidden until Z-Image validation is complete"
+    for profile_id, profile in PROFILES.items():
+        assert profile.id == profile_id, f"Profile key/id mismatch: {profile_id}"
+        assert profile.display_name, f"Missing display name: {profile_id}"
+        assert profile.task, f"Missing task: {profile_id}"
+        assert profile.description_ja, f"Missing Japanese description: {profile_id}"
+        assert profile.description_en, f"Missing English description: {profile_id}"
+        assert profile_summary(profile_id, "日本語"), f"Missing Japanese summary: {profile_id}"
+        assert profile_summary(profile_id, "English"), f"Missing English summary: {profile_id}"
+    assert [p.id for p in enabled_profiles()] == ["z-image"], "Only z-image should be enabled for Ver 1.0"
+
+
 def main() -> int:
     for lang in SUPPORTED_LANGUAGES:
         missing = [key for key in REQUIRED_I18N_KEYS if key not in TEXT[lang]]
@@ -63,6 +81,8 @@ def main() -> int:
         assert help_text(key, "English"), f"Missing English default help: {key}"
         assert "推奨デフォルト" in status_text(key, DEFAULTS[key], "日本語"), key
         assert "Recommended default" in status_text(key, DEFAULTS[key], "English"), key
+
+    _check_model_registry()
 
     import caption_diagnostics  # noqa: F401
     import caption_table_widget  # noqa: F401
