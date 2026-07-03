@@ -17,4 +17,5 @@ if [ ! -f configs/settings.toml ]; then
 fi
 
 echo "Setup complete."
-echo "Next: edit configs/settings.toml, then run scripts/start.sh"
+echo "Next: edit configs/settings.toml, then run scripts/check.sh and scripts/start.sh"
+echo "Optional: run scripts/create_desktop_launcher.sh to create a desktop icon."
