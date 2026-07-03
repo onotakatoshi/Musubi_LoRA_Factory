@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
 
-from PySide6.QtCore import QObject, QProcess, QTimer, Signal
+from PySide6.QtCore import QObject, QProcess, QProcessEnvironment, QTimer, Signal
 
 from command_path_guard import command_paths_ok
 from runner import split_command_sections, validate_command_preview
@@ -217,6 +217,12 @@ class TrainingEngine(QObject):
                 f.write(text)
         self.log_received.emit(text)
 
+    def _process_environment(self) -> QProcessEnvironment:
+        env = QProcessEnvironment.systemEnvironment()
+        env.insert("PYTHONUNBUFFERED", "1")
+        env.insert("PYTHONIOENCODING", "utf-8")
+        return env
+
     def _start_stage(self, stage: str) -> None:
         command = self.sections[stage].strip()
         self._active_stage = stage
@@ -227,6 +233,7 @@ class TrainingEngine(QObject):
         self._emit_log(f"\n===== START {stage} =====\n{command}\n")
         self.process = QProcess(self)
         self.process.setProcessChannelMode(QProcess.ProcessChannelMode.SeparateChannels)
+        self.process.setProcessEnvironment(self._process_environment())
         self.process.setProgram("bash")
         self.process.setArguments(["-lc", command])
         self.process.readyReadStandardOutput.connect(self._read_output)
