@@ -1,14 +1,14 @@
 from __future__ import annotations
 
-from verification_readiness import verification_readiness
+from verification_readiness import is_ready_report, verification_readiness
 
 
 def main() -> int:
     report = verification_readiness()
     assert report.startswith("# Verification Readiness")
     assert "OK: required beta files exist" in report
-    assert "READY: PGX実機でZ-Image LoRAの通し検証に進めます。" in report, report
-    assert "NOT READY" not in report, report
+    assert is_ready_report(report), report
+    assert not is_ready_report("NOT READY: PGX実機検証の前に修正が必要です。")
     print("Verification readiness test OK")
     return 0
 
