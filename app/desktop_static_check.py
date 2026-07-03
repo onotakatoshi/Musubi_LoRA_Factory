@@ -64,13 +64,15 @@ def main() -> int:
         assert "推奨デフォルト" in status_text(key, DEFAULTS[key], "日本語"), key
         assert "Recommended default" in status_text(key, DEFAULTS[key], "English"), key
 
-    # Import modules that desktop_main depends on, without starting QApplication.
     import caption_diagnostics  # noqa: F401
     import caption_table_widget  # noqa: F401
     import dataset_diagnostics  # noqa: F401
     import desktop_main  # noqa: F401
     import image_caption_browser  # noqa: F401
+    import project_io  # noqa: F401
     import training_estimator  # noqa: F401
+    import training_presets  # noqa: F401
+    import training_review  # noqa: F401
 
     print("Desktop static check OK")
     return 0
