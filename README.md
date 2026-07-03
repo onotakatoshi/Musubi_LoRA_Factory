@@ -2,6 +2,8 @@
 
 PGX向けのmusubi-tuner用ローカルGUIです。
 
+現在の優先ターゲットは **Z-Image / Z-Image-Turbo運用** です。
+
 目的:
 - データセット選択
 - JoyCaption/LLM整形用のキャプション生成パイプライン
@@ -14,7 +16,7 @@ PGX向けのmusubi-tuner用ローカルGUIです。
 - GPU状態表示
 - 完成LoRAをComfyUIへコピー
 
-> まだMVPです。最初はWan2.2向けプロファイルを優先しています。
+> まだMVPです。まずZ-Image向けプロファイルを優先し、その後Wan2.2/FLUXへ広げます。
 
 ## PGXでの起動
 
@@ -52,12 +54,13 @@ python app/main.py
 3. `Generate Captions` で `.txt` captionを生成
 4. `Caption Editor` でcaptionを確認・修正
 5. `Config` で `dataset.toml` を作成
-6. `Train` で `0. Preflight Check`
-7. `Preview Commands` で実行内容を確認
-8. `Run 1: Latent Cache`
-9. `Run 2: Text Cache`
-10. `Run 3: Train`
-11. `Export` で完成LoRAをComfyUIへコピー
+6. `Train` で Target model が `z-image` になっていることを確認
+7. `0. Preflight Check`
+8. `Preview Commands` で実行内容を確認
+9. `Run 1: Latent Cache`
+10. `Run 2: Text Cache`
+11. `Run 3: Train`
+12. `Export` で完成LoRAをComfyUIへコピー
 
 ## Caption
 
@@ -74,9 +77,27 @@ llm_endpoint = "http://localhost:8000/v1/chat/completions"
 llm_model = "qwen-caption-helper"
 ```
 
+## Z-Image paths
+
+Z-Imageでは、少なくともVAE、Text Encoder、DiTのパスが必要です。
+
+```toml
+[model_paths]
+zimage_dit = "/home/ono/models/z-image/z_image_base_or_deturbo.safetensors"
+zimage_vae = "/home/ono/models/z-image/ae.safetensors"
+zimage_text_encoder = "/home/ono/models/z-image/qwen3_text_encoder_00001-of-00002.safetensors"
+zimage_base_weights = ""
+```
+
+`zimage_base_weights` は任意です。
+
+注意:
+- Turbo系そのものを直接学習するより、BaseまたはDe-Turbo系DiTを学習対象にする想定です。
+- 作成したLoRAをZ-Image-Turbo生成ワークフローでテストする運用を優先します。
+
 ## Wan2.2 paths
 
-Wan2.2では、少なくともVAE、T5、DiTのパスが必要です。
+Wan2.2も後続対応として残しています。
 
 ```toml
 [model_paths]
@@ -85,8 +106,6 @@ wan_t5 = "/home/ono/models/wan/models_t5_umt5-xxl-enc-bf16.pth"
 wan_dit = "/home/ono/models/wan/wan2.2_low_noise.safetensors"
 wan_dit_high_noise = "/home/ono/models/wan/wan2.2_high_noise.safetensors"
 ```
-
-最初に `0. Preflight Check` を押すと、不足しているパスが表示されます。
 
 ## Logs
 
