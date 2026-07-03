@@ -12,6 +12,9 @@ Verify beta:
 Check desktop launch without opening normal GUI:
   bash ./scripts/check_desktop_launch.sh
 
+Create a tiny GUI validation dataset:
+  bash ./scripts/create_sample_dataset.sh sample_data/eye_validation 4
+
 Start GUI:
   bash ./scripts/start.sh
 
@@ -23,6 +26,7 @@ Validate output after training:
 
 GUI checks:
   System tab -> 環境チェック
+  Dataset tab -> sample_data/eye_validation を選択
   Train tab -> ログ解析
   Export tab -> コピー前チェック
 """
