@@ -21,6 +21,9 @@ def main() -> int:
     assert "pgx_next_steps()" in module
     assert "nvidia-smi" in module
     assert "verify_pgx_beta.sh" in next_steps
+    assert "check_desktop_launch.sh" in next_steps
+    assert "create_sample_dataset.sh" in next_steps
+    assert "sample_data/eye_validation" in next_steps
     assert "validation_report.sh" in next_steps
     print("Debug info static check OK")
     return 0
