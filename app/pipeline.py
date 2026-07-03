@@ -30,19 +30,24 @@ class AppConfig:
             example = path.with_name("settings.example.toml")
             raise FileNotFoundError(f"settings.toml がありません。まず {example} をコピーしてください。")
         data = toml.load(path)
+        musubi = data.get("musubi", {})
+        paths = data.get("paths", {})
+        caption = data.get("caption", {})
         return cls(
-            musubi_repo_path=Path(data["musubi"]["repo_path"]),
-            musubi_python_path=Path(data["musubi"]["python_path"]),
-            datasets_dir=Path(data["paths"]["datasets_dir"]),
-            outputs_dir=Path(data["paths"]["outputs_dir"]),
-            comfyui_loras_dir=Path(data["paths"]["comfyui_loras_dir"]),
-            llm_endpoint=data["caption"].get("llm_endpoint", ""),
-            llm_model=data["caption"].get("llm_model", ""),
-            joycaption_command=data["caption"].get("joycaption_command", ""),
+            musubi_repo_path=Path(musubi.get("repo_path", "/home/ono/musubi-tuner")),
+            musubi_python_path=Path(musubi.get("python_path", "python")),
+            datasets_dir=Path(paths.get("datasets_dir", "/home/ono/datasets/lora")),
+            outputs_dir=Path(paths.get("outputs_dir", "/home/ono/outputs/lora")),
+            comfyui_loras_dir=Path(paths.get("comfyui_loras_dir", "/home/ono/ComfyUI/models/loras")),
+            llm_endpoint=caption.get("llm_endpoint", ""),
+            llm_model=caption.get("llm_model", ""),
+            joycaption_command=caption.get("joycaption_command", ""),
         )
 
 
 def image_files(dataset_dir: Path) -> list[Path]:
+    if not dataset_dir.exists():
+        return []
     return sorted(p for p in dataset_dir.iterdir() if p.suffix.lower() in IMAGE_EXTS)
 
 
@@ -126,12 +131,13 @@ def generate_captions(dataset_dir: Path, lora_type: str, caption_mode: str, cfg:
     return "\n".join(lines)
 
 
-# Backward-compatible name used by app/main.py
 def generate_captions_placeholder(dataset_dir: Path, lora_type: str, caption_mode: str, cfg: AppConfig) -> str:
     return generate_captions(dataset_dir, lora_type, caption_mode, cfg, overwrite=False)
 
 
 def build_dataset_toml(dataset_dir: Path, output_dir: Path, resolution: int) -> str:
+    if not dataset_dir.exists():
+        raise FileNotFoundError(f"Dataset folder not found: {dataset_dir}")
     output_dir.mkdir(parents=True, exist_ok=True)
     cache_dir = output_dir / "cache"
     cache_dir.mkdir(exist_ok=True)
