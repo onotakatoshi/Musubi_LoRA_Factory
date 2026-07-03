@@ -38,6 +38,7 @@ from error_analyzer import analyze_log
 from gpu_monitor import gpu_preflight_warning
 from i18n import SUPPORTED_LANGUAGES, normalize_language, tr
 from image_caption_browser import ImageCaptionBrowser
+from model_ui import available_model_labels, help_for_profile, label_for_profile, profile_id_from_label, task_for_profile, v1_default_profile
 from pipeline import AppConfig, build_dataset_toml, check_dataset, copy_lora_to_comfyui
 from preflight import run_preflight
 from project_io import default_project_path, load_project, project_data, save_project
@@ -67,8 +68,8 @@ HELP = {
     "lora_type": "何を学習したいかです。eyeなら目を学習する前提でcaptionを整理します。",
     "output_folder": "dataset.toml、cache、学習済みLoRAを置く出力フォルダです。",
     "dataset_toml": "Build dataset.tomlで作られるmusubi-tuner用設定ファイルです。",
-    "target_model": "どのモデル向けLoRAを作るかです。初期版はz-image優先です。",
-    "task_profile": "Z-Imageではz-imageを選びます。Wan用項目は後続です。",
+    "target_model": "どのモデル向けLoRAを作るかです。Ver 1.0ではZ-Image / Z-Image-Turboのみ表示します。内部構造は将来のモデル追加に対応しています。",
+    "task_profile": "選択したモデルプロファイルに対応するmusubi-tuner taskです。Ver 1.0では z-image 固定です。",
     "output_name": "保存されるLoRA名です。",
 }
 
@@ -234,9 +235,9 @@ class DesktopApp(QMainWindow):
         box = QVBoxLayout()
         guide_box = QTextEdit(); guide_box.setReadOnly(True); guide_box.setPlainText(guide("train")); guide_box.setMaximumHeight(210); box.addWidget(guide_box)
         form = QFormLayout()
-        self.target_model = QComboBox(); self.target_model.addItems(["z-image", "wan2.2"])
+        self.target_model = QComboBox(); self.target_model.addItems(available_model_labels()); self.target_model.setCurrentText(label_for_profile(v1_default_profile().id)); self.target_model.currentTextChanged.connect(self._sync_task_profile)
         form.addRow(HelpLabel(self.t("label_target_model"), HELP["target_model"]), self.target_model)
-        self.task = QComboBox(); self.task.addItems(["z-image", "t2v-A14B", "i2v-A14B", "t2v-1.3B"])
+        self.task = QComboBox(); self.task.addItem(task_for_profile(self._current_model_id()))
         form.addRow(HelpLabel(self.t("label_task_profile"), HELP["task_profile"]), self.task)
         self.preset = QComboBox(); self.preset.addItems(preset_names()); self.preset.setCurrentText(self.lora_type.currentText())
         form.addRow(HelpLabel("Preset", "用途別のZ-Image推奨設定です。"), self.preset)
@@ -274,6 +275,7 @@ class DesktopApp(QMainWindow):
         row2.addStretch(); box.addLayout(row2)
         self.run_log = self._log(); box.addWidget(QLabel(self.t("run_log"))); box.addWidget(self.run_log)
         self.analysis_log = self._log(); self.analysis_log.setMaximumHeight(140); box.addWidget(QLabel(self.t("error_analysis"))); box.addWidget(self.analysis_log)
+        self._sync_task_profile()
         w = QWidget(); w.setLayout(box); return w
 
     def _export_tab(self) -> QWidget:
@@ -320,6 +322,29 @@ class DesktopApp(QMainWindow):
     def _reload_settings_fields(self) -> None:
         self.settings = load_settings(SETTINGS_PATH); self.lang = normalize_language(nested_get(self.settings, "ui", "language", "日本語")); self._rebuild_ui()
 
+    def _current_model_id(self) -> str:
+        if not hasattr(self, "target_model"):
+            return v1_default_profile().id
+        return profile_id_from_label(self.target_model.currentText())
+
+    def _current_task(self) -> str:
+        if not hasattr(self, "task"):
+            return task_for_profile(self._current_model_id())
+        return self.task.currentText()
+
+    def _sync_task_profile(self) -> None:
+        if not hasattr(self, "task"):
+            return
+        profile_id = self._current_model_id()
+        task = task_for_profile(profile_id)
+        self.task.blockSignals(True)
+        self.task.clear()
+        self.task.addItem(task)
+        self.task.setCurrentText(task)
+        self.task.blockSignals(False)
+        if hasattr(self, "train_status"):
+            self.train_status.setPlainText(help_for_profile(profile_id, self.lang))
+
     def _check_dataset(self) -> None:
         self.dataset_log.setPlainText(check_dataset(Path(self.dataset_dir.text()), self.lang))
 
@@ -344,12 +369,12 @@ class DesktopApp(QMainWindow):
         self.train_status.setPlainText(preset_summary(p.name, self.lang))
 
     def _training_review(self) -> None:
-        self.train_status.setPlainText(training_review(Path(self.dataset_dir.text()), self.lora_type.currentText(), self.rank.value(), self.alpha.value(), self.epochs.value(), self.lr.value(), self.resolution.value(), self.dataset_toml.text(), self.target_model.currentText(), self.lang))
+        self.train_status.setPlainText(training_review(Path(self.dataset_dir.text()), self.lora_type.currentText(), self.rank.value(), self.alpha.value(), self.epochs.value(), self.lr.value(), self.resolution.value(), self.dataset_toml.text(), self._current_model_id(), self.lang))
 
     def _save_project(self) -> None:
         path, _ = QFileDialog.getSaveFileName(self, "Save project", str(default_project_path(self.output_dir.text())), "TOML (*.toml)")
         if not path: return
-        data = project_data(self.dataset_dir.text(), self.output_dir.text(), self.dataset_toml.text(), self.target_model.currentText(), self.task.currentText(), self.rank.value(), self.alpha.value(), self.epochs.value(), self.lr.value(), self.output_name.text(), self.resolution.value())
+        data = project_data(self.dataset_dir.text(), self.output_dir.text(), self.dataset_toml.text(), self._current_model_id(), self._current_task(), self.rank.value(), self.alpha.value(), self.epochs.value(), self.lr.value(), self.output_name.text(), self.resolution.value())
         self.train_status.setPlainText(save_project(Path(path), data))
 
     def _load_project(self) -> None:
@@ -359,8 +384,11 @@ class DesktopApp(QMainWindow):
         self.dataset_dir.setText(str(data.get("dataset_dir", self.dataset_dir.text())))
         self.output_dir.setText(str(data.get("output_dir", self.output_dir.text())))
         self.dataset_toml.setText(str(data.get("dataset_toml", self.dataset_toml.text())))
-        self.target_model.setCurrentText(str(data.get("target_model", self.target_model.currentText())))
-        self.task.setCurrentText(str(data.get("task", self.task.currentText())))
+        loaded_profile_id = str(data.get("target_model", self._current_model_id()))
+        loaded_label = label_for_profile(loaded_profile_id)
+        if self.target_model.findText(loaded_label) >= 0:
+            self.target_model.setCurrentText(loaded_label)
+        self._sync_task_profile()
         self.rank.setValue(int(data.get("rank", self.rank.value())))
         self.alpha.setValue(int(data.get("alpha", self.alpha.value())))
         self.epochs.setValue(int(data.get("epochs", self.epochs.value())))
@@ -370,13 +398,13 @@ class DesktopApp(QMainWindow):
         self.train_status.setPlainText(f"Loaded project: {path}")
 
     def _preflight(self) -> None:
-        self.train_status.setPlainText(run_preflight(SETTINGS_PATH, self.dataset_toml.text(), self.target_model.currentText(), self.task.currentText()))
+        self.train_status.setPlainText(run_preflight(SETTINGS_PATH, self.dataset_toml.text(), self._current_model_id(), self._current_task()))
 
     def _estimate_training_load(self) -> None:
         self.train_status.setPlainText(estimate_training_load(Path(self.dataset_dir.text()), self.epochs.value(), self.rank.value(), self.resolution.value(), self.lang))
 
     def _preview_commands(self) -> None:
-        text = preview_from_settings(SETTINGS_PATH, self.dataset_toml.text(), self.target_model.currentText(), self.rank.value(), self.alpha.value(), self.epochs.value(), self.lr.value(), self.output_name.text(), self.task.currentText())
+        text = preview_from_settings(SETTINGS_PATH, self.dataset_toml.text(), self._current_model_id(), self.rank.value(), self.alpha.value(), self.epochs.value(), self.lr.value(), self.output_name.text(), self._current_task())
         self.command_preview_text = text; self.command_preview.setPlainText(text)
 
     def _run_section(self, section: str) -> None:
