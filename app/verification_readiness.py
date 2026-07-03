@@ -66,6 +66,7 @@ def verification_readiness() -> str:
         ("Beta check runs static check", READINESS_FILES["check_beta"], "desktop_static_check.py"),
         ("Beta check runs command path guard test", READINESS_FILES["check_beta"], "command_path_guard_test.py"),
         ("Beta check runs stage guidance test", READINESS_FILES["check_beta"], "stage_guidance_test.py"),
+        ("Beta check runs musubi runtime test", READINESS_FILES["check_beta"], "musubi_runtime_check_test.py"),
         ("Beta check runs export validator test", READINESS_FILES["check_beta"], "export_validator_test.py"),
         ("Runbook documents command path guard", READINESS_FILES["runbook"], "Command Path Guard"),
         ("Runbook documents export validation", READINESS_FILES["runbook"], "コピー前チェック"),
