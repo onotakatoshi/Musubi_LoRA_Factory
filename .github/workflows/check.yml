@@ -21,7 +21,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Compile Python files
+      - name: Compile desktop app and support modules
         run: python -m py_compile app/*.py
 
       - name: Run smoke test
