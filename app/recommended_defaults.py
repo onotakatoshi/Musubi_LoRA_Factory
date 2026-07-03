@@ -8,28 +8,30 @@ DEFAULTS = {
     "lr": 0.00005,
 }
 
+HELP_JA = {
+    "resolution": "Resolution\n\n512: 推奨デフォルト。最初の学習は512が安定です。\n768: 品質を上げたい場合。\n1024: 重くなります。まずは非推奨です。",
+    "rank": "Rank\n\nLoRAの表現力です。\n16: 推奨デフォルト。体の一部LoRAではまずここから。\n32以上: より強く覚えますが、過学習に注意。",
+    "alpha": "Alpha\n\nLoRAの効きのスケールです。\n推奨デフォルトはRankと同じ値です。まずは Rank=16 / Alpha=16 で始めます。",
+    "epochs": "Epochs\n\nデータセットを何周学習するかです。\n10: 推奨デフォルト。100枚前後の画像で最初に試す値です。",
+    "lr": "Learning rate\n\n学習率です。\n0.00005: 推奨デフォルト。大きすぎると壊れやすく、小さすぎると覚えにくくなります。",
+}
 
-def status_text(name: str, value: int | float, lang: str = "日本語") -> str:
-    default = DEFAULTS[name]
-    is_default = value == default
-    if lang == "English":
-        return "Recommended default" if is_default else f"Custom value / default: {default}"
-    return "推奨デフォルト" if is_default else f"ユーザー設定 / デフォルト: {default}"
+HELP_EN = {
+    "resolution": "Resolution\n\n512: Recommended default. Stable for first runs.\n768: Higher quality.\n1024: Heavier; not recommended for the first run.",
+    "rank": "Rank\n\nLoRA capacity.\n16: Recommended default for body-part LoRA.\n32+: Stronger learning, but watch for overfitting.",
+    "alpha": "Alpha\n\nLoRA strength scale.\nRecommended default is the same as Rank. Start with Rank=16 / Alpha=16.",
+    "epochs": "Epochs\n\nHow many times to iterate over the dataset.\n10: Recommended default for around 100 images.",
+    "lr": "Learning rate\n\n0.00005: Recommended default. Too high can break training; too low may underfit.",
+}
 
 
 def help_text(name: str, lang: str = "日本語") -> str:
-    ja = {
-        "resolution": "推奨デフォルト: 512。最初は512が安全です。768/1024は品質向上の可能性がありますが、メモリ使用量と学習時間が増えます。",
-        "rank": "推奨デフォルト: 16。LoRAの表現力です。大きいほど覚えますが、重くなり過学習もしやすくなります。",
-        "alpha": "推奨デフォルト: 16。通常はRankと同じ値から始めます。LoRAの効き方に関係します。",
-        "epochs": "推奨デフォルト: 10。データセットを何周学習するかです。効きが弱ければ増やし、強すぎれば減らします。",
-        "lr": "推奨デフォルト: 0.00005。学習率です。最初は変更しないことを推奨します。大きすぎると破綻しやすくなります。",
-    }
-    en = {
-        "resolution": "Recommended default: 512. Start with 512. 768/1024 may improve quality but uses more memory and time.",
-        "rank": "Recommended default: 16. Higher rank increases capacity but can be heavier and overfit more easily.",
-        "alpha": "Recommended default: 16. Usually start with the same value as Rank.",
-        "epochs": "Recommended default: 10. Increase if too weak, decrease if overtrained.",
-        "lr": "Recommended default: 0.00005. Keep this unchanged at first. Too high can break training.",
-    }
-    return (en if lang == "English" else ja)[name]
+    return (HELP_EN if lang == "English" else HELP_JA).get(name, name)
+
+
+def status_text(name: str, value: int | float, lang: str = "日本語") -> str:
+    default = DEFAULTS[name]
+    same = abs(float(value) - float(default)) < 1e-12 if isinstance(default, float) else int(value) == int(default)
+    if lang == "English":
+        return f"🟢 Recommended default: {default}" if same else f"🟡 Custom value\nDefault: {default}"
+    return f"🟢 推奨デフォルト: {default}" if same else f"🟡 ユーザー設定\nデフォルト: {default}"
