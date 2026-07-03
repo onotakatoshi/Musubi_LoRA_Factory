@@ -4,6 +4,8 @@ PGX向けのmusubi-tuner用ローカルGUIです。
 
 現在の優先ターゲットは **Z-Image / Z-Image-Turbo運用** です。
 
+Z-Imageで最初に試す場合は、まず [PGX Z-Image setup notes](docs/pgx_zimage_setup.md) を見てください。
+
 目的:
 - データセット選択
 - JoyCaption/LLM整形用のキャプション生成パイプライン
