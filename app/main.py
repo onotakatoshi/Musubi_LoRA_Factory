@@ -20,6 +20,7 @@ from pipeline import (
     run_cache_placeholder,
     run_train_placeholder,
 )
+from runner import CommandRunnerError, run_preview_section
 from workflow import next_action, workflow_markdown
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -91,6 +92,16 @@ def ui_command_preview(
     )
 
 
+def ui_run_command_section(command_preview: str, section: str) -> str:
+    try:
+        output = run_preview_section(command_preview, section, cwd=ROOT)
+        return f"DONE: {section}\n\n{output}"
+    except CommandRunnerError as exc:
+        return f"FAILED: {section}\n\n{exc}"
+    except Exception as exc:
+        return f"FAILED: {section}\n\n{type(exc).__name__}: {exc}"
+
+
 def ui_train(
     dataset_toml: str,
     target_model: str,
@@ -110,7 +121,7 @@ def ui_copy(lora_path: str) -> str:
 
 
 with gr.Blocks(title="Musubi LoRA Factory") as demo:
-    gr.Markdown("# Musubi LoRA Factory\nPGX向けLoRA作成MVP")
+    gr.Markdown("# Musubi LoRA Factory\nPGX向けmusubi-tuner GUI")
 
     with gr.Row():
         with gr.Column(scale=2):
@@ -168,7 +179,7 @@ with gr.Blocks(title="Musubi LoRA Factory") as demo:
         build_btn.click(ui_build_dataset_toml, inputs=[dataset_dir, output_dir, resolution], outputs=[dataset_toml])
 
     with gr.Tab("4. Train"):
-        gr.Markdown("## Step 5: Train\nまずコマンドを確認し、その後cache作成とLoRA学習へ進みます。")
+        gr.Markdown("## Step 5: Train\nまずコマンドを確認します。問題なければ Latent Cache → Text Cache → Train の順に実行します。")
         target_model = gr.Dropdown(
             ["wan2.2", "z-image", "flux", "hunyuanvideo", "framepack"],
             value="wan2.2",
@@ -181,12 +192,15 @@ with gr.Blocks(title="Musubi LoRA Factory") as demo:
         lr = gr.Number(value=0.00005, label="Learning rate")
         output_name = gr.Textbox(value="eye_lora_wan22", label="Output name")
         preview_btn = gr.Button("Preview Commands")
-        cache_btn = gr.Button("Create Cache")
-        train_btn = gr.Button("Train LoRA")
+        with gr.Row():
+            run_latent_btn = gr.Button("Run 1: Latent Cache")
+            run_text_btn = gr.Button("Run 2: Text Cache")
+            run_train_btn = gr.Button("Run 3: Train")
         train_log = gr.Textbox(label="Log / Command Preview", lines=24)
         preview_btn.click(ui_command_preview, inputs=[dataset_toml, target_model, rank, alpha, epochs, lr, output_name, task], outputs=[train_log])
-        cache_btn.click(ui_cache, inputs=[dataset_toml, target_model], outputs=[train_log])
-        train_btn.click(ui_train, inputs=[dataset_toml, target_model, rank, alpha, epochs, lr, output_name], outputs=[train_log])
+        run_latent_btn.click(lambda text: ui_run_command_section(text, "latent_cache"), inputs=[train_log], outputs=[train_log])
+        run_text_btn.click(lambda text: ui_run_command_section(text, "text_cache"), inputs=[train_log], outputs=[train_log])
+        run_train_btn.click(lambda text: ui_run_command_section(text, "train"), inputs=[train_log], outputs=[train_log])
 
     with gr.Tab("5. Export"):
         gr.Markdown("## Step 6: Export\n完成したLoRAをComfyUIのlorasフォルダへコピーします。")
