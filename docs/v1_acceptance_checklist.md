@@ -15,9 +15,10 @@ Ver 1.0はZ-Image専用です。
 ```bash
 git clone https://github.com/onotakatoshi/Musubi_LoRA_Factory.git
 cd Musubi_LoRA_Factory
-chmod +x scripts/setup.sh scripts/start.sh scripts/check.sh scripts/update.sh scripts/create_desktop_launcher.sh
+chmod +x scripts/*.sh
 ./scripts/setup.sh
 ./scripts/check.sh
+./scripts/check_beta.sh
 ./scripts/create_desktop_launcher.sh
 ```
 
@@ -47,6 +48,9 @@ chmod +x scripts/setup.sh scripts/start.sh scripts/check.sh scripts/update.sh sc
 - [ ] Z-Image text encoder path is set
 - [ ] Validate Settings shows no missing required items
 - [ ] Environment Check passes required Z-Image items
+- [ ] Musubi Runtime Check confirms configured python
+- [ ] Musubi Runtime Check confirms accelerate module
+- [ ] Musubi Runtime Check confirms Z-Image scripts
 
 ## Dataset check
 
@@ -76,15 +80,25 @@ chmod +x scripts/setup.sh scripts/start.sh scripts/check.sh scripts/update.sh sc
 - [ ] 学習前レビュー runs
 - [ ] Preflight Check passes
 - [ ] Command Preview generates Z-Image commands
+- [ ] Command Preview uses configured musubi python
+- [ ] Train command uses `python -m accelerate.commands.launch`
+- [ ] Command Path Guard passes before run
 - [ ] Latent Cache command starts
 - [ ] Text Cache command starts
 - [ ] Train command starts
 - [ ] Logs are visible in the GUI
+- [ ] Logs are saved under output folder `logs/`
 - [ ] Stop button can request termination
+- [ ] Stop escalates to force kill if process does not stop
 
 ## Output / Export check
 
 - [ ] LoRA `.safetensors` is created
+- [ ] Latest LoRA is auto-detected after training
+- [ ] 書き出し tab receives LoRA path automatically
+- [ ] コピー前チェック returns `Result: OK`
+- [ ] コピー前チェック blocks missing / invalid LoRA
+- [ ] コピー前チェック blocks missing ComfyUI LoRA folder
 - [ ] Export copies LoRA to ComfyUI loras folder
 - [ ] ComfyUI can see the copied LoRA
 - [ ] Z-Image-Turbo workflow can load the LoRA
@@ -98,13 +112,18 @@ Ver 1.0 is complete only when the full flow succeeds on PGX:
 setup
 → double-click launch
 → settings
+→ runtime check
 → dataset
 → caption check/edit
 → dataset.toml
+→ command preview
+→ command path guard
 → latent cache
 → text cache
 → train
 → LoRA output
+→ auto-detect LoRA
+→ export validation
 → copy to ComfyUI
 → use in Z-Image-Turbo generation
 ```
