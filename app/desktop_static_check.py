@@ -30,6 +30,7 @@ REQUIRED_I18N_KEYS = [
 ]
 
 REQUIRED_DEFAULT_KEYS = ["resolution", "rank", "alpha", "epochs", "lr"]
+FORBIDDEN_DESKTOP_MODEL_LITERALS = ["wan2.2", "t2v-A14B", "i2v-A14B", "t2v-1.3B"]
 
 
 def _used_translation_keys() -> set[str]:
@@ -76,6 +77,15 @@ def _check_model_ui() -> None:
     assert "Z-Image" in help_for_profile("z-image", "English")
 
 
+def _check_desktop_uses_model_ui() -> None:
+    text = DESKTOP_MAIN.read_text(encoding="utf-8")
+    assert "available_model_labels" in text, "desktop_main.py should use model_ui.available_model_labels"
+    assert "profile_id_from_label" in text, "desktop_main.py should convert labels through model_ui"
+    assert "task_for_profile" in text, "desktop_main.py should sync task through model_ui"
+    for literal in FORBIDDEN_DESKTOP_MODEL_LITERALS:
+        assert literal not in text, f"desktop_main.py must not hard-code future model/task literal: {literal}"
+
+
 def main() -> int:
     for lang in SUPPORTED_LANGUAGES:
         missing = [key for key in REQUIRED_I18N_KEYS if key not in TEXT[lang]]
@@ -97,6 +107,7 @@ def main() -> int:
 
     _check_model_registry()
     _check_model_ui()
+    _check_desktop_uses_model_ui()
 
     import caption_diagnostics  # noqa: F401
     import caption_table_widget  # noqa: F401
