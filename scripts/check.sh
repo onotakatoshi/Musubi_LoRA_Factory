@@ -16,6 +16,7 @@ print('PySide6 import OK')
 PY
 
 python -m py_compile app/*.py
+python app/desktop_static_check.py
 python app/smoke_test.py
 python app/env_check.py
 
