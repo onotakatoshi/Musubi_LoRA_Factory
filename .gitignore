@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+
+# Local settings
+configs/settings.toml
+
+# Runtime logs
+logs/
+
+# Generated datasets / outputs / caches
+outputs/
+cache/
+*.safetensors
+*.ckpt
+*.pt
+*.pth
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
