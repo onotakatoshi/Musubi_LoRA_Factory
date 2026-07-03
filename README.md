@@ -2,18 +2,23 @@
 
 PGX向けのmusubi-tuner用ローカルデスクトップGUIです。
 
-現在の優先ターゲットは **Z-Image / Z-Image-Turbo運用** です。
+**Ver 1.0 は Z-Image / Z-Image-Turbo 用LoRA作成に限定します。**
+
+Wan2.2、FLUX、SDXL、その他モデルへの対応は、Z-Image-Turboで実用的なLoRA生成が確認できたあとに追加します。
 
 Z-Imageで最初に試す場合は、まず [PGX Z-Image setup notes](docs/pgx_zimage_setup.md) を見てください。
 
+Ver 1.0の合格条件は [Ver 1.0 Acceptance Checklist](docs/v1_acceptance_checklist.md) にまとめています。
+
 目的:
+- Z-Image / Z-Image-Turbo 用LoRA作成
 - データセット選択
 - caption診断
 - caption一覧編集
 - caption一括置換 / 一括削除
 - 画像プレビューを見ながらcaption最終確認
 - dataset.toml自動生成
-- musubi-tunerのcache/trainコマンドPreview
+- Z-Image用musubi-tuner cache/trainコマンドPreview
 - Preflight Check
 - musubi-tunerコマンド実行
 - リアルタイムログ表示
@@ -27,7 +32,7 @@ Z-Imageで最初に試す場合は、まず [PGX Z-Image setup notes](docs/pgx_z
 ```bash
 git clone https://github.com/onotakatoshi/Musubi_LoRA_Factory.git
 cd Musubi_LoRA_Factory
-chmod +x scripts/setup.sh scripts/start.sh scripts/check.sh scripts/create_desktop_launcher.sh
+chmod +x scripts/setup.sh scripts/start.sh scripts/check.sh scripts/update.sh scripts/create_desktop_launcher.sh
 ./scripts/setup.sh
 ./scripts/check.sh
 ```
@@ -41,6 +46,12 @@ chmod +x scripts/setup.sh scripts/start.sh scripts/check.sh scripts/create_deskt
 ```
 
 PySide6のデスクトップウィンドウが開きます。
+
+## 更新
+
+```bash
+./scripts/update.sh
+```
 
 ## アイコンから起動
 
@@ -83,12 +94,15 @@ python app/desktop_main.py
 7. `画像プレビュー` で画像を見ながらcaptionを最終確認
 8. `設定生成` で `dataset.toml` を作成
 9. `学習` で Target model が `z-image` になっていることを確認
-10. `0. 事前チェック`
-11. `コマンド確認` で実行内容を確認
-12. `1. Latent Cache実行`
-13. `2. Text Cache実行`
-14. `3. 学習実行`
-15. `書き出し` で完成LoRAをComfyUIへコピー
+10. `Preset適用`
+11. `学習前レビュー`
+12. `0. 事前チェック`
+13. `コマンド確認` で実行内容を確認
+14. `1. Latent Cache実行`
+15. `2. Text Cache実行`
+16. `3. 学習実行`
+17. `書き出し` で完成LoRAをComfyUIへコピー
+18. ComfyUIのZ-Image-TurboワークフローでLoRAを確認
 
 ## Z-Image paths
 
@@ -108,14 +122,16 @@ zimage_base_weights = ""
 - Turbo系そのものを直接学習するより、BaseまたはDe-Turbo系DiTを学習対象にする想定です。
 - 作成したLoRAをZ-Image-Turbo生成ワークフローでテストする運用を優先します。
 
-## Wan2.2 paths
+## Out of scope for Ver 1.0
 
-Wan2.2も後続対応として残しています。
+以下はVer 1.0では対象外です。
 
-```toml
-[model_paths]
-wan_vae = "/home/ono/models/wan/Wan2.1_VAE.pth"
-wan_t5 = "/home/ono/models/wan/models_t5_umt5-xxl-enc-bf16.pth"
-wan_dit = "/home/ono/models/wan/wan2.2_low_noise.safetensors"
-wan_dit_high_noise = "/home/ono/models/wan/wan2.2_high_noise.safetensors"
-```
+- Wan2.2 LoRA
+- FLUX LoRA
+- SDXL LoRA
+- AIアシスタント
+- タグヒートマップ
+- 学習履歴DB
+- 高度な自動修正
+
+これらは、Z-Image-Turboで「ちゃんと使えるLoRA」が作れることを確認したあとに追加します。
