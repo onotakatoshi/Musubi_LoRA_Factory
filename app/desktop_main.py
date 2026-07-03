@@ -40,6 +40,7 @@ from i18n import SUPPORTED_LANGUAGES, normalize_language, tr
 from image_caption_browser import ImageCaptionBrowser
 from pipeline import AppConfig, build_dataset_toml, check_dataset, copy_lora_to_comfyui
 from preflight import run_preflight
+from project_io import default_project_path, load_project, project_data, save_project
 from recommended_defaults import DEFAULTS, help_text as default_help_text, status_text as default_status_text
 from runner import split_command_sections
 from settings_detect import detect_zimage_files, validate_settings_paths
@@ -47,6 +48,8 @@ from settings_io import load_settings, nested_get, save_settings
 from state_check import config_status, dataset_status, train_ready_status
 from step_guides import guide
 from training_estimator import estimate_training_load
+from training_presets import get_preset, preset_names, preset_summary
+from training_review import training_review
 
 SETTINGS_PATH = ROOT / "configs" / "settings.toml"
 
@@ -192,7 +195,7 @@ class DesktopApp(QMainWindow):
         form = QFormLayout()
         self.dataset_dir = self._line(str(Path(nested_get(self.settings, "paths", "datasets_dir")) / "Eye_Blue_v1"))
         form.addRow(HelpLabel(self.t("label_dataset_folder"), HELP["dataset_folder"]), self._browse_dir_row(self.dataset_dir))
-        self.lora_type = QComboBox(); self.lora_type.addItems(["eye", "mouth", "face", "hair", "hand", "style", "clothing"])
+        self.lora_type = QComboBox(); self.lora_type.addItems(preset_names())
         form.addRow(HelpLabel(self.t("label_lora_type"), HELP["lora_type"]), self.lora_type)
         box.addLayout(form)
         buttons = QHBoxLayout()
@@ -235,6 +238,8 @@ class DesktopApp(QMainWindow):
         form.addRow(HelpLabel(self.t("label_target_model"), HELP["target_model"]), self.target_model)
         self.task = QComboBox(); self.task.addItems(["z-image", "t2v-A14B", "i2v-A14B", "t2v-1.3B"])
         form.addRow(HelpLabel(self.t("label_task_profile"), HELP["task_profile"]), self.task)
+        self.preset = QComboBox(); self.preset.addItems(preset_names()); self.preset.setCurrentText(self.lora_type.currentText())
+        form.addRow(HelpLabel("Preset", "用途別のZ-Image推奨設定です。"), self.preset)
         self.rank = QSpinBox(); self.rank.setRange(4, 128); self.rank.setSingleStep(4); self.rank.setValue(DEFAULTS["rank"])
         form.addRow(HelpLabel(self.t("label_rank"), default_help_text("rank", self.lang)), self._default_spin_row("rank", self.rank))
         self.alpha = QSpinBox(); self.alpha.setRange(4, 128); self.alpha.setSingleStep(4); self.alpha.setValue(DEFAULTS["alpha"])
@@ -246,13 +251,19 @@ class DesktopApp(QMainWindow):
         self.output_name = self._line("eye_lora_zimage")
         form.addRow(HelpLabel(self.t("label_output_name"), HELP["output_name"]), self.output_name)
         box.addLayout(form)
+        project_row = QHBoxLayout()
+        project_row.addWidget(self._button("Preset適用", self._apply_preset))
+        project_row.addWidget(self._button("学習前レビュー", self._training_review))
+        project_row.addWidget(self._button("Project保存", self._save_project))
+        project_row.addWidget(self._button("Project読み込み", self._load_project))
+        project_row.addStretch(); box.addLayout(project_row)
         row1 = QHBoxLayout()
         row1.addWidget(self._button(self.t("preflight_check"), self._preflight))
         row1.addWidget(self._button(self.t("preview_commands"), self._preview_commands))
         row1.addWidget(self._button(self.t("estimate_training_load"), self._estimate_training_load))
         row1.addWidget(self._button(self.t("check_current_step"), lambda: self.train_status.setPlainText(train_ready_status(self.command_preview_text))))
         row1.addStretch(); box.addLayout(row1)
-        self.train_status = self._log(); self.train_status.setMaximumHeight(120); box.addWidget(self.train_status)
+        self.train_status = self._log(); self.train_status.setMaximumHeight(150); box.addWidget(self.train_status)
         self.command_preview = self._log(); self.command_preview.setMaximumHeight(180); box.addWidget(QLabel(self.t("command_preview"))); box.addWidget(self.command_preview)
         row2 = QHBoxLayout()
         row2.addWidget(self._button(self.t("run_latent_cache"), lambda: self._run_section("latent_cache")))
@@ -324,6 +335,39 @@ class DesktopApp(QMainWindow):
             self.dataset_toml.setText(path); self.config_log.setPlainText(f"OK: {path}")
         except Exception as exc:
             self.config_log.setPlainText(f"NG: {type(exc).__name__}: {exc}")
+
+    def _apply_preset(self) -> None:
+        p = get_preset(self.preset.currentText())
+        self.lora_type.setCurrentText(p.lora_type)
+        self.rank.setValue(p.rank); self.alpha.setValue(p.alpha); self.epochs.setValue(p.epochs); self.lr.setValue(p.lr); self.resolution.setValue(p.resolution)
+        self.output_name.setText(f"{p.name}_lora_zimage")
+        self.train_status.setPlainText(preset_summary(p.name, self.lang))
+
+    def _training_review(self) -> None:
+        self.train_status.setPlainText(training_review(Path(self.dataset_dir.text()), self.lora_type.currentText(), self.rank.value(), self.alpha.value(), self.epochs.value(), self.lr.value(), self.resolution.value(), self.dataset_toml.text(), self.target_model.currentText(), self.lang))
+
+    def _save_project(self) -> None:
+        path, _ = QFileDialog.getSaveFileName(self, "Save project", str(default_project_path(self.output_dir.text())), "TOML (*.toml)")
+        if not path: return
+        data = project_data(self.dataset_dir.text(), self.output_dir.text(), self.dataset_toml.text(), self.target_model.currentText(), self.task.currentText(), self.rank.value(), self.alpha.value(), self.epochs.value(), self.lr.value(), self.output_name.text(), self.resolution.value())
+        self.train_status.setPlainText(save_project(Path(path), data))
+
+    def _load_project(self) -> None:
+        path, _ = QFileDialog.getOpenFileName(self, "Load project", str(Path.home()), "TOML (*.toml)")
+        if not path: return
+        data = load_project(Path(path))
+        self.dataset_dir.setText(str(data.get("dataset_dir", self.dataset_dir.text())))
+        self.output_dir.setText(str(data.get("output_dir", self.output_dir.text())))
+        self.dataset_toml.setText(str(data.get("dataset_toml", self.dataset_toml.text())))
+        self.target_model.setCurrentText(str(data.get("target_model", self.target_model.currentText())))
+        self.task.setCurrentText(str(data.get("task", self.task.currentText())))
+        self.rank.setValue(int(data.get("rank", self.rank.value())))
+        self.alpha.setValue(int(data.get("alpha", self.alpha.value())))
+        self.epochs.setValue(int(data.get("epochs", self.epochs.value())))
+        self.lr.setValue(float(data.get("learning_rate", self.lr.value())))
+        self.output_name.setText(str(data.get("output_name", self.output_name.text())))
+        self.resolution.setValue(int(data.get("resolution", self.resolution.value())))
+        self.train_status.setPlainText(f"Loaded project: {path}")
 
     def _preflight(self) -> None:
         self.train_status.setPlainText(run_preflight(SETTINGS_PATH, self.dataset_toml.text(), self.target_model.currentText(), self.task.currentText()))
