@@ -5,6 +5,7 @@ from pathlib import Path
 
 from i18n import SUPPORTED_LANGUAGES, TEXT, tr
 from model_registry import PROFILES, enabled_profiles, get_profile, profile_ids, profile_summary
+from model_ui import available_model_ids, available_model_labels, help_for_profile, label_for_profile, profile_id_from_label, task_for_profile, v1_default_profile
 from recommended_defaults import DEFAULTS, help_text, status_text
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -63,6 +64,18 @@ def _check_model_registry() -> None:
     assert [p.id for p in enabled_profiles()] == ["z-image"], "Only z-image should be enabled for Ver 1.0"
 
 
+def _check_model_ui() -> None:
+    assert available_model_ids() == ["z-image"]
+    assert "wan2.2" in available_model_ids(include_future=True)
+    assert available_model_labels() == ["Z-Image / Z-Image-Turbo"]
+    assert label_for_profile("z-image") == "Z-Image / Z-Image-Turbo"
+    assert profile_id_from_label("Z-Image / Z-Image-Turbo") == "z-image"
+    assert task_for_profile("z-image") == "z-image"
+    assert v1_default_profile().id == "z-image"
+    assert "Z-Image" in help_for_profile("z-image", "日本語")
+    assert "Z-Image" in help_for_profile("z-image", "English")
+
+
 def main() -> int:
     for lang in SUPPORTED_LANGUAGES:
         missing = [key for key in REQUIRED_I18N_KEYS if key not in TEXT[lang]]
@@ -83,12 +96,14 @@ def main() -> int:
         assert "Recommended default" in status_text(key, DEFAULTS[key], "English"), key
 
     _check_model_registry()
+    _check_model_ui()
 
     import caption_diagnostics  # noqa: F401
     import caption_table_widget  # noqa: F401
     import dataset_diagnostics  # noqa: F401
     import desktop_main  # noqa: F401
     import image_caption_browser  # noqa: F401
+    import model_ui  # noqa: F401
     import project_io  # noqa: F401
     import training_estimator  # noqa: F401
     import training_presets  # noqa: F401
