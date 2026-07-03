@@ -13,23 +13,9 @@ ROOT = Path(__file__).resolve().parents[1]
 DESKTOP_MAIN = ROOT / "app" / "desktop_main.py"
 
 REQUIRED_I18N_KEYS = [
-    "app_title",
-    "tab_settings",
-    "tab_system",
-    "tab_dataset",
-    "tab_caption",
-    "tab_preview",
-    "tab_config",
-    "tab_train",
-    "tab_export",
-    "check_dataset",
-    "diagnose_captions",
-    "estimate_training_load",
-    "preview_commands",
-    "run_train",
-    "copy_to_comfyui",
+    "app_title", "tab_settings", "tab_system", "tab_dataset", "tab_caption", "tab_preview", "tab_config", "tab_train", "tab_export",
+    "check_dataset", "diagnose_captions", "estimate_training_load", "preview_commands", "run_train", "copy_to_comfyui",
 ]
-
 REQUIRED_DEFAULT_KEYS = ["resolution", "rank", "alpha", "epochs", "lr"]
 FORBIDDEN_DESKTOP_MODEL_LITERALS = ["wan2.2", "t2v-A14B", "i2v-A14B", "t2v-1.3B"]
 
@@ -96,6 +82,19 @@ def _check_desktop_uses_model_ui() -> None:
         assert literal not in text, f"desktop_main.py must not hard-code future model/task literal: {literal}"
 
 
+def _check_desktop_uses_training_engine() -> None:
+    text = DESKTOP_MAIN.read_text(encoding="utf-8")
+    assert "from training_engine import TrainingEngine" in text
+    assert "self.training_engine = TrainingEngine()" in text
+    assert "self.training_engine.prepare" in text
+    assert "self.training_engine.run_one" in text
+    assert "self.training_engine.run_all" in text
+    assert "self.training_engine.stop" in text
+    assert "_append_training_log" in text
+    assert "_set_training_state" in text
+    assert "全部実行" in text
+
+
 def main() -> int:
     for lang in SUPPORTED_LANGUAGES:
         missing = [key for key in REQUIRED_I18N_KEYS if key not in TEXT[lang]]
@@ -119,6 +118,7 @@ def main() -> int:
     _check_model_ui()
     _check_model_adapters()
     _check_desktop_uses_model_ui()
+    _check_desktop_uses_training_engine()
 
     import caption_diagnostics  # noqa: F401
     import caption_table_widget  # noqa: F401
@@ -128,6 +128,7 @@ def main() -> int:
     import model_adapters  # noqa: F401
     import model_ui  # noqa: F401
     import project_io  # noqa: F401
+    import training_engine  # noqa: F401
     import training_estimator  # noqa: F401
     import training_presets  # noqa: F401
     import training_review  # noqa: F401
