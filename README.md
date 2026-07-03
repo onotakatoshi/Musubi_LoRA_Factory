@@ -25,8 +25,9 @@ Z-Imageで最初に試す場合は、まず [PGX Z-Image setup notes](docs/pgx_z
 ```bash
 git clone https://github.com/onotakatoshi/Musubi_LoRA_Factory.git
 cd Musubi_LoRA_Factory
-chmod +x scripts/setup.sh scripts/start.sh
+chmod +x scripts/setup.sh scripts/start.sh scripts/check.sh
 ./scripts/setup.sh
+./scripts/check.sh
 ```
 
 `configs/settings.toml` をPGX環境に合わせて編集します。
@@ -46,6 +47,8 @@ python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 cp configs/settings.example.toml configs/settings.toml
+python -m py_compile app/*.py
+python app/smoke_test.py
 python app/main.py
 ```
 
