@@ -2,6 +2,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from model_adapters import get_adapter
+from model_registry import get_profile
+
 MODEL_EXTS = {".safetensors", ".pt", ".pth", ".bin"}
 
 
@@ -43,30 +46,53 @@ def detect_zimage_files(model_dir: Path) -> dict[str, str]:
     }
 
 
-def validate_settings_paths(values: dict[str, str]) -> str:
+def _status_dir(key: str, value: str) -> str:
+    if not value:
+        return f"❌ {key}: not set"
+    p = Path(value)
+    if not p.exists():
+        return f"❌ {key}: not found: {value}"
+    if not p.is_dir():
+        return f"❌ {key}: not a directory: {value}"
+    return f"✅ {key}: {value}"
+
+
+def _status_file(key: str, value: str) -> str:
+    if not value:
+        return f"❌ {key}: not set"
+    p = Path(value)
+    if not p.exists():
+        return f"❌ {key}: not found: {value}"
+    if not p.is_file():
+        return f"❌ {key}: not a file: {value}"
+    return f"✅ {key}: {value}"
+
+
+def validate_settings_paths(values: dict[str, str], profile_id: str = "z-image") -> str:
+    profile = get_profile(profile_id)
     required_dirs = ["musubi_repo", "datasets_dir", "outputs_dir", "comfyui_loras_dir"]
-    required_files = ["musubi_python", "zimage_dit", "zimage_vae", "zimage_text_encoder"]
-    lines = ["# Settings Validation", ""]
+    required_files = ["musubi_python"]
+    lines = ["# Settings Validation", "", f"Profile: {profile.display_name}", ""]
+
     for key in required_dirs:
-        value = values.get(key, "")
-        if not value:
-            lines.append(f"❌ {key}: not set")
-        elif not Path(value).exists():
-            lines.append(f"❌ {key}: not found: {value}")
-        elif not Path(value).is_dir():
-            lines.append(f"❌ {key}: not a directory: {value}")
-        else:
-            lines.append(f"✅ {key}: {value}")
+        lines.append(_status_dir(key, values.get(key, "")))
     for key in required_files:
-        value = values.get(key, "")
-        if not value:
-            lines.append(f"❌ {key}: not set")
-        elif not Path(value).exists():
-            lines.append(f"❌ {key}: not found: {value}")
-        elif not Path(value).is_file():
-            lines.append(f"❌ {key}: not a file: {value}")
-        else:
-            lines.append(f"✅ {key}: {value}")
+        lines.append(_status_file(key, values.get(key, "")))
+
+    try:
+        adapter = get_adapter(profile.id)
+        lines.append("")
+        lines.append(f"## {profile.display_name} model paths")
+        for key in adapter.required_setting_keys():
+            lines.append(_status_file(key, values.get(key, "")))
+        for key in adapter.optional_setting_keys():
+            value = values.get(key, "")
+            if value:
+                lines.append(_status_file(key, value))
+            else:
+                lines.append(f"ℹ️ {key}: optional / not set")
+    except NotImplementedError as exc:
+        lines.append(f"❌ {exc}")
 
     repo = Path(values.get("musubi_repo", ""))
     if repo.exists():
