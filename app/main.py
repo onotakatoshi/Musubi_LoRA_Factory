@@ -21,7 +21,8 @@ from pipeline import (
     run_train_placeholder,
 )
 from preflight import run_preflight
-from runner import CommandRunnerError, run_preview_section
+from section_runner import stream_section
+from stream_runner import stop_job
 from workflow import next_action, workflow_markdown
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -97,14 +98,12 @@ def ui_command_preview(
     )
 
 
-def ui_run_command_section(command_preview: str, section: str) -> str:
-    try:
-        output = run_preview_section(command_preview, section, cwd=ROOT)
-        return f"DONE: {section}\n\n{output}"
-    except CommandRunnerError as exc:
-        return f"FAILED: {section}\n\n{exc}"
-    except Exception as exc:
-        return f"FAILED: {section}\n\n{type(exc).__name__}: {exc}"
+def ui_stream_command_section(command_preview: str, section: str):
+    yield from stream_section(command_preview, section, cwd=ROOT)
+
+
+def ui_stop(section: str) -> str:
+    return stop_job(section)
 
 
 def ui_train(
@@ -184,7 +183,7 @@ with gr.Blocks(title="Musubi LoRA Factory") as demo:
         build_btn.click(ui_build_dataset_toml, inputs=[dataset_dir, output_dir, resolution], outputs=[dataset_toml])
 
     with gr.Tab("4. Train"):
-        gr.Markdown("## Step 5: Train\nPreflight → Preview Commands → Latent Cache → Text Cache → Train の順に進めます。")
+        gr.Markdown("## Step 5: Train\nPreflight → Preview Commands → Latent Cache → Text Cache → Train の順に進めます。ログはリアルタイム表示されます。")
         target_model = gr.Dropdown(
             ["wan2.2", "z-image", "flux", "hunyuanvideo", "framepack"],
             value="wan2.2",
@@ -202,12 +201,15 @@ with gr.Blocks(title="Musubi LoRA Factory") as demo:
             run_latent_btn = gr.Button("Run 1: Latent Cache")
             run_text_btn = gr.Button("Run 2: Text Cache")
             run_train_btn = gr.Button("Run 3: Train")
+            stop_btn = gr.Button("Stop Current Section")
+        stop_section = gr.Dropdown(["latent_cache", "text_cache", "train"], value="train", label="Stop target")
         train_log = gr.Textbox(label="Log / Command Preview", lines=24)
         preflight_btn.click(ui_preflight, inputs=[dataset_toml, target_model, task], outputs=[train_log])
         preview_btn.click(ui_command_preview, inputs=[dataset_toml, target_model, rank, alpha, epochs, lr, output_name, task], outputs=[train_log])
-        run_latent_btn.click(lambda text: ui_run_command_section(text, "latent_cache"), inputs=[train_log], outputs=[train_log])
-        run_text_btn.click(lambda text: ui_run_command_section(text, "text_cache"), inputs=[train_log], outputs=[train_log])
-        run_train_btn.click(lambda text: ui_run_command_section(text, "train"), inputs=[train_log], outputs=[train_log])
+        run_latent_btn.click(lambda text: ui_stream_command_section(text, "latent_cache"), inputs=[train_log], outputs=[train_log])
+        run_text_btn.click(lambda text: ui_stream_command_section(text, "text_cache"), inputs=[train_log], outputs=[train_log])
+        run_train_btn.click(lambda text: ui_stream_command_section(text, "train"), inputs=[train_log], outputs=[train_log])
+        stop_btn.click(ui_stop, inputs=[stop_section], outputs=[train_log])
 
     with gr.Tab("5. Export"):
         gr.Markdown("## Step 6: Export\n完成したLoRAをComfyUIのlorasフォルダへコピーします。")
@@ -217,4 +219,4 @@ with gr.Blocks(title="Musubi LoRA Factory") as demo:
         copy_btn.click(ui_copy, inputs=[lora_path], outputs=[export_log])
 
 if __name__ == "__main__":
-    demo.launch(server_name="0.0.0.0", server_port=7865)
+    demo.queue().launch(server_name="0.0.0.0", server_port=7865)
