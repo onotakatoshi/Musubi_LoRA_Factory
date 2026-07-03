@@ -4,6 +4,9 @@ from pathlib import Path
 
 import toml
 
+SUPPORTED_TARGET_MODEL = "z-image"
+SUPPORTED_TASK = "z-image"
+
 
 def _status_path(label: str, value: str, must_exist: bool = True) -> str:
     if not value:
@@ -15,10 +18,15 @@ def _status_path(label: str, value: str, must_exist: bool = True) -> str:
 
 
 def run_preflight(settings_path: Path, dataset_toml: str, target_model: str, task: str) -> str:
-    lines = ["# Preflight Check", ""]
+    lines = ["# Preflight Check", "", "Ver 1.0 は Z-Image / Z-Image-Turbo 用LoRA作成に限定しています。", ""]
+
+    if target_model != SUPPORTED_TARGET_MODEL:
+        return "❌ Ver 1.0 は Z-Image 専用です。Target model は z-image 固定です。"
+    if task != SUPPORTED_TASK:
+        return "❌ Ver 1.0 は Z-Image 専用です。Task/profile は z-image 固定です。"
 
     if not settings_path.exists():
-        return f"❌ settings.toml がありません: {settings_path}\nconfigs/settings.example.toml をコピーしてください。"
+        return f"❌ settings.toml がありません: {settings_path}\nアプリの設定タブ、または configs/settings.example.toml から作成してください。"
 
     data = toml.load(settings_path)
     musubi = data.get("musubi", {})
@@ -43,33 +51,21 @@ def run_preflight(settings_path: Path, dataset_toml: str, target_model: str, tas
         lines.append("❌ dataset.toml: not set")
     lines.append("")
 
-    if target_model == "wan2.2":
-        lines.append("## Wan2.2 model paths")
-        lines.append(_status_path("wan_vae", model_paths.get("wan_vae", "")))
-        lines.append(_status_path("wan_t5", model_paths.get("wan_t5", "")))
-        lines.append(_status_path("wan_dit", model_paths.get("wan_dit", "")))
-        if task in {"t2v-A14B", "i2v-A14B"}:
-            lines.append(_status_path("wan_dit_high_noise", model_paths.get("wan_dit_high_noise", "")))
-        lines.append("")
-    elif target_model == "z-image":
-        lines.append("## Z-Image model paths")
-        lines.append(_status_path("zimage_vae", model_paths.get("zimage_vae", "")))
-        lines.append(_status_path("zimage_text_encoder", model_paths.get("zimage_text_encoder", "")))
-        lines.append(_status_path("zimage_dit", model_paths.get("zimage_dit", "")))
-        base_weights = model_paths.get("zimage_base_weights", "")
-        if base_weights:
-            lines.append(_status_path("zimage_base_weights", base_weights))
-        else:
-            lines.append("ℹ️ zimage_base_weights: optional / not set")
-        lines.append("")
-        lines.append("## Z-Image note")
-        lines.append("- Turbo系そのものを直接学習するより、BaseまたはDe-Turbo系DiTを学習対象にする想定です。")
-        lines.append("- 生成時にTurbo系ワークフローへLoRAを適用する運用を優先します。")
-        lines.append("")
+    lines.append("## Z-Image model paths")
+    lines.append(_status_path("zimage_vae", model_paths.get("zimage_vae", "")))
+    lines.append(_status_path("zimage_text_encoder", model_paths.get("zimage_text_encoder", "")))
+    lines.append(_status_path("zimage_dit", model_paths.get("zimage_dit", "")))
+    base_weights = model_paths.get("zimage_base_weights", "")
+    if base_weights:
+        lines.append(_status_path("zimage_base_weights", base_weights))
     else:
-        lines.append(f"## {target_model}")
-        lines.append("⚠️ This target profile is not fully implemented yet.")
-        lines.append("")
+        lines.append("ℹ️ zimage_base_weights: optional / not set")
+    lines.append("")
+
+    lines.append("## Z-Image note")
+    lines.append("- Turbo系そのものを直接学習するより、BaseまたはDe-Turbo系DiTを学習対象にする想定です。")
+    lines.append("- 生成時にZ-Image-TurboワークフローへLoRAを適用する運用を優先します。")
+    lines.append("")
 
     text = "\n".join(lines)
     if "❌" in text:
