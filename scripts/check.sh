@@ -12,5 +12,6 @@ source .venv/bin/activate
 
 python -m py_compile app/*.py
 python app/smoke_test.py
+python app/env_check.py
 
 echo "Check OK"
