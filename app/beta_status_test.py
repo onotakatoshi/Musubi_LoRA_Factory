@@ -16,7 +16,7 @@ def main() -> int:
     assert "verification_readiness.py" in text
     assert "verify_pgx_beta.sh" in text
     assert "Next PGX action" in text
-    assert "./scripts/verify_pgx_beta.sh" in text
+    assert "bash ./scripts/verify_pgx_beta.sh" in text
     assert missing_required_files() == []
     print("Beta status test OK")
     return 0
