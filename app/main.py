@@ -10,6 +10,7 @@ from caption_editor import (
     remove_words_caption_rows,
     save_caption_rows,
 )
+from command_preview import preview_from_settings
 from pipeline import (
     AppConfig,
     build_dataset_toml,
@@ -65,6 +66,29 @@ def ui_build_dataset_toml(dataset_dir: str, output_dir: str, resolution: int) ->
 def ui_cache(dataset_toml: str, target_model: str) -> str:
     cfg = load_config()
     return run_cache_placeholder(Path(dataset_toml), target_model, cfg)
+
+
+def ui_command_preview(
+    dataset_toml: str,
+    target_model: str,
+    rank: int,
+    alpha: int,
+    epochs: int,
+    lr: float,
+    output_name: str,
+    task: str,
+) -> str:
+    return preview_from_settings(
+        SETTINGS_PATH,
+        dataset_toml,
+        target_model,
+        rank,
+        alpha,
+        epochs,
+        lr,
+        output_name,
+        task,
+    )
 
 
 def ui_train(
@@ -144,20 +168,23 @@ with gr.Blocks(title="Musubi LoRA Factory") as demo:
         build_btn.click(ui_build_dataset_toml, inputs=[dataset_dir, output_dir, resolution], outputs=[dataset_toml])
 
     with gr.Tab("4. Train"):
-        gr.Markdown("## Step 5: Train\nまずcacheを作り、その後LoRA学習を実行します。")
+        gr.Markdown("## Step 5: Train\nまずコマンドを確認し、その後cache作成とLoRA学習へ進みます。")
         target_model = gr.Dropdown(
             ["wan2.2", "z-image", "flux", "hunyuanvideo", "framepack"],
             value="wan2.2",
             label="Target model",
         )
+        task = gr.Dropdown(["t2v-A14B", "i2v-A14B", "t2v-1.3B"], value="t2v-A14B", label="Wan task/profile")
         rank = gr.Slider(4, 128, value=16, step=4, label="Rank")
         alpha = gr.Slider(4, 128, value=16, step=4, label="Alpha")
         epochs = gr.Slider(1, 50, value=10, step=1, label="Epochs")
         lr = gr.Number(value=0.00005, label="Learning rate")
         output_name = gr.Textbox(value="eye_lora_wan22", label="Output name")
+        preview_btn = gr.Button("Preview Commands")
         cache_btn = gr.Button("Create Cache")
         train_btn = gr.Button("Train LoRA")
-        train_log = gr.Textbox(label="Log", lines=16)
+        train_log = gr.Textbox(label="Log / Command Preview", lines=24)
+        preview_btn.click(ui_command_preview, inputs=[dataset_toml, target_model, rank, alpha, epochs, lr, output_name, task], outputs=[train_log])
         cache_btn.click(ui_cache, inputs=[dataset_toml, target_model], outputs=[train_log])
         train_btn.click(ui_train, inputs=[dataset_toml, target_model, rank, alpha, epochs, lr, output_name], outputs=[train_log])
 
