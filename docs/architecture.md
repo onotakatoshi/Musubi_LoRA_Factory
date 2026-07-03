@@ -14,6 +14,22 @@ The rule is:
 
 This prevents large rewrites when Wan2.2 and other LoRA targets are added later.
 
+## Long-term policy
+
+After Z-Image / Z-Image-Turbo LoRA generation is validated on PGX, the project should add every LoRA target supported by musubi-tuner.
+
+The expansion order should be:
+
+1. Finish and validate Z-Image / Z-Image-Turbo end-to-end.
+2. Enable the next musubi-tuner-supported model profile.
+3. Add model-path validation for that profile.
+4. Add command builder support for that profile.
+5. Add presets and help text for that profile.
+6. Validate end-to-end LoRA generation for that profile.
+7. Repeat until all musubi-tuner-supported LoRA targets are covered.
+
+A profile must not be shown as generally usable until it passes the full flow acceptance test.
+
 ## Model profile layer
 
 Model availability is defined in `app/model_registry.py`.
@@ -55,13 +71,14 @@ Command generation should go through profile-aware functions.
 
 Ver 1.0 currently implements Z-Image command generation only.
 
-When adding Wan2.2:
+When adding a new musubi-tuner-supported model:
 
-1. Enable `wan2.2` in `model_registry.py`
-2. Add/restore Wan2.2 model path validation
-3. Add Wan2.2 command builder adapter
-4. Add Wan2.2-specific preset values
-5. Add Wan2.2 acceptance checklist
+1. Add or enable the profile in `model_registry.py`
+2. Add model path validation
+3. Add command builder adapter
+4. Add model-specific preset values
+5. Add acceptance checklist
+6. Keep the UI surface consistent with existing tabs
 
 ## Settings rule
 
