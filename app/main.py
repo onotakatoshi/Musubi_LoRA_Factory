@@ -11,6 +11,7 @@ from caption_editor import (
     save_caption_rows,
 )
 from command_preview import preview_from_settings
+from env_check import check_environment
 from error_analyzer import analyze_log
 from gpu_monitor import gpu_preflight_warning
 from help_text import HELP, help_markdown
@@ -37,6 +38,10 @@ SETTINGS_PATH = ROOT / "configs" / "settings.toml"
 
 def load_config() -> AppConfig:
     return AppConfig.from_file(SETTINGS_PATH)
+
+
+def ui_environment_check() -> str:
+    return check_environment(SETTINGS_PATH)
 
 
 def ui_gpu_status() -> str:
@@ -174,6 +179,11 @@ with gr.Blocks(title="Musubi LoRA Factory") as demo:
             guide_btn = gr.Button("Show Next Action")
             guide_text = gr.Markdown("次にやること: Datasetフォルダを指定して、`Show Next Action` を押してください。")
             guide_btn.click(ui_next_action, inputs=[guide_dataset_dir, guide_dataset_toml, guide_lora_path], outputs=[guide_text])
+
+    with gr.Accordion("Environment Check", open=False):
+        env_btn = gr.Button("Run Environment Check")
+        env_status = gr.Markdown("Z-Image用のmusubi-tuner環境とモデルパスを確認できます。")
+        env_btn.click(ui_environment_check, outputs=[env_status])
 
     with gr.Accordion("? Help", open=False):
         help_topic = gr.Dropdown(["all"] + list(HELP.keys()), value="all", label="Help topic", info="知りたい項目を選ぶと説明が表示されます。")
