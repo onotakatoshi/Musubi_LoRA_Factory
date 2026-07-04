@@ -5,6 +5,21 @@ import re
 
 ERROR_PATTERNS: list[tuple[str, str, str]] = [
     (
+        "No training items found in the dataset",
+        "Latent/Text Encoder cacheが未作成、または古い可能性があります。",
+        "dataset.tomlを作り直した後は、Trainの前に必ず Latent Cache → Text Encoder Cache を再実行してください。cacheフォルダを消した場合も同じです。",
+    ),
+    (
+        "total batches: 0",
+        "学習に使えるcache済みデータが0件です。",
+        "画像が見つかっていても、cacheが無いとTrainは開始できません。Latent Cache実行とText Cache実行のログがDONEになっているか確認してください。",
+    ),
+    (
+        "found 0 images",
+        "dataset.tomlの画像フォルダを見失っています。",
+        "dataset.tomlを作り直してください。image_directory が /home/... で始まる絶対パスになっている必要があります。",
+    ),
+    (
         "CUDA out of memory",
         "GPUメモリ不足の可能性があります。",
         "解像度、rank、同時処理数を下げてください。PGXでも高解像度・高rankではキャッシュまたは学習でメモリが詰まることがあります。",
@@ -47,7 +62,7 @@ ERROR_PATTERNS: list[tuple[str, str, str]] = [
     (
         "dataset_config",
         "dataset.toml関連の問題の可能性があります。",
-        "設定生成タブでdataset.tomlを作り直し、画像フォルダとcaptionを確認してください。",
+        "コンフィグ生成タブでdataset.tomlを作り直し、画像フォルダとcaptionを確認してください。",
     ),
     (
         "safetensors",
@@ -73,7 +88,7 @@ ERROR_PATTERNS: list[tuple[str, str, str]] = [
 
 
 def extract_recent_error_lines(log_text: str, max_lines: int = 20) -> list[str]:
-    keywords = ["error", "exception", "traceback", "failed", "runtimeerror", "modulenotfounderror", "cuda", "zimage", "dataset"]
+    keywords = ["error", "exception", "traceback", "failed", "runtimeerror", "modulenotfounderror", "cuda", "zimage", "dataset", "training items", "total batches"]
     lines = log_text.splitlines()
     hits = []
     for line in lines:
@@ -118,7 +133,12 @@ def analyze_log(log_text: str) -> str:
         lines.extend(f"```text\n{line}\n```" for line in recent[-8:])
     lines.append("")
     lines.append("## Next action")
-    lines.append("1. まず上の推定段階を確認してください。")
-    lines.append("2. Settings / dataset.toml / caption / モデルパスの順に確認してください。")
-    lines.append("3. 修正後、Preflight Check → Command Preview → 該当ステップ実行の順にやり直してください。")
+    if "No training items found in the dataset" in log_text or "total batches: 0" in log_text:
+        lines.append("1. コンフィグ生成タブでdataset.tomlを作り直してください。")
+        lines.append("2. 出力フォルダのcacheを消した場合は、Latent Cache → Text Encoder Cacheを再実行してください。")
+        lines.append("3. その後にTrainを実行してください。")
+    else:
+        lines.append("1. まず上の推定段階を確認してください。")
+        lines.append("2. Settings / dataset.toml / caption / モデルパスの順に確認してください。")
+        lines.append("3. 修正後、Preflight Check → Command Preview → 該当ステップ実行の順にやり直してください。")
     return "\n".join(lines)
