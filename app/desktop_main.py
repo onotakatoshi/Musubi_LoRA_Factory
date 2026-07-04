@@ -229,7 +229,6 @@ class DesktopApp(QMainWindow):
         row.addWidget(self._button(self.t("detect_zimage_files"), self._detect_zimage_files))
         row.addWidget(self._button(self.t("save_settings"), self._save_settings))
         row.addWidget(self._button(self.t("reload_settings"), self._reload_settings_fields))
-        row.addWidget(self._button(self.t("environment_check"), lambda: self.settings_log.setPlainText(check_environment(SETTINGS_PATH))))
         row.addStretch()
         controls_box.addLayout(row)
         controls.setLayout(controls_box)
