@@ -62,6 +62,9 @@ DISPLAY_NAMES = {
     "lr": "Learning rate",
 }
 
+STEP_BUTTON_WIDTH = 142
+RUN_GROUP_GAP = 24
+
 
 def _en(self) -> bool:
     return getattr(self, "lang", "日本語") == "English"
@@ -305,9 +308,12 @@ def _train_tab(self) -> QWidget:
     self.btn_latent_cache = self._button("1. Latent Cache", lambda: self._run_section_with_ui("latent_cache"))
     self.btn_text_cache = self._button("2. Text Cache", lambda: self._run_section_with_ui("text_cache"))
     self.btn_train = self._button(_txt(self, "3. 学習実行", "3. Train"), lambda: self._run_section_with_ui("train"))
+    for button in (self.btn_latent_cache, self.btn_text_cache, self.btn_train):
+        button.setFixedWidth(STEP_BUTTON_WIDTH)
     run_row.addWidget(self.btn_latent_cache)
     run_row.addWidget(self.btn_text_cache)
     run_row.addWidget(self.btn_train)
+    run_row.addSpacing(RUN_GROUP_GAP)
     run_row.addWidget(self._button(_txt(self, "全部実行", "Run All"), self._run_all_training_with_ui))
     run_row.addWidget(self._button(self.t("stop"), self._stop_process))
     run_row.addWidget(self._button(self.t("analyze_log"), lambda: self.analysis_log.setPlainText(self._analyze_current_logs())))
