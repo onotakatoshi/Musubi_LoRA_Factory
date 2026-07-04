@@ -6,6 +6,15 @@ import toml
 
 from model_adapters import CommandContext, get_adapter
 from model_registry import get_profile
+from path_resolver import resolve_path, resolve_path_str
+
+
+def _resolved_model_paths(model_paths: dict) -> dict:
+    resolved = dict(model_paths)
+    for key, value in list(resolved.items()):
+        if isinstance(value, str) and value.strip():
+            resolved[key] = resolve_path_str(value)
+    return resolved
 
 
 def preview_from_settings(
@@ -31,8 +40,8 @@ def preview_from_settings(
 
     data = toml.load(settings_path)
     musubi = data.get("musubi", {})
-    model_paths = data.get("model_paths", {})
-    dataset_path = Path(dataset_toml)
+    model_paths = _resolved_model_paths(data.get("model_paths", {}))
+    dataset_path = resolve_path(dataset_toml)
     output_dir = dataset_path.parent
 
     try:
@@ -46,8 +55,8 @@ def preview_from_settings(
 
     command = adapter.build_commands(
         CommandContext(
-            musubi_python=Path(musubi.get("python_path", "python")),
-            musubi_repo=Path(musubi.get("repo_path", ".")),
+            musubi_python=resolve_path(musubi.get("python_path", "../musubi-tuner/.venv/bin/python")),
+            musubi_repo=resolve_path(musubi.get("repo_path", "../musubi-tuner")),
             dataset_toml=dataset_path,
             output_dir=output_dir,
             output_name=output_name,
