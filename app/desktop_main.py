@@ -58,7 +58,7 @@ SETTINGS_PATH = ROOT / "configs" / "settings.toml"
 
 HELP = {
     "musubi_repo": "musubi-tunerをcloneしたフォルダです。src/musubi_tuner が中にある場所を指定します。",
-    "musubi_python": "musubi-tuner用venvのpythonです。例: /home/ono/musubi-tuner/.venv/bin/python",
+    "musubi_python": "musubi-tuner用venvのpythonです。例: ../musubi-tuner/.venv/bin/python",
     "datasets_dir": "LoRA学習用データセットを置く親フォルダです。",
     "outputs_dir": "dataset.toml、cache、学習済みLoRAを置く親フォルダです。",
     "comfyui_loras_dir": "ComfyUIの models/loras フォルダです。Export時のコピー先です。",
@@ -131,14 +131,28 @@ class DesktopApp(QMainWindow):
         b.clicked.connect(fn)
         return b
 
+    def _compact_form(self) -> QFormLayout:
+        form = QFormLayout()
+        form.setContentsMargins(0, 0, 0, 0)
+        form.setHorizontalSpacing(8)
+        form.setVerticalSpacing(6)
+        form.setLabelAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        form.setFormAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
+        form.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.ExpandingFieldsGrow)
+        return form
+
     def _browse_dir_row(self, edit: QLineEdit) -> QHBoxLayout:
         row = QHBoxLayout()
+        row.setContentsMargins(0, 0, 0, 0)
+        row.setSpacing(6)
         row.addWidget(edit)
         row.addWidget(self._button(self.t("browse"), lambda: self._pick_dir(edit)))
         return row
 
     def _browse_file_row(self, edit: QLineEdit) -> QHBoxLayout:
         row = QHBoxLayout()
+        row.setContentsMargins(0, 0, 0, 0)
+        row.setSpacing(6)
         row.addWidget(edit)
         row.addWidget(self._button(self.t("browse"), lambda: self._pick_file(edit)))
         return row
@@ -149,6 +163,8 @@ class DesktopApp(QMainWindow):
         reset = self._button(reset_text, lambda: self._reset_default(name, widget, label))
         widget.valueChanged.connect(lambda _value: label.setText(default_status_text(name, widget.value(), self.lang)))
         row = QHBoxLayout()
+        row.setContentsMargins(0, 0, 0, 0)
+        row.setSpacing(6)
         row.addWidget(widget)
         row.addWidget(label)
         row.addWidget(reset)
@@ -171,7 +187,7 @@ class DesktopApp(QMainWindow):
     def _settings_tab(self) -> QWidget:
         box = QVBoxLayout()
         guide_box = QTextEdit(); guide_box.setReadOnly(True); guide_box.setPlainText(self.t("settings_intro")); guide_box.setMaximumHeight(100); box.addWidget(guide_box)
-        form = QFormLayout()
+        form = self._compact_form()
         self.set_language = QComboBox(); self.set_language.addItems(SUPPORTED_LANGUAGES); self.set_language.setCurrentText(self.lang)
         form.addRow(HelpLabel(self.t("language"), "UIの表示言語です。デフォルトは日本語です。"), self.set_language)
         self.set_musubi_repo = self._line(nested_get(self.settings, "musubi", "repo_path"))
@@ -194,6 +210,8 @@ class DesktopApp(QMainWindow):
         form.addRow(HelpLabel(self.t("label_zimage_base_weights"), HELP["zimage_base_weights"]), self._browse_file_row(self.set_zimage_base_weights))
         box.addLayout(form)
         row = QHBoxLayout()
+        row.setContentsMargins(0, 0, 0, 0)
+        row.setSpacing(6)
         row.addWidget(self._button(self.t("validate_settings"), self._validate_settings))
         row.addWidget(self._button(self.t("detect_zimage_files"), self._detect_zimage_files))
         row.addWidget(self._button(self.t("save_settings"), self._save_settings))
@@ -216,7 +234,7 @@ class DesktopApp(QMainWindow):
     def _dataset_tab(self) -> QWidget:
         box = QVBoxLayout()
         guide_box = QTextEdit(); guide_box.setReadOnly(True); guide_box.setPlainText(guide("dataset")); guide_box.setMaximumHeight(190); box.addWidget(guide_box)
-        form = QFormLayout()
+        form = self._compact_form()
         self.dataset_dir = self._line(str(Path(nested_get(self.settings, "paths", "datasets_dir")) / "Eye_Blue_v1"))
         form.addRow(HelpLabel(self.t("label_dataset_folder"), HELP["dataset_folder"]), self._browse_dir_row(self.dataset_dir))
         self.lora_type = QComboBox(); self.lora_type.addItems(preset_names())
@@ -239,7 +257,7 @@ class DesktopApp(QMainWindow):
     def _config_tab(self) -> QWidget:
         box = QVBoxLayout()
         guide_box = QTextEdit(); guide_box.setReadOnly(True); guide_box.setPlainText(guide("config")); guide_box.setMaximumHeight(160); box.addWidget(guide_box)
-        form = QFormLayout()
+        form = self._compact_form()
         self.output_dir = self._line(str(Path(nested_get(self.settings, "paths", "outputs_dir")) / "Eye_Blue_v1_zimage"))
         form.addRow(HelpLabel(self.t("label_output_folder"), HELP["output_folder"]), self._browse_dir_row(self.output_dir))
         self.resolution = QSpinBox(); self.resolution.setRange(256, 2048); self.resolution.setSingleStep(64); self.resolution.setValue(DEFAULTS["resolution"])
@@ -257,7 +275,7 @@ class DesktopApp(QMainWindow):
     def _train_tab(self) -> QWidget:
         box = QVBoxLayout()
         guide_box = QTextEdit(); guide_box.setReadOnly(True); guide_box.setPlainText(guide("train")); guide_box.setMaximumHeight(210); box.addWidget(guide_box)
-        form = QFormLayout()
+        form = self._compact_form()
         default_profile = v1_default_profile()
         self.target_model = QComboBox(); self.target_model.addItems(available_model_labels()); self.target_model.setCurrentText(label_for_profile(default_profile.id)); self.target_model.currentTextChanged.connect(self._sync_profile_task)
         form.addRow(HelpLabel(self.t("label_target_model"), help_for_profile(default_profile.id, self.lang)), self.target_model)
