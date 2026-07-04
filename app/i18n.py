@@ -23,7 +23,7 @@ TEXT = {
         "gpu_status": "GPU状態",
         "browse": "参照",
         "check_dataset": "データセット確認",
-        "diagnose_captions": "Caption診断",
+        "diagnose_captions": "キャプション診断",
         "check_current_step": "現在のステップを確認",
         "build_dataset_toml": "dataset.tomlを作成",
         "preflight_check": "0. 事前チェック",
