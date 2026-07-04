@@ -63,6 +63,7 @@ DISPLAY_NAMES = {
 }
 
 STEP_BUTTON_WIDTH = 142
+ACTION_BUTTON_WIDTH = 118
 RUN_GROUP_GAP = 24
 
 
@@ -310,13 +311,18 @@ def _train_tab(self) -> QWidget:
     self.btn_train = self._button(_txt(self, "3. 学習実行", "3. Train"), lambda: self._run_section_with_ui("train"))
     for button in (self.btn_latent_cache, self.btn_text_cache, self.btn_train):
         button.setFixedWidth(STEP_BUTTON_WIDTH)
+    run_all_button = self._button(_txt(self, "全部実行", "Run All"), self._run_all_training_with_ui)
+    stop_button = self._button(self.t("stop"), self._stop_process)
+    analyze_button = self._button(self.t("analyze_log"), lambda: self.analysis_log.setPlainText(self._analyze_current_logs()))
+    for button in (run_all_button, stop_button, analyze_button):
+        button.setFixedWidth(ACTION_BUTTON_WIDTH)
     run_row.addWidget(self.btn_latent_cache)
     run_row.addWidget(self.btn_text_cache)
     run_row.addWidget(self.btn_train)
     run_row.addSpacing(RUN_GROUP_GAP)
-    run_row.addWidget(self._button(_txt(self, "全部実行", "Run All"), self._run_all_training_with_ui))
-    run_row.addWidget(self._button(self.t("stop"), self._stop_process))
-    run_row.addWidget(self._button(self.t("analyze_log"), lambda: self.analysis_log.setPlainText(self._analyze_current_logs())))
+    run_row.addWidget(run_all_button)
+    run_row.addWidget(stop_button)
+    run_row.addWidget(analyze_button)
     run_row.addStretch()
     page.addWidget(_group(_txt(self, "3. 実行", "3. Run"), run_row))
 
