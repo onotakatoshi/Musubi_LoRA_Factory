@@ -86,6 +86,15 @@ def _check_desktop_uses_model_ui() -> None:
         assert literal not in text, f"desktop_main.py must not hard-code future model/task literal: {literal}"
 
 
+def _check_desktop_form_spacing() -> None:
+    text = DESKTOP_MAIN.read_text(encoding="utf-8")
+    assert "def _compact_form" in text
+    assert "setHorizontalSpacing(8)" in text
+    assert "setVerticalSpacing(6)" in text
+    assert "setLabelAlignment(Qt.AlignmentFlag.AlignRight" in text
+    assert "setContentsMargins(0, 0, 0, 0)" in text
+
+
 def _check_desktop_uses_training_engine() -> None:
     text = DESKTOP_MAIN.read_text(encoding="utf-8")
     assert "from training_engine import TrainingEngine" in text
@@ -184,6 +193,7 @@ def main() -> int:
     _check_model_ui()
     _check_model_adapters()
     _check_desktop_uses_model_ui()
+    _check_desktop_form_spacing()
     _check_desktop_uses_training_engine()
     _check_training_engine_hardening()
     _check_commands_use_musubi_python()
