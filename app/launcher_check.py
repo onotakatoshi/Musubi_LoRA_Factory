@@ -13,6 +13,7 @@ REQUIRED_SCRIPTS = [
     "scripts/verify_pgx_beta.sh",
     "scripts/update.sh",
     "scripts/create_desktop_launcher.sh",
+    "scripts/fix_local_paths.sh",
 ]
 
 
@@ -41,11 +42,13 @@ def main() -> int:
 
     start_text = (ROOT / "scripts" / "start.sh").read_text(encoding="utf-8")
     start_desktop_text = (ROOT / "scripts" / "start_desktop.sh").read_text(encoding="utf-8")
+    fix_paths_text = (ROOT / "scripts" / "fix_local_paths.sh").read_text(encoding="utf-8")
     launcher_text = (ROOT / "app" / "desktop_launcher.py").read_text(encoding="utf-8")
     for text in [start_text, start_desktop_text]:
         assert "settings.example.toml" in text
         assert "startup_check.py" in text
         assert "desktop_launcher.py" in text
+    assert "fix_local_paths.py" in fix_paths_text
     assert "apply_balanced_ui_font" in launcher_text
     assert "DesktopApp" in launcher_text
 
