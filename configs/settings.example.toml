@@ -1,11 +1,14 @@
+[ui]
+language = "日本語"
+
 [musubi]
-repo_path = "/home/ono/musubi-tuner"
-python_path = "/home/ono/musubi-tuner/.venv/bin/python"
+repo_path = "../musubi-tuner"
+python_path = "../musubi-tuner/.venv/bin/python"
 
 [paths]
-datasets_dir = "/home/ono/datasets/lora"
-outputs_dir = "/home/ono/outputs/lora"
-comfyui_loras_dir = "/home/ono/ComfyUI/models/loras"
+datasets_dir = "datasets/lora"
+outputs_dir = "outputs/lora"
+comfyui_loras_dir = "../ComfyUI/models/loras"
 
 [caption]
 mode = "joycaption_llm"
@@ -14,12 +17,12 @@ llm_endpoint = "http://localhost:8000/v1/chat/completions"
 llm_model = "qwen-caption-helper"
 
 [model_paths]
-wan_vae = "/home/ono/models/wan/Wan2.1_VAE.pth"
-wan_t5 = "/home/ono/models/wan/models_t5_umt5-xxl-enc-bf16.pth"
-wan_dit = "/home/ono/models/wan/wan2.2_low_noise.safetensors"
-wan_dit_high_noise = "/home/ono/models/wan/wan2.2_high_noise.safetensors"
+wan_vae = "../models/wan/Wan2.1_VAE.pth"
+wan_t5 = "../models/wan/models_t5_umt5-xxl-enc-bf16.pth"
+wan_dit = "../models/wan/wan2.2_low_noise.safetensors"
+wan_dit_high_noise = "../models/wan/wan2.2_high_noise.safetensors"
 
-zimage_dit = "/home/ono/models/z-image/z_image_base_or_deturbo.safetensors"
-zimage_vae = "/home/ono/models/z-image/ae.safetensors"
-zimage_text_encoder = "/home/ono/models/z-image/qwen3_text_encoder_00001-of-00002.safetensors"
+zimage_dit = "../models/z-image/z_image_base_or_deturbo.safetensors"
+zimage_vae = "../models/z-image/ae.safetensors"
+zimage_text_encoder = "../models/z-image/qwen3_text_encoder_00001-of-00002.safetensors"
 zimage_base_weights = ""
