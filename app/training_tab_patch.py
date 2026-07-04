@@ -17,7 +17,6 @@ from PySide6.QtWidgets import (
 
 from model_ui import available_model_labels, label_for_profile, v1_default_profile
 from recommended_defaults import DEFAULTS, REASONS_EN, REASONS_JA
-from step_guides import guide
 from training_presets import preset_names
 
 SUCCESS_BUTTON_STYLE = """
@@ -115,27 +114,43 @@ def _reset_execution_status_buttons(self) -> None:
     _reset_button(getattr(self, "btn_train", None))
 
 
-def _preflight_with_ui(self) -> None:
-    self._preflight()
-    text = self.train_status.toPlainText() if hasattr(self, "train_status") else ""
-    if text and "NG:" not in text and ("OK" in text or "✓" in text or "✅" in text):
-        _mark_button_success(getattr(self, "btn_preflight", None))
+def _append_visible_log(self, text: str) -> None:
+    if hasattr(self, "run_log"):
+        self.run_log.append(text)
 
 
-def _preview_commands_with_ui(self) -> None:
+def _ensure_commands_ready(self) -> bool:
+    preview_text = getattr(self, "command_preview_text", "")
+    if preview_text and not preview_text.strip().startswith("NG:"):
+        return True
     self._preview_commands()
-    text = self.train_status.toPlainText() if hasattr(self, "train_status") else ""
+    status = self.train_status.toPlainText() if hasattr(self, "train_status") else ""
     preview = self.command_preview.toPlainText() if hasattr(self, "command_preview") else ""
-    if text.startswith("OK:") or "3コマンドが揃っています" in text:
-        _mark_button_success(getattr(self, "btn_command_preview", None))
+    if status.startswith("NG:") or preview.startswith("NG:"):
+        _append_visible_log(self, "\n===== 実行準備に失敗 =====\n" + (status or preview))
+        return False
+    if "# 1. Latent cache" in preview and "# 2. Text encoder cache" in preview and "# 3. Train LoRA" in preview:
+        _append_visible_log(self, "\n===== コマンド自動準備 OK =====")
         _reset_execution_status_buttons(self)
-    elif "# 1. Latent cache" in preview and "# 2. Text encoder cache" in preview and "# 3. Train LoRA" in preview:
-        _mark_button_success(getattr(self, "btn_command_preview", None))
+        return True
+    if status.startswith("OK:"):
+        _append_visible_log(self, "\n===== コマンド自動準備 OK =====")
         _reset_execution_status_buttons(self)
+        return True
+    _append_visible_log(self, "\n===== 実行準備を確認してください =====\n" + status)
+    return False
 
 
 def _run_section_with_ui(self, section: str) -> None:
+    if not _ensure_commands_ready(self):
+        return
     self._run_section(section)
+
+
+def _run_all_training_with_ui(self) -> None:
+    if not _ensure_commands_ready(self):
+        return
+    self._run_all_training()
 
 
 def _on_training_stage_finished_for_ui(self, stage: str, exit_code: int) -> None:
@@ -159,18 +174,16 @@ def _connect_training_ui_signals(self) -> None:
 def _train_tab(self) -> QWidget:
     page = QVBoxLayout()
     page.setContentsMargins(8, 8, 8, 8)
-    page.setSpacing(8)
+    page.setSpacing(6)
     _connect_training_ui_signals(self)
 
-    guide_box = QTextEdit()
-    guide_box.setReadOnly(True)
-    guide_box.setPlainText(
-        "操作順: 1) 事前チェック  2) コマンド確認  3) Latent Cache  4) Text Cache  5) 学習実行\n"
-        "完了した操作はボタンが緑になります。緑になっていない工程は未完了または失敗です。\n\n"
-        + guide("train")
-    )
-    guide_box.setMaximumHeight(120)
-    page.addWidget(guide_box)
+    guide = QLabel("操作順: 1. Latent Cache → 2. Text Cache → 3. 学習実行　※必要なコマンド準備は自動で行います。成功した工程は緑になります。")
+    page.addWidget(guide)
+
+    self.train_status = self._log()
+    self.train_status.setVisible(False)
+    self.command_preview = self._log()
+    self.command_preview.setVisible(False)
 
     default_profile = v1_default_profile()
     top_form = self._compact_form()
@@ -223,17 +236,13 @@ def _train_tab(self) -> QWidget:
     param_box.addLayout(_training_param_row(self, "lr", self.lr))
     page.addWidget(_group("2. 学習パラメータ", param_box))
 
-    prepare_row = QHBoxLayout()
-    prepare_row.setSpacing(6)
-    prepare_row.addWidget(self._button("Preset適用", self._apply_preset))
-    prepare_row.addWidget(self._button("学習前レビュー", self._training_review))
-    self.btn_preflight = self._button(self.t("preflight_check"), self._preflight_with_ui)
-    self.btn_command_preview = self._button(self.t("preview_commands"), self._preview_commands_with_ui)
-    prepare_row.addWidget(self.btn_preflight)
-    prepare_row.addWidget(self.btn_command_preview)
-    prepare_row.addWidget(self._button(self.t("estimate_training_load"), self._estimate_training_load))
-    prepare_row.addStretch()
-    page.addWidget(_group("3. 確認・準備", prepare_row))
+    aux_row = QHBoxLayout()
+    aux_row.setSpacing(6)
+    aux_row.addWidget(self._button("Preset適用", self._apply_preset))
+    aux_row.addWidget(self._button("学習前レビュー", self._training_review))
+    aux_row.addWidget(self._button(self.t("estimate_training_load"), self._estimate_training_load))
+    aux_row.addStretch()
+    page.addWidget(_group("3. 補助", aux_row))
 
     run_row = QHBoxLayout()
     run_row.setSpacing(6)
@@ -243,37 +252,20 @@ def _train_tab(self) -> QWidget:
     run_row.addWidget(self.btn_latent_cache)
     run_row.addWidget(self.btn_text_cache)
     run_row.addWidget(self.btn_train)
-    run_row.addWidget(self._button("全部実行", self._run_all_training))
+    run_row.addWidget(self._button("全部実行", self._run_all_training_with_ui))
     run_row.addWidget(self._button(self.t("stop"), self._stop_process))
     run_row.addWidget(self._button(self.t("analyze_log"), lambda: self.analysis_log.setPlainText(self._analyze_current_logs())))
     run_row.addStretch()
     page.addWidget(_group("4. 実行", run_row))
-
-    project_row = QHBoxLayout()
-    project_row.setSpacing(6)
-    project_row.addWidget(self._button("Project保存", self._save_project))
-    project_row.addWidget(self._button("Project読み込み", self._load_project))
-    project_row.addStretch()
-    page.addWidget(_group("Project", project_row))
-
-    self.train_status = self._log()
-    self.train_status.setMaximumHeight(115)
-    page.addWidget(QLabel("状態"))
-    page.addWidget(self.train_status)
-
-    self.command_preview = self._log()
-    self.command_preview.setMaximumHeight(145)
-    page.addWidget(QLabel(self.t("command_preview")))
-    page.addWidget(self.command_preview)
 
     self.run_log = self._log()
     page.addWidget(QLabel(self.t("run_log")))
     page.addWidget(self.run_log, 1)
 
     self.analysis_log = self._log()
-    self.analysis_log.setMaximumHeight(145)
+    self.analysis_log.setMaximumHeight(120)
     page.addWidget(QLabel(self.t("error_analysis")))
-    page.addWidget(self.analysis_log)
+    page.addWidget(self.analysis_log, 0)
 
     self._sync_profile_task()
     w = QWidget()
@@ -291,7 +283,6 @@ def _analyze_current_logs(self) -> str:
 def apply_training_tab_patch(desktop_app_class) -> None:
     desktop_app_class._train_tab = _train_tab
     desktop_app_class._analyze_current_logs = _analyze_current_logs
-    desktop_app_class._preflight_with_ui = _preflight_with_ui
-    desktop_app_class._preview_commands_with_ui = _preview_commands_with_ui
     desktop_app_class._run_section_with_ui = _run_section_with_ui
+    desktop_app_class._run_all_training_with_ui = _run_all_training_with_ui
     desktop_app_class._on_training_stage_finished_for_ui = _on_training_stage_finished_for_ui
