@@ -28,6 +28,11 @@ def main() -> int:
     assert "apply_balanced_ui_font" in launcher
     assert "Noto Sans CJK JP" in font
     assert "font-weight: 400" in font
+    assert "QPushButton" in font
+    assert "background-color: #4a5563" in font
+    assert "QTabBar::tab" in font
+    assert "QTabBar::tab:selected" in font
+    assert "background: #2f3742" in font
     assert "def showEvent" in caption_table
     assert "load_if_needed" in caption_table
     assert "_last_loaded_dataset_dir" in caption_table
