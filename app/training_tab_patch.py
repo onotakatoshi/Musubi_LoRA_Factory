@@ -66,6 +66,23 @@ STEP_BUTTON_WIDTH = 142
 ACTION_BUTTON_WIDTH = 118
 RUN_GROUP_GAP = 24
 
+TRAIN_HELP_JA = (
+    "このタブでは LoRA 学習を実行します。\n\n"
+    "1. Latent Cache: 画像を学習用の潜在表現に変換します。\n"
+    "2. Text Cache: caption / prompt 側のテキスト特徴を準備します。\n"
+    "3. 学習実行: dataset.toml、モデル、Rank、Alpha、Epochs、Learning rate を使って LoRA を作成します。\n\n"
+    "Trigger word はデータセット側の caption に入れておく重要語です。生成時にも同じ語をプロンプトに入れることで、LoRA を効かせやすくします。\n\n"
+    "ログ欄には実行中の詳細、エラー解析欄には失敗時の原因候補と次の対応が表示されます。"
+)
+TRAIN_HELP_EN = (
+    "Use this tab to run LoRA training.\n\n"
+    "1. Latent Cache: converts images into latent representations for training.\n"
+    "2. Text Cache: prepares text features from captions/prompts.\n"
+    "3. Train: creates the LoRA using dataset.toml, model settings, Rank, Alpha, Epochs, and Learning rate.\n\n"
+    "The Trigger word should be included in your dataset captions. Use the same word in generation prompts to invoke the LoRA more reliably.\n\n"
+    "The Run Log shows execution details. Error Analysis suggests likely causes and next actions when something fails."
+)
+
 
 def _en(self) -> bool:
     return getattr(self, "lang", "日本語") == "English"
@@ -228,6 +245,8 @@ def _make_log_column(title_text: str, log_widget: QTextEdit) -> QWidget:
 
 
 def _train_tab(self) -> QWidget:
+    from desktop_main import HelpLabel
+
     page = QVBoxLayout()
     page.setContentsMargins(10, 8, 10, 8)
     page.setSpacing(6)
@@ -236,7 +255,7 @@ def _train_tab(self) -> QWidget:
     header = QVBoxLayout()
     header.setContentsMargins(2, 0, 2, 0)
     header.setSpacing(2)
-    title = QLabel("Musubi LoRA Training")
+    title = HelpLabel("Musubi LoRA Training", TRAIN_HELP_EN if _en(self) else TRAIN_HELP_JA)
     title.setStyleSheet("font-size: 14pt; font-weight: 800; color: #ffffff; background: transparent;")
     subtitle = QLabel(
         "Latent Cache → Text Cache → Train. Commands are prepared automatically; completed steps turn green."
