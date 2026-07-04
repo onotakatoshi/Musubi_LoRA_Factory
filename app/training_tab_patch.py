@@ -63,6 +63,14 @@ DISPLAY_NAMES = {
 }
 
 
+def _en(self) -> bool:
+    return getattr(self, "lang", "日本語") == "English"
+
+
+def _txt(self, ja: str, en: str) -> str:
+    return en if _en(self) else ja
+
+
 def _group(title: str, layout: QVBoxLayout | QFormLayout | QHBoxLayout) -> QGroupBox:
     box = QGroupBox(title)
     box.setLayout(layout)
@@ -101,28 +109,28 @@ def _training_param_row(self, name: str, widget: QSpinBox | QDoubleSpinBox) -> Q
     title.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
 
     status = QLabel()
-    status.setFixedWidth(54)
+    status.setFixedWidth(72 if _en(self) else 54)
 
     widget.setFixedWidth(96)
 
     default = DEFAULTS[name]
     reason = _training_reason(name, self.lang)
-    detail = QLabel(f"デフォルト {default}　{reason}" if self.lang != "English" else f"Default {default}  {reason}")
+    detail = QLabel(f"Default {default}  {reason}" if _en(self) else f"デフォルト {default}　{reason}")
     detail.setMinimumWidth(220)
     detail.setMaximumWidth(360)
 
-    reset_text = "Reset" if self.lang == "English" else "戻す"
+    reset_text = "Reset" if _en(self) else "戻す"
     reset = self._button(reset_text, lambda: widget.setValue(DEFAULTS[name]))
     reset.setObjectName("resetButton")
-    reset.setToolTip("デフォルトに戻す" if self.lang != "English" else "Reset to default")
-    reset.setFixedWidth(64 if self.lang != "English" else 66)
+    reset.setToolTip("Reset to default" if _en(self) else "デフォルトに戻す")
+    reset.setFixedWidth(66 if _en(self) else 64)
     reset.setFixedHeight(28)
 
     def refresh() -> None:
         if _is_default_value(name, widget.value()):
-            status.setText("推奨" if self.lang != "English" else "Default")
+            status.setText("Default" if _en(self) else "推奨")
         else:
-            status.setText("変更" if self.lang != "English" else "Custom")
+            status.setText("Custom" if _en(self) else "変更")
 
     widget.valueChanged.connect(lambda _value: refresh())
     refresh()
@@ -158,17 +166,17 @@ def _ensure_commands_ready(self) -> bool:
     status = self.train_status.toPlainText() if hasattr(self, "train_status") else ""
     preview = self.command_preview.toPlainText() if hasattr(self, "command_preview") else ""
     if status.startswith("NG:") or preview.startswith("NG:"):
-        _append_visible_log(self, "\n===== 実行準備に失敗 =====\n" + (status or preview))
+        _append_visible_log(self, "\n===== Command preparation failed =====\n" + (status or preview) if _en(self) else "\n===== 実行準備に失敗 =====\n" + (status or preview))
         return False
     if "# 1. Latent cache" in preview and "# 2. Text encoder cache" in preview and "# 3. Train LoRA" in preview:
-        _append_visible_log(self, "\n===== コマンド自動準備 OK =====")
+        _append_visible_log(self, "\n===== Commands prepared automatically =====" if _en(self) else "\n===== コマンド自動準備 OK =====")
         _reset_execution_status_buttons(self)
         return True
     if status.startswith("OK:"):
-        _append_visible_log(self, "\n===== コマンド自動準備 OK =====")
+        _append_visible_log(self, "\n===== Commands prepared automatically =====" if _en(self) else "\n===== コマンド自動準備 OK =====")
         _reset_execution_status_buttons(self)
         return True
-    _append_visible_log(self, "\n===== 実行準備を確認してください =====\n" + status)
+    _append_visible_log(self, ("\n===== Check command preparation =====\n" if _en(self) else "\n===== 実行準備を確認してください =====\n") + status)
     return False
 
 
@@ -226,7 +234,11 @@ def _train_tab(self) -> QWidget:
     header.setSpacing(2)
     title = QLabel("Musubi LoRA Training")
     title.setStyleSheet("font-size: 14pt; font-weight: 800; color: #ffffff; background: transparent;")
-    subtitle = QLabel("Latent Cache → Text Cache → 学習実行。必要なコマンド準備は自動化されています。成功した工程は緑になります。")
+    subtitle = QLabel(
+        "Latent Cache → Text Cache → Train. Commands are prepared automatically; completed steps turn green."
+        if _en(self)
+        else "Latent Cache → Text Cache → 学習実行。必要なコマンド準備は自動化されています。成功した工程は緑になります。"
+    )
     subtitle.setStyleSheet("color: #9fb4d0; background: transparent;")
     header.addWidget(title)
     header.addWidget(subtitle)
@@ -257,7 +269,7 @@ def _train_tab(self) -> QWidget:
 
     self.output_name = self._line("zimage_smoke_test")
     top_form.addRow("Output name", self.output_name)
-    page.addWidget(_group("1. 基本設定", top_form))
+    page.addWidget(_group(_txt(self, "1. 基本設定", "1. Basic Settings"), top_form))
 
     param_box = QVBoxLayout()
     param_box.setContentsMargins(8, 6, 8, 6)
@@ -286,21 +298,21 @@ def _train_tab(self) -> QWidget:
     self.lr.setSingleStep(0.00001)
     self.lr.setValue(DEFAULTS["lr"])
     param_box.addLayout(_training_param_row(self, "lr", self.lr))
-    page.addWidget(_group("2. 学習パラメータ", param_box))
+    page.addWidget(_group(_txt(self, "2. 学習パラメータ", "2. Training Parameters"), param_box))
 
     run_row = QHBoxLayout()
     run_row.setSpacing(8)
     self.btn_latent_cache = self._button("1. Latent Cache", lambda: self._run_section_with_ui("latent_cache"))
     self.btn_text_cache = self._button("2. Text Cache", lambda: self._run_section_with_ui("text_cache"))
-    self.btn_train = self._button("3. 学習実行", lambda: self._run_section_with_ui("train"))
+    self.btn_train = self._button(_txt(self, "3. 学習実行", "3. Train"), lambda: self._run_section_with_ui("train"))
     run_row.addWidget(self.btn_latent_cache)
     run_row.addWidget(self.btn_text_cache)
     run_row.addWidget(self.btn_train)
-    run_row.addWidget(self._button("全部実行", self._run_all_training_with_ui))
+    run_row.addWidget(self._button(_txt(self, "全部実行", "Run All"), self._run_all_training_with_ui))
     run_row.addWidget(self._button(self.t("stop"), self._stop_process))
     run_row.addWidget(self._button(self.t("analyze_log"), lambda: self.analysis_log.setPlainText(self._analyze_current_logs())))
     run_row.addStretch()
-    page.addWidget(_group("3. 実行", run_row))
+    page.addWidget(_group(_txt(self, "3. 実行", "3. Run"), run_row))
 
     self.run_log = self._log()
     self.analysis_log = self._log()
