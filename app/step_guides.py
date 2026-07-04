@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-GUIDES = {
+GUIDES_JA = {
     "dataset": """# Step 1: Dataset
 
 **目的**: 学習用画像フォルダを確認します。
@@ -16,7 +16,6 @@ GUIDES = {
 - caption未作成数を把握できている
 
 **次に押すボタン**:
-- captionが無ければ `Generate Captions`
 - caption確認へ進むなら `Caption Editor` タブ
 """,
     "caption": """# Step 2-3: Caption / Review
@@ -49,7 +48,7 @@ GUIDES = {
 - dataset.toml path にパスが表示される
 
 **次に押すボタン**:
-- `Train` タブで `0. Preflight Check`
+- `Train` タブで学習を実行
 """,
     "train": """# Step 5: Train
 
@@ -57,36 +56,118 @@ GUIDES = {
 
 **やること**:
 1. Target model が z-image であることを確認
-2. 0. Preflight Check
-3. Preview Commands
-4. Run 1: Latent Cache
-5. Run 2: Text Cache
-6. Run 3: Train
+2. Run 1: Latent Cache
+3. Run 2: Text Cache
+4. Run 3: Train
 
 **完了条件**:
-- PreflightがOK
 - cache 2種類が完了
 - TrainがDONEで終了
 
 **次に押すボタン**:
-- `Export` タブで `Copy to ComfyUI`
+- `Export` タブへ進む
 """,
     "export": """# Step 6: Export
 
-**目的**: 完成したLoRAをComfyUIへコピーします。
+**目的**: 完成したLoRAをComfyUIへ配置します。
 
 **やること**:
 1. LoRA file path を指定
 2. Copy to ComfyUI を押す
 
 **完了条件**:
-- ComfyUIのlorasフォルダに.safetensorsがコピーされる
+- ComfyUIのlorasフォルダに.safetensorsが配置される
 
 **次にやること**:
-- ComfyUIでZ-Image-TurboワークフローにLoRAを読み込んでテスト
+- ComfyUIでLoRAを読み込んでテスト
+""",
+}
+
+GUIDES_EN = {
+    "dataset": """# Step 1: Dataset
+
+**Purpose**: Check the folder that contains your training images.
+
+**What to do**:
+1. Select the Dataset folder
+2. Click Check Dataset
+3. Review image count, resolution, and missing caption count
+
+**Done when**:
+- Images are found
+- Images are roughly 512x512 or larger
+- You understand how many captions are missing
+
+**Next**:
+- Open the `Caption Editor` tab to review captions
+""",
+    "caption": """# Step 2-3: Caption / Review
+
+**Purpose**: Review and edit captions for each image.
+
+**What to do**:
+1. Click Load Captions
+2. Review the caption list
+3. Use Remove Words or Bulk Replace when needed
+4. Click Save Captions
+
+**Done when**:
+- Each image has a matching .txt caption
+- Unrelated words have been reduced
+
+**Next**:
+- Open the `Config` tab and build dataset.toml
+""",
+    "config": """# Step 4: Config
+
+**Purpose**: Create dataset.toml for musubi-tuner.
+
+**What to do**:
+1. Select the Output folder
+2. Choose the Resolution
+3. Click Build dataset.toml
+
+**Done when**:
+- The dataset.toml path field shows a generated path
+
+**Next**:
+- Open the `Train` tab and run the training steps
+""",
+    "train": """# Step 5: Train
+
+**Purpose**: Train a Z-Image LoRA in three stages.
+
+**What to do**:
+1. Confirm the Target model
+2. Run Latent Cache
+3. Run Text Cache
+4. Run Train
+
+**Done when**:
+- Both cache stages complete
+- Train finishes successfully
+
+**Next**:
+- Open the `Export` tab
+""",
+    "export": """# Step 6: Export
+
+**Purpose**: Place the completed LoRA where ComfyUI can use it.
+
+**What to do**:
+1. Select the LoRA file path
+2. Click Copy to ComfyUI
+
+**Done when**:
+- The .safetensors file is placed in the ComfyUI LoRA folder
+
+**Next**:
+- Load and test the LoRA in ComfyUI
 """,
 }
 
 
-def guide(topic: str) -> str:
-    return GUIDES.get(topic, "ガイドがまだ登録されていません。")
+def guide(topic: str, lang: str = "日本語") -> str:
+    guides = GUIDES_EN if lang == "English" else GUIDES_JA
+    fallback = "Guide is not registered yet." if lang == "English" else "ガイドがまだ登録されていません。"
+    return guides.get(topic, fallback)
