@@ -23,33 +23,33 @@ from training_presets import preset_names
 SUCCESS_BUTTON_STYLE = """
 QPushButton {
     background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-        stop:0 #4ade80,
-        stop:0.45 #22c55e,
-        stop:0.55 #16a34a,
-        stop:1 #0f6b2d);
-    color: #ffffff;
-    border: 1px solid #86efac;
-    border-bottom: 2px solid #052e16;
-    border-right: 2px solid #052e16;
+        stop:0 #16803f,
+        stop:0.45 #0f6b35,
+        stop:0.55 #0b542a,
+        stop:1 #052e16);
+    color: #f7fff9;
+    border: 1px solid #4ade80;
+    border-bottom: 2px solid #02140a;
+    border-right: 2px solid #02140a;
     border-radius: 9px;
     padding: 7px 13px;
-    font-weight: 800;
+    font-weight: 900;
 }
 QPushButton:hover {
     background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-        stop:0 #86efac,
-        stop:0.45 #4ade80,
-        stop:0.55 #22c55e,
-        stop:1 #15803d);
+        stop:0 #22c55e,
+        stop:0.45 #16803f,
+        stop:0.55 #0f6b35,
+        stop:1 #064e2c);
 }
 QPushButton:pressed {
     background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-        stop:0 #14532d,
-        stop:1 #16a34a);
-    border-top: 2px solid #052e16;
-    border-left: 2px solid #052e16;
-    border-bottom: 1px solid #86efac;
-    border-right: 1px solid #86efac;
+        stop:0 #02140a,
+        stop:1 #0f6b35);
+    border-top: 2px solid #02140a;
+    border-left: 2px solid #02140a;
+    border-bottom: 1px solid #4ade80;
+    border-right: 1px solid #4ade80;
     padding-top: 8px;
     padding-left: 14px;
 }
@@ -97,36 +97,39 @@ def _reset_button(button: QPushButton | None) -> None:
 
 def _training_param_row(self, name: str, widget: QSpinBox | QDoubleSpinBox) -> QHBoxLayout:
     title = QLabel(DISPLAY_NAMES[name])
-    title.setFixedWidth(118)
+    title.setFixedWidth(96)
     title.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
 
     status = QLabel()
-    status.setFixedWidth(92)
+    status.setFixedWidth(54)
 
-    widget.setFixedWidth(118)
+    widget.setFixedWidth(96)
 
     default = DEFAULTS[name]
     reason = _training_reason(name, self.lang)
     detail = QLabel(f"デフォルト {default}　{reason}" if self.lang != "English" else f"Default {default}  {reason}")
-    detail.setMinimumWidth(260)
-    detail.setMaximumWidth(430)
+    detail.setMinimumWidth(220)
+    detail.setMaximumWidth(360)
 
-    reset_text = "Reset" if self.lang == "English" else "デフォルトに戻す"
+    reset_text = "Reset" if self.lang == "English" else "戻す"
     reset = self._button(reset_text, lambda: widget.setValue(DEFAULTS[name]))
-    reset.setFixedWidth(150 if self.lang != "English" else 96)
+    reset.setObjectName("resetButton")
+    reset.setToolTip("デフォルトに戻す" if self.lang != "English" else "Reset to default")
+    reset.setFixedWidth(64 if self.lang != "English" else 66)
+    reset.setFixedHeight(28)
 
     def refresh() -> None:
         if _is_default_value(name, widget.value()):
             status.setText("推奨" if self.lang != "English" else "Default")
         else:
-            status.setText("ユーザー設定" if self.lang != "English" else "Custom")
+            status.setText("変更" if self.lang != "English" else "Custom")
 
     widget.valueChanged.connect(lambda _value: refresh())
     refresh()
 
     row = QHBoxLayout()
     row.setContentsMargins(0, 0, 0, 0)
-    row.setSpacing(8)
+    row.setSpacing(6)
     row.addWidget(title)
     row.addWidget(status)
     row.addWidget(widget)
