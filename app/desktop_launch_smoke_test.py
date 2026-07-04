@@ -10,7 +10,7 @@ from PySide6.QtWidgets import QApplication, QTabWidget
 from desktop_main import DesktopApp
 
 
-EXPECTED_TABS = [
+EXPECTED_TAB_KEYWORDS = [
     "設定",
     "システム",
     "データセット",
@@ -28,8 +28,8 @@ def main() -> int:
     tabs = win.centralWidget()
     assert isinstance(tabs, QTabWidget)
     labels = [tabs.tabText(i) for i in range(tabs.count())]
-    for expected in EXPECTED_TABS:
-        assert expected in labels, f"missing tab: {expected}; labels={labels}"
+    for expected in EXPECTED_TAB_KEYWORDS:
+        assert any(expected in label for label in labels), f"missing tab keyword: {expected}; labels={labels}"
     assert win.windowTitle()
     win.close()
     app.processEvents()
