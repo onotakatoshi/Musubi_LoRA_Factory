@@ -5,6 +5,16 @@ import re
 
 ERROR_PATTERNS: list[tuple[str, str, str]] = [
     (
+        ".triton/cache",
+        "Triton cacheフォルダの権限問題です。",
+        "~/.triton/cache に書き込めず失敗しています。最新版では TRITON_CACHE_DIR をプロジェクト内 .cache/triton に固定します。GUIをgit pull後に再起動してください。",
+    ),
+    (
+        "Permission denied",
+        "権限エラーです。",
+        "ログに出ているパスの所有者または書き込み権限を確認してください。Triton cacheの場合は ~/.triton/cache を削除またはchownしてください。",
+    ),
+    (
         "sm_121 is not compatible with the current PyTorch installation",
         "PyTorchがPGX / GB10のCUDAアーキテクチャに未対応です。",
         "現在のtorch wheelがGB10向けkernelを含んでいません。musubi-tuner側venvのtorchを、CUDA 13系などGB10でCUDA tensorが作れる版へ入れ替えてください。",
@@ -98,7 +108,7 @@ ERROR_PATTERNS: list[tuple[str, str, str]] = [
 
 
 def extract_recent_error_lines(log_text: str, max_lines: int = 20) -> list[str]:
-    keywords = ["error", "exception", "traceback", "failed", "runtimeerror", "modulenotfounderror", "cuda", "zimage", "dataset", "training items", "total batches", "sm_121", "sm_120", "compute_120", "kernel image"]
+    keywords = ["error", "exception", "traceback", "failed", "runtimeerror", "modulenotfounderror", "cuda", "zimage", "dataset", "training items", "total batches", "sm_121", "sm_120", "compute_120", "kernel image", "permission", ".triton", "triton"]
     lines = log_text.splitlines()
     hits = []
     for line in lines:
@@ -110,10 +120,16 @@ def extract_recent_error_lines(log_text: str, max_lines: int = 20) -> list[str]:
 
 def summarize_stage(log_text: str) -> str:
     lower = log_text.lower()
-    if "zimage_cache_latents" in lower:
+    if "failed text_cache" in lower or "text encoder cache failed" in lower:
+        return "推定段階: Text Encoder Cache"
+    if "failed latent_cache" in lower or "latent cache failed" in lower:
         return "推定段階: Latent Cache"
+    if "failed train" in lower or "train failed" in lower:
+        return "推定段階: Train"
     if "zimage_cache_text_encoder_outputs" in lower:
         return "推定段階: Text Encoder Cache"
+    if "zimage_cache_latents" in lower:
+        return "推定段階: Latent Cache"
     if "zimage_train_network" in lower:
         return "推定段階: Train"
     return "推定段階: 不明"
@@ -143,7 +159,11 @@ def analyze_log(log_text: str) -> str:
         lines.extend(f"```text\n{line}\n```" for line in recent[-8:])
     lines.append("")
     lines.append("## Next action")
-    if "sm_121 is not compatible" in log_text or "no kernel image is available for execution on the device" in log_text:
+    if ".triton/cache" in log_text or "Permission denied" in log_text:
+        lines.append("1. GUIを最新版へ更新し、TRITON_CACHE_DIRをプロジェクト内 .cache/triton に固定してください。")
+        lines.append("2. 必要なら古い ~/.triton/cache の所有者を直すか削除してください。")
+        lines.append("3. Text Cacheを再実行してください。")
+    elif "sm_121 is not compatible" in log_text or "no kernel image is available for execution on the device" in log_text:
         lines.append("1. musubi-tuner側venvのtorchをGB10対応版に入れ替えてください。")
         lines.append("2. torch.cuda.get_arch_list()にsm_120/compute_120があり、CUDA tensor作成が通ることを確認してください。")
         lines.append("3. その後、Latent Cache → Text Encoder Cache → Trainの順に再実行してください。")
@@ -154,5 +174,5 @@ def analyze_log(log_text: str) -> str:
     else:
         lines.append("1. まず上の推定段階を確認してください。")
         lines.append("2. Settings / dataset.toml / caption / モデルパスの順に確認してください。")
-        lines.append("3. 修正後、Preflight Check → Command Preview → 該当ステップ実行の順にやり直してください。")
+        lines.append("3. 修正後、該当ステップを実行してください。")
     return "\n".join(lines)
