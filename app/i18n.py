@@ -9,7 +9,7 @@ TEXT = {
         "tab_settings": "設定",
         "tab_system": "システム",
         "tab_dataset": "1. データセット",
-        "tab_caption": "2. Caption編集",
+        "tab_caption": "2. キャプション編集",
         "tab_preview": "3. 画像プレビュー",
         "tab_config": "4. コンフィグ生成",
         "tab_train": "5. 学習",
