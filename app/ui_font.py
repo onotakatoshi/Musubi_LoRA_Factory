@@ -34,27 +34,8 @@ def apply_balanced_ui_font(app: QApplication) -> str:
             font-size: 10pt;
             font-weight: 400;
         }
-        QTabWidget::pane {
-            border: 1px solid #7a7f87;
-            background: #f4f5f7;
-            top: -1px;
-        }
         QTabBar::tab {
-            background: #5f6670;
-            color: #ffffff;
-            border: 1px solid #4b515a;
-            border-bottom: none;
-            padding: 7px 13px;
-            margin-right: 2px;
-            font-weight: 500;
-        }
-        QTabBar::tab:selected {
-            background: #2f3742;
-            color: #ffffff;
-            border-color: #2a3039;
-        }
-        QTabBar::tab:hover:!selected {
-            background: #4f5660;
+            font-weight: 400;
         }
         QPushButton {
             background-color: #4a5563;
@@ -78,15 +59,8 @@ def apply_balanced_ui_font(app: QApplication) -> str:
         QLabel {
             font-weight: 400;
         }
-        QLineEdit, QTextEdit, QPlainTextEdit, QComboBox, QSpinBox, QDoubleSpinBox {
-            background-color: #ffffff;
-            border: 1px solid #9aa1aa;
-            border-radius: 4px;
-            padding: 3px 5px;
+        QTextEdit, QLineEdit, QComboBox, QSpinBox, QDoubleSpinBox {
             font-weight: 400;
-        }
-        QLineEdit:focus, QTextEdit:focus, QPlainTextEdit:focus, QComboBox:focus, QSpinBox:focus, QDoubleSpinBox:focus {
-            border: 1px solid #4a5563;
         }
         """
     )
