@@ -137,15 +137,33 @@ QComboBox QAbstractItemView {
 }
 
 QTextEdit, QPlainTextEdit {
-    background-color: #020617;
-    color: #dbeafe;
-    border: 1px solid #1e293b;
+    background-color: #000000;
+    color: #39ff88;
+    border: 1px solid #0b7a3b;
     border-radius: 10px;
-    padding: 9px;
-    selection-background-color: #1d4ed8;
-    selection-color: #ffffff;
-    font-family: "DejaVu Sans Mono", "Noto Sans Mono", monospace;
-    font-size: 9.5pt;
+    padding: 10px;
+    selection-background-color: #14532d;
+    selection-color: #d9ffe8;
+    font-family: "DejaVu Sans Mono", "Noto Sans Mono", "Ubuntu Mono", monospace;
+    font-size: 9.7pt;
+    line-height: 130%;
+}
+
+QTextEdit:focus, QPlainTextEdit:focus {
+    border: 1px solid #22c55e;
+    background-color: #000000;
+}
+
+QTextEdit QScrollBar:vertical, QPlainTextEdit QScrollBar:vertical {
+    background-color: #020402;
+}
+
+QTextEdit QScrollBar::handle:vertical, QPlainTextEdit QScrollBar::handle:vertical {
+    background-color: #0f7a3a;
+}
+
+QTextEdit QScrollBar::handle:vertical:hover, QPlainTextEdit QScrollBar::handle:vertical:hover {
+    background-color: #16a34a;
 }
 
 QScrollBar:vertical {
