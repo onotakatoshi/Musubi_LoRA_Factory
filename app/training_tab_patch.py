@@ -21,18 +21,18 @@ from training_presets import preset_names
 
 SUCCESS_BUTTON_STYLE = """
 QPushButton {
-    background-color: #2f7d46;
+    background-color: #16a34a;
     color: #ffffff;
-    border: 1px solid #236236;
-    border-radius: 5px;
-    padding: 6px 12px;
-    font-weight: 600;
+    border: 1px solid #22c55e;
+    border-radius: 9px;
+    padding: 7px 13px;
+    font-weight: 700;
 }
 QPushButton:hover {
-    background-color: #286b3c;
+    background-color: #15803d;
 }
 QPushButton:pressed {
-    background-color: #205530;
+    background-color: #166534;
 }
 """
 
@@ -173,12 +173,19 @@ def _connect_training_ui_signals(self) -> None:
 
 def _train_tab(self) -> QWidget:
     page = QVBoxLayout()
-    page.setContentsMargins(8, 8, 8, 8)
-    page.setSpacing(6)
+    page.setContentsMargins(12, 10, 12, 10)
+    page.setSpacing(8)
     _connect_training_ui_signals(self)
 
-    guide = QLabel("操作順: 1. Latent Cache → 2. Text Cache → 3. 学習実行　※必要なコマンド準備は自動で行います。成功した工程は緑になります。")
-    page.addWidget(guide)
+    header = QVBoxLayout()
+    header.setContentsMargins(2, 0, 2, 0)
+    title = QLabel("Musubi LoRA Training")
+    title.setStyleSheet("font-size: 17pt; font-weight: 800; color: #ffffff; background: transparent;")
+    subtitle = QLabel("Latent Cache → Text Cache → 学習実行。必要なコマンド準備は自動化されています。成功した工程は緑になります。")
+    subtitle.setStyleSheet("color: #9fb4d0; background: transparent;")
+    header.addWidget(title)
+    header.addWidget(subtitle)
+    page.addLayout(header)
 
     self.train_status = self._log()
     self.train_status.setVisible(False)
@@ -237,7 +244,7 @@ def _train_tab(self) -> QWidget:
     page.addWidget(_group("2. 学習パラメータ", param_box))
 
     aux_row = QHBoxLayout()
-    aux_row.setSpacing(6)
+    aux_row.setSpacing(8)
     aux_row.addWidget(self._button("Preset適用", self._apply_preset))
     aux_row.addWidget(self._button("学習前レビュー", self._training_review))
     aux_row.addWidget(self._button(self.t("estimate_training_load"), self._estimate_training_load))
@@ -245,7 +252,7 @@ def _train_tab(self) -> QWidget:
     page.addWidget(_group("3. 補助", aux_row))
 
     run_row = QHBoxLayout()
-    run_row.setSpacing(6)
+    run_row.setSpacing(8)
     self.btn_latent_cache = self._button("1. Latent Cache", lambda: self._run_section_with_ui("latent_cache"))
     self.btn_text_cache = self._button("2. Text Cache", lambda: self._run_section_with_ui("text_cache"))
     self.btn_train = self._button("3. 学習実行", lambda: self._run_section_with_ui("train"))
@@ -259,12 +266,16 @@ def _train_tab(self) -> QWidget:
     page.addWidget(_group("4. 実行", run_row))
 
     self.run_log = self._log()
-    page.addWidget(QLabel(self.t("run_log")))
+    log_label = QLabel(self.t("run_log"))
+    log_label.setStyleSheet("font-weight: 700; color: #cfe5ff; background: transparent;")
+    page.addWidget(log_label)
     page.addWidget(self.run_log, 1)
 
     self.analysis_log = self._log()
-    self.analysis_log.setMaximumHeight(120)
-    page.addWidget(QLabel(self.t("error_analysis")))
+    self.analysis_log.setMaximumHeight(115)
+    analysis_label = QLabel(self.t("error_analysis"))
+    analysis_label.setStyleSheet("font-weight: 700; color: #cfe5ff; background: transparent;")
+    page.addWidget(analysis_label)
     page.addWidget(self.analysis_log, 0)
 
     self._sync_profile_task()
