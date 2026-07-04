@@ -5,6 +5,16 @@ import re
 
 ERROR_PATTERNS: list[tuple[str, str, str]] = [
     (
+        "sm_121 is not compatible with the current PyTorch installation",
+        "PyTorchがPGX / GB10のCUDAアーキテクチャに未対応です。",
+        "現在のtorch wheelがsm_121向けkernelを含んでいません。musubi-tuner側venvのtorchを、GB10に対応したCUDA 13系またはNVIDIA提供のPyTorchへ入れ替えてください。",
+    ),
+    (
+        "no kernel image is available for execution on the device",
+        "CUDA kernelがPGX / GB10で実行できません。",
+        "VAEやText Encoderの問題ではなく、torchのCUDAビルド不一致が原因です。torch.cuda.get_arch_list() に sm_121 が出る環境へ入れ替える必要があります。",
+    ),
+    (
         "No training items found in the dataset",
         "Latent/Text Encoder cacheが未作成、または古い可能性があります。",
         "dataset.tomlを作り直した後は、Trainの前に必ず Latent Cache → Text Encoder Cache を再実行してください。cacheフォルダを消した場合も同じです。",
@@ -88,7 +98,7 @@ ERROR_PATTERNS: list[tuple[str, str, str]] = [
 
 
 def extract_recent_error_lines(log_text: str, max_lines: int = 20) -> list[str]:
-    keywords = ["error", "exception", "traceback", "failed", "runtimeerror", "modulenotfounderror", "cuda", "zimage", "dataset", "training items", "total batches"]
+    keywords = ["error", "exception", "traceback", "failed", "runtimeerror", "modulenotfounderror", "cuda", "zimage", "dataset", "training items", "total batches", "sm_121", "kernel image"]
     lines = log_text.splitlines()
     hits = []
     for line in lines:
@@ -133,7 +143,11 @@ def analyze_log(log_text: str) -> str:
         lines.extend(f"```text\n{line}\n```" for line in recent[-8:])
     lines.append("")
     lines.append("## Next action")
-    if "No training items found in the dataset" in log_text or "total batches: 0" in log_text:
+    if "sm_121 is not compatible" in log_text or "no kernel image is available for execution on the device" in log_text:
+        lines.append("1. musubi-tuner側venvのtorchをGB10対応版に入れ替えてください。")
+        lines.append("2. pythonでtorch.cuda.get_arch_list()を確認し、sm_121が含まれることを確認してください。")
+        lines.append("3. その後、Latent Cache → Text Encoder Cache → Trainの順に再実行してください。")
+    elif "No training items found in the dataset" in log_text or "total batches: 0" in log_text:
         lines.append("1. コンフィグ生成タブでdataset.tomlを作り直してください。")
         lines.append("2. 出力フォルダのcacheを消した場合は、Latent Cache → Text Encoder Cacheを再実行してください。")
         lines.append("3. その後にTrainを実行してください。")
