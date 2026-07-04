@@ -7,12 +7,12 @@ ERROR_PATTERNS: list[tuple[str, str, str]] = [
     (
         "sm_121 is not compatible with the current PyTorch installation",
         "PyTorchがPGX / GB10のCUDAアーキテクチャに未対応です。",
-        "現在のtorch wheelがsm_121向けkernelを含んでいません。musubi-tuner側venvのtorchを、GB10に対応したCUDA 13系またはNVIDIA提供のPyTorchへ入れ替えてください。",
+        "現在のtorch wheelがGB10向けkernelを含んでいません。musubi-tuner側venvのtorchを、CUDA 13系などGB10でCUDA tensorが作れる版へ入れ替えてください。",
     ),
     (
         "no kernel image is available for execution on the device",
         "CUDA kernelがPGX / GB10で実行できません。",
-        "VAEやText Encoderの問題ではなく、torchのCUDAビルド不一致が原因です。torch.cuda.get_arch_list() に sm_121 が出る環境へ入れ替える必要があります。",
+        "VAEやText Encoderの問題ではなく、torchのCUDAビルド不一致が原因です。torch.cuda.get_arch_list() に sm_120 または compute_120 があり、CUDA tensor作成が通る環境へ入れ替えてください。",
     ),
     (
         "No training items found in the dataset",
@@ -98,7 +98,7 @@ ERROR_PATTERNS: list[tuple[str, str, str]] = [
 
 
 def extract_recent_error_lines(log_text: str, max_lines: int = 20) -> list[str]:
-    keywords = ["error", "exception", "traceback", "failed", "runtimeerror", "modulenotfounderror", "cuda", "zimage", "dataset", "training items", "total batches", "sm_121", "kernel image"]
+    keywords = ["error", "exception", "traceback", "failed", "runtimeerror", "modulenotfounderror", "cuda", "zimage", "dataset", "training items", "total batches", "sm_121", "sm_120", "compute_120", "kernel image"]
     lines = log_text.splitlines()
     hits = []
     for line in lines:
@@ -145,7 +145,7 @@ def analyze_log(log_text: str) -> str:
     lines.append("## Next action")
     if "sm_121 is not compatible" in log_text or "no kernel image is available for execution on the device" in log_text:
         lines.append("1. musubi-tuner側venvのtorchをGB10対応版に入れ替えてください。")
-        lines.append("2. pythonでtorch.cuda.get_arch_list()を確認し、sm_121が含まれることを確認してください。")
+        lines.append("2. torch.cuda.get_arch_list()にsm_120/compute_120があり、CUDA tensor作成が通ることを確認してください。")
         lines.append("3. その後、Latent Cache → Text Encoder Cache → Trainの順に再実行してください。")
     elif "No training items found in the dataset" in log_text or "total batches: 0" in log_text:
         lines.append("1. コンフィグ生成タブでdataset.tomlを作り直してください。")
