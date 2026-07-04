@@ -4,6 +4,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 FILES = [
+    "app/path_resolver.py",
     "app/desktop_launcher.py",
     "app/ui_font.py",
     "app/fix_local_paths.py",
