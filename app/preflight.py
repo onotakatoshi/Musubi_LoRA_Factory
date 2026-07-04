@@ -6,15 +6,16 @@ import toml
 
 from model_adapters import get_adapter
 from model_registry import get_profile
+from path_resolver import resolve_path
 
 
 def _status_path(label: str, value: str, must_exist: bool = True) -> str:
     if not value:
         return f"❌ {label}: not set"
-    p = Path(value)
+    p = resolve_path(value)
     if must_exist and not p.exists():
-        return f"❌ {label}: not found: {value}"
-    return f"✅ {label}: {value}"
+        return f"❌ {label}: not found: {p}  (settings: {value})"
+    return f"✅ {label}: {p}  (settings: {value})"
 
 
 def run_preflight(settings_path: Path, dataset_toml: str, target_model: str, task: str) -> str:
@@ -24,6 +25,7 @@ def run_preflight(settings_path: Path, dataset_toml: str, target_model: str, tas
         "",
         "Ver 1.0 は Z-Image / Z-Image-Turbo 用LoRA作成に限定しています。",
         "パス検証はモデルアダプタ経由です。Musubi Tuner対応モデルを後から追加しやすい構造にしています。",
+        "Relative paths are resolved from the repository root.",
         "",
     ]
 
