@@ -9,16 +9,17 @@ import toml
 from model_adapters import get_adapter
 from model_registry import get_profile
 from musubi_runtime_check import check_musubi_runtime
+from path_resolver import resolve_path
 from verification_readiness import verification_readiness
 
 
 def _path_status(label: str, value: str, must_exist: bool = True) -> str:
     if not value:
         return f"❌ {label}: not set"
-    p = Path(value)
+    p = resolve_path(value)
     if must_exist and not p.exists():
-        return f"❌ {label}: not found: {p}"
-    return f"✅ {label}: {p}"
+        return f"❌ {label}: not found: {p}  (settings: {value})"
+    return f"✅ {label}: {p}  (settings: {value})"
 
 
 def _run_version(cmd: list[str]) -> str:
@@ -49,6 +50,7 @@ def check_environment(settings_path: Path, profile_id: str = "z-image") -> str:
     lines = ["# Environment Check", "", f"Profile: {profile.display_name}", ""]
     lines.append(f"GUI Python: {sys.version.split()[0]}")
     lines.append(f"nvidia-smi: {_run_version(['nvidia-smi'])}")
+    lines.append("Relative paths are resolved from the repository root.")
     lines.append("")
 
     lines.append("## Verification readiness")
@@ -68,14 +70,14 @@ def check_environment(settings_path: Path, profile_id: str = "z-image") -> str:
     lines.append("## musubi-tuner")
     lines.append(_path_status("repo_path", musubi.get("repo_path", "")))
     lines.append(_path_status("python_path", musubi.get("python_path", "")))
-    repo = Path(musubi.get("repo_path", "")) if musubi.get("repo_path") else None
+    repo = resolve_path(musubi.get("repo_path", "")) if musubi.get("repo_path") else None
     if repo:
         lines.extend(_check_musubi_scripts(repo, profile.id))
     lines.append("")
 
     if musubi.get("repo_path") and musubi.get("python_path"):
         lines.append("## musubi runtime")
-        lines.append(check_musubi_runtime(musubi.get("python_path", ""), musubi.get("repo_path", ""), profile.id))
+        lines.append(check_musubi_runtime(str(resolve_path(musubi.get("python_path", ""))), str(resolve_path(musubi.get("repo_path", ""))), profile.id))
         lines.append("")
 
     try:
