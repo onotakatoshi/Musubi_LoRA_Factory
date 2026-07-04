@@ -30,9 +30,13 @@ def main() -> int:
     assert "font-weight: 400" in font
     assert "QPushButton" in font
     assert "background-color: #4a5563" in font
-    assert "QTabBar::tab" in font
-    assert "QTabBar::tab:selected" in font
-    assert "background: #2f3742" in font
+    assert "QPushButton:hover" in font
+    assert "QPushButton:pressed" in font
+    assert "QTabWidget::pane" not in font
+    assert "QTabBar::tab:selected" not in font
+    assert "background: #2f3742" not in font
+    assert "background-color: #ffffff" not in font
+    assert "border: 1px solid #9aa1aa" not in font
     assert "def showEvent" in caption_table
     assert "load_if_needed" in caption_table
     assert "_last_loaded_dataset_dir" in caption_table
