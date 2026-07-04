@@ -20,4 +20,4 @@ fi
 
 source .venv/bin/activate
 python app/startup_check.py
-python app/desktop_main.py
+python app/desktop_launcher.py
