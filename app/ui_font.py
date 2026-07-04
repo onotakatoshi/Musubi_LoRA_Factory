@@ -34,17 +34,59 @@ def apply_balanced_ui_font(app: QApplication) -> str:
             font-size: 10pt;
             font-weight: 400;
         }
+        QTabWidget::pane {
+            border: 1px solid #7a7f87;
+            background: #f4f5f7;
+            top: -1px;
+        }
         QTabBar::tab {
-            font-weight: 400;
+            background: #5f6670;
+            color: #ffffff;
+            border: 1px solid #4b515a;
+            border-bottom: none;
+            padding: 7px 13px;
+            margin-right: 2px;
+            font-weight: 500;
+        }
+        QTabBar::tab:selected {
+            background: #2f3742;
+            color: #ffffff;
+            border-color: #2a3039;
+        }
+        QTabBar::tab:hover:!selected {
+            background: #4f5660;
         }
         QPushButton {
-            font-weight: 400;
+            background-color: #4a5563;
+            color: #ffffff;
+            border: 1px solid #313946;
+            border-radius: 5px;
+            padding: 6px 12px;
+            font-weight: 500;
+        }
+        QPushButton:hover {
+            background-color: #3f4a58;
+        }
+        QPushButton:pressed {
+            background-color: #303946;
+        }
+        QPushButton:disabled {
+            background-color: #a9aeb5;
+            color: #eeeeee;
+            border-color: #8f959d;
         }
         QLabel {
             font-weight: 400;
         }
-        QTextEdit, QLineEdit, QComboBox, QSpinBox, QDoubleSpinBox {
+        QLineEdit, QTextEdit, QPlainTextEdit, QComboBox, QSpinBox, QDoubleSpinBox {
+            background-color: #ffffff;
+            border: 1px solid #9aa1aa;
+            border-radius: 4px;
+            padding: 3px 5px;
             font-weight: 400;
+        }
+        QLineEdit:focus, QTextEdit:focus, QPlainTextEdit:focus, QComboBox:focus, QSpinBox:focus, QDoubleSpinBox:focus {
+            border: 1px solid #4a5563;
         }
         """
     )
