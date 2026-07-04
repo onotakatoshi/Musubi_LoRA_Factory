@@ -99,8 +99,8 @@ class CaptionTableWidget(QWidget):
 
     def refresh_language(self) -> None:
         lang = self.lang_getter()
-        self.load_btn.setText(_t(lang, "Captionを読み込み", "Load Captions"))
-        self.save_btn.setText(_t(lang, "Captionを保存", "Save Captions"))
+        self.load_btn.setText(_t(lang, "キャプションを読み込み", "Load Captions"))
+        self.save_btn.setText(_t(lang, "キャプションを保存", "Save Captions"))
         self.reload_btn.setText(_t(lang, "再読み込み", "Reload"))
         self.replace_btn.setText(_t(lang, "一括置換", "Bulk Replace"))
         self.remove_words_btn.setText(_t(lang, "語句を一括削除", "Remove Words"))
@@ -160,9 +160,9 @@ class CaptionTableWidget(QWidget):
     def bulk_replace(self) -> None:
         rows = bulk_replace_caption_rows(self._table_rows(), self.find_edit.text(), self.replace_edit.text())
         self._set_table_rows(rows)
-        self.log.setPlainText(_t(self.lang_getter(), "一括置換を適用しました。保存するにはCaptionを保存してください。", "Bulk replace applied. Click Save Captions to write files."))
+        self.log.setPlainText(_t(self.lang_getter(), "一括置換を適用しました。保存するにはキャプションを保存してください。", "Bulk replace applied. Click Save Captions to write files."))
 
     def remove_words(self) -> None:
         rows = remove_words_caption_rows(self._table_rows(), self.remove_words_edit.text())
         self._set_table_rows(rows)
-        self.log.setPlainText(_t(self.lang_getter(), "語句削除を適用しました。保存するにはCaptionを保存してください。", "Word removal applied. Click Save Captions to write files."))
+        self.log.setPlainText(_t(self.lang_getter(), "語句削除を適用しました。保存するにはキャプションを保存してください。", "Word removal applied. Click Save Captions to write files."))
