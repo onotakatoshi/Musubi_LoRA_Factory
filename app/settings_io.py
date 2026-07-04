@@ -6,6 +6,9 @@ from typing import Any
 import toml
 
 
+ZIMAGE_MODEL_ROOT = "../models/z-image/Tongyi-MAI/Z-Image"
+
+
 def default_settings() -> dict[str, Any]:
     return {
         "ui": {
@@ -27,9 +30,9 @@ def default_settings() -> dict[str, Any]:
             "llm_model": "",
         },
         "model_paths": {
-            "zimage_dit": "../models/z-image/z_image_base_or_deturbo.safetensors",
-            "zimage_vae": "../models/z-image/ae.safetensors",
-            "zimage_text_encoder": "../models/z-image/qwen3_text_encoder_00001-of-00002.safetensors",
+            "zimage_dit": f"{ZIMAGE_MODEL_ROOT}/transformer/diffusion_pytorch_model-00001-of-00002.safetensors",
+            "zimage_vae": f"{ZIMAGE_MODEL_ROOT}/vae/diffusion_pytorch_model.safetensors",
+            "zimage_text_encoder": f"{ZIMAGE_MODEL_ROOT}/text_encoder/model-00001-of-00003.safetensors",
             "zimage_base_weights": "",
             "wan_vae": "../models/wan/Wan2.1_VAE.pth",
             "wan_t5": "../models/wan/models_t5_umt5-xxl-enc-bf16.pth",
