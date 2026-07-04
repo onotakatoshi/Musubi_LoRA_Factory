@@ -1,5 +1,13 @@
 from __future__ import annotations
 
+from pathlib import Path
+
+from PySide6.QtCore import QProcessEnvironment
+
+
+ROOT = Path(__file__).resolve().parents[1]
+TRITON_CACHE_DIR = ROOT / ".cache" / "triton"
+
 
 def normalize_stage_name(stage: str) -> str:
     key = str(stage).strip().lower().replace(" ", "_").replace("-", "_")
@@ -21,7 +29,17 @@ def normalize_stage_name(stage: str) -> str:
 
 
 def command_not_ready_message() -> str:
-    return "NG: コマンドが未生成です。先に『コマンド確認』を押してください。"
+    return "NG: コマンドが未生成です。実行前のコマンド準備に失敗しています。dataset.toml と設定を確認してください。"
+
+
+def patched_process_environment(self) -> QProcessEnvironment:
+    env = QProcessEnvironment.systemEnvironment()
+    env.insert("PYTHONUNBUFFERED", "1")
+    env.insert("PYTHONIOENCODING", "utf-8")
+    TRITON_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    env.insert("TRITON_CACHE_DIR", str(TRITON_CACHE_DIR))
+    env.insert("XDG_CACHE_HOME", str(ROOT / ".cache"))
+    return env
 
 
 def patched_run_one(self, stage: str) -> str:
@@ -34,7 +52,7 @@ def patched_run_one(self, stage: str) -> str:
     if stage not in valid_stages:
         return f"NG: unknown command section: {stage}"
     if not self.sections.get(stage, "").strip():
-        return f"NG: command section not found: {stage}\n先に『コマンド確認』を押して、3つのコマンドが揃っているか確認してください。"
+        return f"NG: command section not found: {stage}\n実行前のコマンド準備に失敗しています。dataset.toml と設定を確認してください。"
     guard = self._guard_before_run()
     if guard:
         return "NG: 実行前パス検証に失敗しました。\n" + guard
@@ -51,7 +69,7 @@ def patched_run_all(self) -> str:
         return command_not_ready_message()
     missing = [stage for stage in required if not self.sections.get(stage, "").strip()]
     if missing:
-        return "NG: missing command sections: " + ", ".join(missing) + "\n先に『コマンド確認』を押してください。"
+        return "NG: missing command sections: " + ", ".join(missing) + "\n実行前のコマンド準備に失敗しています。dataset.toml と設定を確認してください。"
     guard = self._guard_before_run()
     if guard:
         return "NG: 実行前パス検証に失敗しました。\n" + guard
@@ -63,3 +81,4 @@ def patched_run_all(self) -> str:
 def apply_training_engine_patch(training_engine_class) -> None:
     training_engine_class.run_one = patched_run_one
     training_engine_class.run_all = patched_run_all
+    training_engine_class._process_environment = patched_process_environment
