@@ -4,6 +4,7 @@ from pathlib import Path
 
 from model_adapters import get_adapter
 from model_registry import get_profile
+from path_resolver import resolve_path
 
 MODEL_EXTS = {".safetensors", ".pt", ".pth", ".bin"}
 
@@ -22,6 +23,7 @@ def _score_file(path: Path, keywords: list[str]) -> int:
 
 
 def _best_file(root: Path, keywords: list[str]) -> Path | None:
+    root = resolve_path(root)
     if not root.exists():
         return None
     candidates = [p for p in root.rglob("*") if p.is_file() and p.suffix.lower() in MODEL_EXTS]
@@ -49,30 +51,30 @@ def detect_zimage_files(model_dir: Path) -> dict[str, str]:
 def _status_dir(key: str, value: str) -> str:
     if not value:
         return f"❌ {key}: not set"
-    p = Path(value)
+    p = resolve_path(value)
     if not p.exists():
-        return f"❌ {key}: not found: {value}"
+        return f"❌ {key}: not found: {p}  (settings: {value})"
     if not p.is_dir():
-        return f"❌ {key}: not a directory: {value}"
-    return f"✅ {key}: {value}"
+        return f"❌ {key}: not a directory: {p}  (settings: {value})"
+    return f"✅ {key}: {p}  (settings: {value})"
 
 
 def _status_file(key: str, value: str) -> str:
     if not value:
         return f"❌ {key}: not set"
-    p = Path(value)
+    p = resolve_path(value)
     if not p.exists():
-        return f"❌ {key}: not found: {value}"
+        return f"❌ {key}: not found: {p}  (settings: {value})"
     if not p.is_file():
-        return f"❌ {key}: not a file: {value}"
-    return f"✅ {key}: {value}"
+        return f"❌ {key}: not a file: {p}  (settings: {value})"
+    return f"✅ {key}: {p}  (settings: {value})"
 
 
 def validate_settings_paths(values: dict[str, str], profile_id: str = "z-image") -> str:
     profile = get_profile(profile_id)
     required_dirs = ["musubi_repo", "datasets_dir", "outputs_dir", "comfyui_loras_dir"]
     required_files = ["musubi_python"]
-    lines = ["# Settings Validation", "", f"Profile: {profile.display_name}", ""]
+    lines = ["# Settings Validation", "", f"Profile: {profile.display_name}", "", "Relative paths are resolved from the repository root.", ""]
 
     for key in required_dirs:
         lines.append(_status_dir(key, values.get(key, "")))
@@ -94,7 +96,8 @@ def validate_settings_paths(values: dict[str, str], profile_id: str = "z-image")
     except NotImplementedError as exc:
         lines.append(f"❌ {exc}")
 
-    repo = Path(values.get("musubi_repo", ""))
+    repo_value = values.get("musubi_repo", "")
+    repo = resolve_path(repo_value) if repo_value else Path("")
     if repo.exists():
         src = repo / "src" / "musubi_tuner"
         if src.exists():
