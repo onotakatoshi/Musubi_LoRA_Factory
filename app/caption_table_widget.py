@@ -35,6 +35,7 @@ class CaptionTableWidget(QWidget):
         self.dataset_dir_getter = dataset_dir_getter
         self.lang_getter = lang_getter
         self.rows: list[list[str]] = []
+        self._last_loaded_dataset_dir: str | None = None
 
         box = QVBoxLayout()
         self.guide = QTextEdit()
@@ -87,6 +88,15 @@ class CaptionTableWidget(QWidget):
         self.setLayout(box)
         self.refresh_language()
 
+    def showEvent(self, event):  # noqa: N802
+        super().showEvent(event)
+        self.load_if_needed()
+
+    def load_if_needed(self) -> None:
+        dataset_dir = str(Path(self.dataset_dir_getter()))
+        if dataset_dir != self._last_loaded_dataset_dir or self.table.rowCount() == 0:
+            self.load_captions()
+
     def refresh_language(self) -> None:
         lang = self.lang_getter()
         self.load_btn.setText(_t(lang, "Captionを読み込み", "Load Captions"))
@@ -101,8 +111,8 @@ class CaptionTableWidget(QWidget):
         self.guide.setPlainText(
             _t(
                 lang,
-                "Caption Editor\n\nDatasetタブで指定したフォルダの .txt caption を一覧表示します。\nCaption列を直接編集して保存できます。一括置換や語句削除も使えます。画像ファイル名は変更しません。",
-                "Caption Editor\n\nThis lists .txt captions in the folder selected on the Dataset tab.\nEdit captions directly, use bulk replace/remove, then save. Image filenames are not changed.",
+                "Caption Editor\n\nDatasetタブで指定したフォルダの .txt caption を一覧表示します。\nこのタブを開くと自動で読み込みます。Caption列を直接編集して保存できます。一括置換や語句削除も使えます。画像ファイル名は変更しません。",
+                "Caption Editor\n\nThis lists .txt captions in the folder selected on the Dataset tab.\nCaptions load automatically when this tab is opened. Edit captions directly, use bulk replace/remove, then save. Image filenames are not changed.",
             )
         )
 
@@ -134,6 +144,7 @@ class CaptionTableWidget(QWidget):
         try:
             self.rows = load_caption_rows(dataset_dir)
             self._set_table_rows(self.rows)
+            self._last_loaded_dataset_dir = str(dataset_dir)
             self.log.setPlainText(_t(self.lang_getter(), f"読み込み完了: {len(self.rows)}件", f"Loaded: {len(self.rows)} rows"))
         except Exception as exc:
             self.log.setPlainText(f"NG: {type(exc).__name__}: {exc}")
