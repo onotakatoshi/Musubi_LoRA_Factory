@@ -64,8 +64,10 @@ QTabBar::tab {
     color: #9aa8bd;
     border: 1px solid #25324a;
     border-bottom: none;
-    padding: 9px 16px;
+    padding: 9px 8px;
     margin-right: 4px;
+    min-width: 118px;
+    max-width: 118px;
     border-top-left-radius: 10px;
     border-top-right-radius: 10px;
     font-weight: 600;
@@ -80,6 +82,16 @@ QTabBar::tab:selected {
 QTabBar::tab:hover:!selected {
     background-color: #192338;
     color: #d6e4f8;
+}
+
+QTabBar::tab:disabled {
+    background-color: transparent;
+    color: transparent;
+    border: none;
+    min-width: 22px;
+    max-width: 22px;
+    padding: 0px;
+    margin-right: 8px;
 }
 
 QPushButton {
