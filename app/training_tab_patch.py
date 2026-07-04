@@ -22,18 +22,36 @@ from training_presets import preset_names
 
 SUCCESS_BUTTON_STYLE = """
 QPushButton {
-    background-color: #16a34a;
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+        stop:0 #4ade80,
+        stop:0.45 #22c55e,
+        stop:0.55 #16a34a,
+        stop:1 #0f6b2d);
     color: #ffffff;
-    border: 1px solid #22c55e;
+    border: 1px solid #86efac;
+    border-bottom: 2px solid #052e16;
+    border-right: 2px solid #052e16;
     border-radius: 9px;
     padding: 7px 13px;
-    font-weight: 700;
+    font-weight: 800;
 }
 QPushButton:hover {
-    background-color: #15803d;
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+        stop:0 #86efac,
+        stop:0.45 #4ade80,
+        stop:0.55 #22c55e,
+        stop:1 #15803d);
 }
 QPushButton:pressed {
-    background-color: #166534;
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+        stop:0 #14532d,
+        stop:1 #16a34a);
+    border-top: 2px solid #052e16;
+    border-left: 2px solid #052e16;
+    border-bottom: 1px solid #86efac;
+    border-right: 1px solid #86efac;
+    padding-top: 8px;
+    padding-left: 14px;
 }
 """
 
@@ -288,8 +306,8 @@ def _train_tab(self) -> QWidget:
 
     logs_row = QHBoxLayout()
     logs_row.setSpacing(8)
-    logs_row.addWidget(_make_log_column(self.t("run_log"), self.run_log), 3)
-    logs_row.addWidget(_make_log_column(self.t("error_analysis"), self.analysis_log), 2)
+    logs_row.addWidget(_make_log_column(self.t("run_log"), self.run_log), 1)
+    logs_row.addWidget(_make_log_column(self.t("error_analysis"), self.analysis_log), 1)
     page.addLayout(logs_row, 1)
 
     self._sync_profile_task()
