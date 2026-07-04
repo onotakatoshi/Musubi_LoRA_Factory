@@ -186,7 +186,19 @@ class DesktopApp(QMainWindow):
 
     def _settings_tab(self) -> QWidget:
         box = QVBoxLayout()
-        guide_box = QTextEdit(); guide_box.setReadOnly(True); guide_box.setPlainText(self.t("settings_intro")); guide_box.setMaximumHeight(100); box.addWidget(guide_box)
+        box.setContentsMargins(8, 8, 8, 8)
+        box.setSpacing(6)
+
+        guide_box = QTextEdit()
+        guide_box.setReadOnly(True)
+        guide_box.setPlainText(self.t("settings_intro"))
+        guide_box.setMaximumHeight(82)
+        box.addWidget(guide_box, 0)
+
+        controls = QWidget()
+        controls_box = QVBoxLayout()
+        controls_box.setContentsMargins(0, 0, 0, 0)
+        controls_box.setSpacing(6)
         form = self._compact_form()
         self.set_language = QComboBox(); self.set_language.addItems(SUPPORTED_LANGUAGES); self.set_language.setCurrentText(self.lang)
         form.addRow(HelpLabel(self.t("language"), "UIの表示言語です。デフォルトは日本語です。"), self.set_language)
@@ -208,7 +220,8 @@ class DesktopApp(QMainWindow):
         form.addRow(HelpLabel(self.t("label_zimage_text_encoder"), HELP["zimage_text_encoder"]), self._browse_file_row(self.set_zimage_text_encoder))
         self.set_zimage_base_weights = self._line(nested_get(self.settings, "model_paths", "zimage_base_weights"))
         form.addRow(HelpLabel(self.t("label_zimage_base_weights"), HELP["zimage_base_weights"]), self._browse_file_row(self.set_zimage_base_weights))
-        box.addLayout(form)
+        controls_box.addLayout(form)
+
         row = QHBoxLayout()
         row.setContentsMargins(0, 0, 0, 0)
         row.setSpacing(6)
@@ -217,8 +230,14 @@ class DesktopApp(QMainWindow):
         row.addWidget(self._button(self.t("save_settings"), self._save_settings))
         row.addWidget(self._button(self.t("reload_settings"), self._reload_settings_fields))
         row.addWidget(self._button(self.t("environment_check"), lambda: self.settings_log.setPlainText(check_environment(SETTINGS_PATH))))
-        row.addStretch(); box.addLayout(row)
-        self.settings_log = self._log(); self.settings_log.setMaximumHeight(210); box.addWidget(self.settings_log)
+        row.addStretch()
+        controls_box.addLayout(row)
+        controls.setLayout(controls_box)
+        box.addWidget(controls, 0)
+
+        self.settings_log = self._log()
+        self.settings_log.setMinimumHeight(260)
+        box.addWidget(self.settings_log, 1)
         w = QWidget(); w.setLayout(box); return w
 
     def _system_tab(self) -> QWidget:
