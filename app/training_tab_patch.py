@@ -18,7 +18,6 @@ from PySide6.QtWidgets import (
 
 from model_ui import available_model_labels, label_for_profile, v1_default_profile
 from recommended_defaults import DEFAULTS, REASONS_EN, REASONS_JA
-from training_presets import preset_names
 
 SUCCESS_BUTTON_STYLE = """
 QPushButton {
@@ -66,22 +65,29 @@ STEP_BUTTON_WIDTH = 142
 ACTION_BUTTON_WIDTH = 118
 RUN_GROUP_GAP = 24
 
-TRAIN_HELP_JA = (
-    "このタブでは LoRA 学習を実行します。\n\n"
-    "1. Latent Cache: 画像を学習用の潜在表現に変換します。\n"
-    "2. Text Cache: caption / prompt 側のテキスト特徴を準備します。\n"
-    "3. 学習実行: dataset.toml、モデル、Rank、Alpha、Epochs、Learning rate を使って LoRA を作成します。\n\n"
-    "Trigger word はデータセット側の caption に入れておく重要語です。生成時にも同じ語をプロンプトに入れることで、LoRA を効かせやすくします。\n\n"
-    "ログ欄には実行中の詳細、エラー解析欄には失敗時の原因候補と次の対応が表示されます。"
-)
-TRAIN_HELP_EN = (
-    "Use this tab to run LoRA training.\n\n"
-    "1. Latent Cache: converts images into latent representations for training.\n"
-    "2. Text Cache: prepares text features from captions/prompts.\n"
-    "3. Train: creates the LoRA using dataset.toml, model settings, Rank, Alpha, Epochs, and Learning rate.\n\n"
-    "The Trigger word should be included in your dataset captions. Use the same word in generation prompts to invoke the LoRA more reliably.\n\n"
-    "The Run Log shows execution details. Error Analysis suggests likely causes and next actions when something fails."
-)
+BASIC_HELP_JA = {
+    "target_model": "学習対象のベースモデルです。通常は Z-Image 用の既定プロファイルを使います。モデルにより必要なtaskやコマンドが変わります。",
+    "task": "musubi-tuner に渡す学習タスクです。選択したTarget modelに合わせて自動設定されます。通常は手動変更しません。",
+    "output_name": "作成されるLoRAファイル名の元になります。例: zimage_smoke_test → zimage_smoke_test.safetensors。",
+}
+BASIC_HELP_EN = {
+    "target_model": "Base model/profile to train against. Usually keep the default Z-Image profile. The selected model affects task and command generation.",
+    "task": "Training task passed to musubi-tuner. It is set automatically from the selected target model and usually does not need manual edits.",
+    "output_name": "Base name for the generated LoRA file. Example: zimage_smoke_test becomes zimage_smoke_test.safetensors.",
+}
+
+PARAM_HELP_JA = {
+    "rank": "LoRAの表現力です。大きいほど多く覚えますが、ファイルサイズや過学習リスクも増えます。まずは推奨値から始めるのが安全です。",
+    "alpha": "LoRAの効きの強さに関係する値です。多くの場合、Rankと同じ値から始めると扱いやすいです。",
+    "epochs": "データセットを何周学習するかです。少なすぎると弱く、多すぎると過学習しやすくなります。",
+    "lr": "Learning rate、つまり学習率です。大きいほど変化が速いですが破綻しやすく、小さいほど安定しますが時間がかかります。",
+}
+PARAM_HELP_EN = {
+    "rank": "LoRA capacity. Higher values can learn more detail, but increase file size and overfitting risk. Start with the recommended value.",
+    "alpha": "Controls how strongly the LoRA is scaled. In many cases, using the same value as Rank is a good starting point.",
+    "epochs": "How many passes to train over the dataset. Too few can be weak; too many can overfit.",
+    "lr": "Learning rate. Higher values learn faster but can become unstable; lower values are steadier but slower.",
+}
 
 
 def _en(self) -> bool:
@@ -90,6 +96,14 @@ def _en(self) -> bool:
 
 def _txt(self, ja: str, en: str) -> str:
     return en if _en(self) else ja
+
+
+def _basic_help(self, key: str) -> str:
+    return (BASIC_HELP_EN if _en(self) else BASIC_HELP_JA)[key]
+
+
+def _param_help(self, key: str) -> str:
+    return (PARAM_HELP_EN if _en(self) else PARAM_HELP_JA)[key]
 
 
 def _group(title: str, layout: QVBoxLayout | QFormLayout | QHBoxLayout) -> QGroupBox:
@@ -125,8 +139,10 @@ def _reset_button(button: QPushButton | None) -> None:
 
 
 def _training_param_row(self, name: str, widget: QSpinBox | QDoubleSpinBox) -> QHBoxLayout:
-    title = QLabel(DISPLAY_NAMES[name])
-    title.setFixedWidth(92)
+    from desktop_main import HelpLabel
+
+    title = HelpLabel(DISPLAY_NAMES[name], _param_help(self, name))
+    title.setFixedWidth(118)
     title.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
 
     widget.setFixedWidth(96)
@@ -255,7 +271,7 @@ def _train_tab(self) -> QWidget:
     header = QVBoxLayout()
     header.setContentsMargins(2, 0, 2, 0)
     header.setSpacing(2)
-    title = HelpLabel("Musubi LoRA Training", TRAIN_HELP_EN if _en(self) else TRAIN_HELP_JA)
+    title = QLabel("Musubi LoRA Training")
     title.setStyleSheet("font-size: 14pt; font-weight: 800; color: #ffffff; background: transparent;")
     subtitle = QLabel(
         "Latent Cache → Text Cache → Train. Commands are prepared automatically; completed steps turn green."
@@ -278,20 +294,14 @@ def _train_tab(self) -> QWidget:
     self.target_model.addItems(available_model_labels())
     self.target_model.setCurrentText(label_for_profile(default_profile.id))
     self.target_model.currentTextChanged.connect(self._sync_profile_task)
-    top_form.addRow("Target model", self.target_model)
+    top_form.addRow(HelpLabel("Target model", _basic_help(self, "target_model")), self.target_model)
 
     self.task = QLineEdit(default_profile.task)
     self.task.setReadOnly(True)
-    top_form.addRow("Task", self.task)
-
-    self.preset = QComboBox()
-    self.preset.addItems(preset_names())
-    if hasattr(self, "lora_type"):
-        self.preset.setCurrentText(self.lora_type.currentText())
-    top_form.addRow("Preset", self.preset)
+    top_form.addRow(HelpLabel("Task", _basic_help(self, "task")), self.task)
 
     self.output_name = self._line("zimage_smoke_test")
-    top_form.addRow("Output name", self.output_name)
+    top_form.addRow(HelpLabel("Output name", _basic_help(self, "output_name")), self.output_name)
     page.addWidget(_group(_txt(self, "1. 基本設定", "1. Basic Settings"), top_form))
 
     param_box = QVBoxLayout()
