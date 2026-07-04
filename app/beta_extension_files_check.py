@@ -6,6 +6,7 @@ ROOT = Path(__file__).resolve().parents[1]
 FILES = [
     "app/desktop_launcher.py",
     "app/ui_font.py",
+    "app/fix_local_paths.py",
     "app/desktop_launch_smoke_test.py",
     "app/desktop_launch_static_check.py",
     "app/env_check_test.py",
@@ -23,6 +24,7 @@ FILES = [
     "scripts/create_sample_dataset.sh",
     "scripts/collect_debug_info.sh",
     "scripts/validation_report.sh",
+    "scripts/fix_local_paths.sh",
 ]
 
 
