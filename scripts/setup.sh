@@ -3,8 +3,20 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
+PYTHON_BIN="${PYTHON_BIN:-}"
+if [ -z "$PYTHON_BIN" ]; then
+  if command -v python3 >/dev/null 2>&1; then
+    PYTHON_BIN="python3"
+  elif command -v python >/dev/null 2>&1; then
+    PYTHON_BIN="python"
+  else
+    echo "Python not found. Install it first: sudo apt install -y python3 python3-venv python3-pip"
+    exit 1
+  fi
+fi
+
 if [ ! -d .venv ]; then
-  python -m venv .venv
+  "$PYTHON_BIN" -m venv .venv
 fi
 
 source .venv/bin/activate
