@@ -8,6 +8,7 @@ from pathlib import Path
 import toml
 
 from captioning import caption_one_image
+from path_resolver import resolve_path
 
 IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".webp"}
 
@@ -33,11 +34,11 @@ class AppConfig:
         paths = data.get("paths", {})
         caption = data.get("caption", {})
         return cls(
-            musubi_repo_path=Path(musubi.get("repo_path", "/home/ono/musubi-tuner")),
-            musubi_python_path=Path(musubi.get("python_path", "python")),
-            datasets_dir=Path(paths.get("datasets_dir", "/home/ono/datasets/lora")),
-            outputs_dir=Path(paths.get("outputs_dir", "/home/ono/outputs/lora")),
-            comfyui_loras_dir=Path(paths.get("comfyui_loras_dir", "/home/ono/ComfyUI/models/loras")),
+            musubi_repo_path=resolve_path(musubi.get("repo_path", "../musubi-tuner")),
+            musubi_python_path=resolve_path(musubi.get("python_path", "../musubi-tuner/.venv/bin/python")),
+            datasets_dir=resolve_path(paths.get("datasets_dir", "datasets/lora")),
+            outputs_dir=resolve_path(paths.get("outputs_dir", "outputs/lora")),
+            comfyui_loras_dir=resolve_path(paths.get("comfyui_loras_dir", "../ComfyUI/models/loras")),
             llm_endpoint=caption.get("llm_endpoint", ""),
             llm_model=caption.get("llm_model", ""),
             joycaption_command=caption.get("joycaption_command", ""),
