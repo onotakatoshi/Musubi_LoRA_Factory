@@ -105,19 +105,10 @@ def _reset_button(button: QPushButton | None) -> None:
 
 def _training_param_row(self, name: str, widget: QSpinBox | QDoubleSpinBox) -> QHBoxLayout:
     title = QLabel(DISPLAY_NAMES[name])
-    title.setFixedWidth(96)
+    title.setFixedWidth(92)
     title.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
 
-    status = QLabel()
-    status.setFixedWidth(72 if _en(self) else 54)
-
     widget.setFixedWidth(96)
-
-    default = DEFAULTS[name]
-    reason = _training_reason(name, self.lang)
-    detail = QLabel(f"Default {default}  {reason}" if _en(self) else f"デフォルト {default}　{reason}")
-    detail.setMinimumWidth(220)
-    detail.setMaximumWidth(360)
 
     reset_text = "Reset" if _en(self) else "戻す"
     reset = self._button(reset_text, lambda: widget.setValue(DEFAULTS[name]))
@@ -125,6 +116,15 @@ def _training_param_row(self, name: str, widget: QSpinBox | QDoubleSpinBox) -> Q
     reset.setToolTip("Reset to default" if _en(self) else "デフォルトに戻す")
     reset.setFixedWidth(66 if _en(self) else 64)
     reset.setFixedHeight(28)
+
+    status = QLabel()
+    status.setFixedWidth(72 if _en(self) else 48)
+
+    default = DEFAULTS[name]
+    reason = _training_reason(name, self.lang)
+    detail = QLabel(f"Default {default}  {reason}" if _en(self) else f"デフォルト {default}　{reason}")
+    detail.setMinimumWidth(220)
+    detail.setMaximumWidth(360)
 
     def refresh() -> None:
         if _is_default_value(name, widget.value()):
@@ -137,12 +137,12 @@ def _training_param_row(self, name: str, widget: QSpinBox | QDoubleSpinBox) -> Q
 
     row = QHBoxLayout()
     row.setContentsMargins(0, 0, 0, 0)
-    row.setSpacing(6)
+    row.setSpacing(5)
     row.addWidget(title)
-    row.addWidget(status)
     row.addWidget(widget)
-    row.addWidget(detail)
     row.addWidget(reset)
+    row.addWidget(status)
+    row.addWidget(detail)
     row.addStretch(1)
     return row
 
