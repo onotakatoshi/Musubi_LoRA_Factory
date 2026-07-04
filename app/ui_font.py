@@ -83,28 +83,51 @@ QTabBar::tab:hover:!selected {
 }
 
 QPushButton {
-    background-color: #1e40af;
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+        stop:0 #78b7ff,
+        stop:0.44 #3b82f6,
+        stop:0.55 #1d4ed8,
+        stop:1 #12317a);
     color: #ffffff;
-    border: 1px solid #3b82f6;
+    border: 1px solid #93c5fd;
+    border-bottom: 2px solid #071a3d;
+    border-right: 2px solid #071a3d;
     border-radius: 9px;
     padding: 7px 13px;
-    font-weight: 700;
+    font-weight: 800;
 }
 
 QPushButton:hover {
-    background-color: #2563eb;
-    border-color: #60a5fa;
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+        stop:0 #bfdbfe,
+        stop:0.44 #60a5fa,
+        stop:0.55 #2563eb,
+        stop:1 #1e40af);
+    border: 1px solid #dbeafe;
+    border-bottom: 2px solid #0b255f;
+    border-right: 2px solid #0b255f;
 }
 
 QPushButton:pressed {
-    background-color: #1d4ed8;
-    border-color: #93c5fd;
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+        stop:0 #0f2f73,
+        stop:1 #2563eb);
+    border-top: 2px solid #06122c;
+    border-left: 2px solid #06122c;
+    border-bottom: 1px solid #93c5fd;
+    border-right: 1px solid #93c5fd;
+    padding-top: 8px;
+    padding-left: 14px;
 }
 
 QPushButton:disabled {
-    background-color: #334155;
-    color: #94a3b8;
-    border-color: #475569;
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+        stop:0 #64748b,
+        stop:1 #334155);
+    color: #cbd5e1;
+    border: 1px solid #475569;
+    border-bottom: 2px solid #1e293b;
+    border-right: 2px solid #1e293b;
 }
 
 QLineEdit, QComboBox, QSpinBox, QDoubleSpinBox {
