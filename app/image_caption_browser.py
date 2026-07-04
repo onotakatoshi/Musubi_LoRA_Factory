@@ -93,7 +93,7 @@ class ImageCaptionBrowser(QWidget):
     def refresh_language(self) -> None:
         lang = self.lang_getter()
         self.reload_btn.setText(_t(lang, "画像を読み込み", "Load Images"))
-        self.save_btn.setText(_t(lang, "現在のCaptionを保存", "Save Current Caption"))
+        self.save_btn.setText(_t(lang, "現在のキャプションを保存", "Save Current Caption"))
         self.guide.setPlainText(
             _t(
                 lang,
