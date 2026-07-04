@@ -7,6 +7,7 @@ from settings_io import default_settings, load_settings, save_settings
 ROOT = Path(__file__).resolve().parents[1]
 SETTINGS_PATH = ROOT / "configs" / "settings.toml"
 OLD_HOME_PREFIX = "/home/ono"
+ZIMAGE_MODEL_ROOT = "../models/z-image/Tongyi-MAI/Z-Image"
 
 PORTABLE_PATHS = {
     "musubi.repo_path": "../musubi-tuner",
@@ -14,9 +15,9 @@ PORTABLE_PATHS = {
     "paths.datasets_dir": "datasets/lora",
     "paths.outputs_dir": "outputs/lora",
     "paths.comfyui_loras_dir": "../ComfyUI/models/loras",
-    "model_paths.zimage_dit": "../models/z-image/z_image_base_or_deturbo.safetensors",
-    "model_paths.zimage_vae": "../models/z-image/ae.safetensors",
-    "model_paths.zimage_text_encoder": "../models/z-image/qwen3_text_encoder_00001-of-00002.safetensors",
+    "model_paths.zimage_dit": f"{ZIMAGE_MODEL_ROOT}/transformer/diffusion_pytorch_model-00001-of-00002.safetensors",
+    "model_paths.zimage_vae": f"{ZIMAGE_MODEL_ROOT}/vae/diffusion_pytorch_model.safetensors",
+    "model_paths.zimage_text_encoder": f"{ZIMAGE_MODEL_ROOT}/text_encoder/model-00001-of-00003.safetensors",
     "model_paths.wan_vae": "../models/wan/Wan2.1_VAE.pth",
     "model_paths.wan_t5": "../models/wan/models_t5_umt5-xxl-enc-bf16.pth",
     "model_paths.wan_dit": "../models/wan/wan2.2_low_noise.safetensors",
