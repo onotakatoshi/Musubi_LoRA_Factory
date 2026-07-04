@@ -6,19 +6,28 @@ from typing import Any
 import toml
 
 
+def _home() -> str:
+    return str(Path.home())
+
+
+def _home_path(*parts: str) -> str:
+    return str(Path(_home(), *parts))
+
+
 def default_settings() -> dict[str, Any]:
+    home = _home()
     return {
         "ui": {
             "language": "日本語",
         },
         "musubi": {
-            "repo_path": "/home/ono/musubi-tuner",
-            "python_path": "/home/ono/musubi-tuner/.venv/bin/python",
+            "repo_path": _home_path("musubi-tuner"),
+            "python_path": _home_path("musubi-tuner", ".venv", "bin", "python"),
         },
         "paths": {
-            "datasets_dir": "/home/ono/datasets/lora",
-            "outputs_dir": "/home/ono/outputs/lora",
-            "comfyui_loras_dir": "/home/ono/ComfyUI/models/loras",
+            "datasets_dir": _home_path("datasets", "lora"),
+            "outputs_dir": _home_path("outputs", "lora"),
+            "comfyui_loras_dir": _home_path("ComfyUI", "models", "loras"),
         },
         "caption": {
             "mode": "manual",
@@ -27,14 +36,14 @@ def default_settings() -> dict[str, Any]:
             "llm_model": "",
         },
         "model_paths": {
-            "zimage_dit": "/home/ono/models/z-image/z_image_base_or_deturbo.safetensors",
-            "zimage_vae": "/home/ono/models/z-image/ae.safetensors",
-            "zimage_text_encoder": "/home/ono/models/z-image/qwen3_text_encoder_00001-of-00002.safetensors",
+            "zimage_dit": _home_path("models", "z-image", "z_image_base_or_deturbo.safetensors"),
+            "zimage_vae": _home_path("models", "z-image", "ae.safetensors"),
+            "zimage_text_encoder": _home_path("models", "z-image", "qwen3_text_encoder_00001-of-00002.safetensors"),
             "zimage_base_weights": "",
-            "wan_vae": "/home/ono/models/wan/Wan2.1_VAE.pth",
-            "wan_t5": "/home/ono/models/wan/models_t5_umt5-xxl-enc-bf16.pth",
-            "wan_dit": "/home/ono/models/wan/wan2.2_low_noise.safetensors",
-            "wan_dit_high_noise": "/home/ono/models/wan/wan2.2_high_noise.safetensors",
+            "wan_vae": _home_path("models", "wan", "Wan2.1_VAE.pth"),
+            "wan_t5": _home_path("models", "wan", "models_t5_umt5-xxl-enc-bf16.pth"),
+            "wan_dit": _home_path("models", "wan", "wan2.2_low_noise.safetensors"),
+            "wan_dit_high_noise": _home_path("models", "wan", "wan2.2_high_noise.safetensors"),
         },
     }
 
