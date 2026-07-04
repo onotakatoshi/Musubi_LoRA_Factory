@@ -5,7 +5,7 @@ cd "$(dirname "$0")/.."
 
 if [ ! -d .venv ]; then
   echo ".venv not found. Running scripts/setup.sh first..."
-  ./scripts/setup.sh || {
+  bash ./scripts/setup.sh || {
     echo "setup.sh failed."
     read -r -p "Press Enter to close..." _
     exit 1
