@@ -37,6 +37,13 @@ QPushButton:pressed {
 }
 """
 
+DISPLAY_NAMES = {
+    "rank": "Rank",
+    "alpha": "Alpha",
+    "epochs": "Epochs",
+    "lr": "Learning rate",
+}
+
 
 def _group(title: str, layout: QVBoxLayout | QFormLayout | QHBoxLayout) -> QGroupBox:
     box = QGroupBox(title)
@@ -71,6 +78,8 @@ def _reset_button(button: QPushButton | None) -> None:
 
 
 def _training_param_row(self, name: str, widget: QSpinBox | QDoubleSpinBox) -> QHBoxLayout:
+    title = QLabel(DISPLAY_NAMES[name])
+    title.setMinimumWidth(105)
     status = QLabel()
     status.setMinimumWidth(94)
     default = DEFAULTS[name]
@@ -92,6 +101,7 @@ def _training_param_row(self, name: str, widget: QSpinBox | QDoubleSpinBox) -> Q
     row = QHBoxLayout()
     row.setContentsMargins(0, 0, 0, 0)
     row.setSpacing(8)
+    row.addWidget(title)
     row.addWidget(status)
     row.addWidget(widget)
     row.addWidget(detail, 1)
@@ -192,20 +202,17 @@ def _train_tab(self) -> QWidget:
     self.rank.setRange(4, 128)
     self.rank.setSingleStep(4)
     self.rank.setValue(DEFAULTS["rank"])
-    param_box.addWidget(QLabel("Rank"))
     param_box.addLayout(_training_param_row(self, "rank", self.rank))
 
     self.alpha = QSpinBox()
     self.alpha.setRange(4, 128)
     self.alpha.setSingleStep(4)
     self.alpha.setValue(DEFAULTS["alpha"])
-    param_box.addWidget(QLabel("Alpha"))
     param_box.addLayout(_training_param_row(self, "alpha", self.alpha))
 
     self.epochs = QSpinBox()
     self.epochs.setRange(1, 100)
     self.epochs.setValue(DEFAULTS["epochs"])
-    param_box.addWidget(QLabel("Epochs"))
     param_box.addLayout(_training_param_row(self, "epochs", self.epochs))
 
     self.lr = QDoubleSpinBox()
@@ -213,7 +220,6 @@ def _train_tab(self) -> QWidget:
     self.lr.setRange(0.000001, 0.01)
     self.lr.setSingleStep(0.00001)
     self.lr.setValue(DEFAULTS["lr"])
-    param_box.addWidget(QLabel("Learning rate"))
     param_box.addLayout(_training_param_row(self, "lr", self.lr))
     page.addWidget(_group("2. 学習パラメータ", param_box))
 
