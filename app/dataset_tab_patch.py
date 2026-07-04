@@ -39,7 +39,7 @@ def apply_dataset_tab_patch(desktop_app_class) -> None:
         box = QVBoxLayout()
         guide_box = QTextEdit()
         guide_box.setReadOnly(True)
-        guide_box.setPlainText(guide("dataset"))
+        guide_box.setPlainText(guide("dataset", self.lang))
         guide_box.setMaximumHeight(190)
         box.addWidget(guide_box)
 
