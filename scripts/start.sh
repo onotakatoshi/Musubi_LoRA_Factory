@@ -5,7 +5,7 @@ cd "$(dirname "$0")/.."
 
 if [ ! -d .venv ]; then
   echo ".venv not found. Running scripts/setup.sh first..."
-  ./scripts/setup.sh
+  bash ./scripts/setup.sh
 fi
 
 if [ ! -f configs/settings.toml ]; then
