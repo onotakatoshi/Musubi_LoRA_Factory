@@ -93,6 +93,10 @@ def _check_desktop_form_spacing() -> None:
     assert "setVerticalSpacing(6)" in text
     assert "setLabelAlignment(Qt.AlignmentFlag.AlignRight" in text
     assert "setContentsMargins(0, 0, 0, 0)" in text
+    assert "controls_box.setSpacing(6)" in text
+    assert "self.settings_log.setMinimumHeight(260)" in text
+    assert "box.addWidget(self.settings_log, 1)" in text
+    assert "self.settings_log.setMaximumHeight(210)" not in text
 
 
 def _check_desktop_uses_training_engine() -> None:
