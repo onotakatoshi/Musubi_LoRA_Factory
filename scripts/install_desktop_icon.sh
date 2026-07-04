@@ -8,10 +8,19 @@ DESKTOP_FILE_NAME="Musubi_LoRA_Factory.desktop"
 DESKTOP_FILE="$DESKTOP_DIR/$DESKTOP_FILE_NAME"
 APP_FILE="$APPLICATIONS_DIR/$DESKTOP_FILE_NAME"
 LAUNCHER="$APP_DIR/scripts/start_desktop_icon.sh"
-ICON_FILE="$APP_DIR/assets/icons/musubi_lora_factory.svg"
+ICON_DIR="$APP_DIR/assets/icons"
+ICON_FILE="$ICON_DIR/musubi_lora_factory.png"
+ICON_B64="$APP_DIR/assets/musubi_lora_factory_icon_64.png.b64"
 
-mkdir -p "$DESKTOP_DIR" "$APPLICATIONS_DIR" "$APP_DIR/logs"
+mkdir -p "$DESKTOP_DIR" "$APPLICATIONS_DIR" "$APP_DIR/logs" "$ICON_DIR"
 chmod +x "$APP_DIR/scripts/start.sh" "$LAUNCHER"
+
+if [ -f "$ICON_B64" ]; then
+  base64 -d "$ICON_B64" > "$ICON_FILE"
+  chmod 644 "$ICON_FILE"
+else
+  echo "WARN: icon base64 asset not found: $ICON_B64"
+fi
 
 cat > "$APP_FILE" <<EOF
 [Desktop Entry]
