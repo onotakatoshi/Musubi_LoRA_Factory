@@ -11,6 +11,17 @@ from training_presets import preset_names
 
 DEFAULT_CONCEPT = "eye"
 
+TRIGGER_HELP_JA = (
+    "LoRAを呼び出すための重要な単語です。"
+    "captionにこの語を入れて学習させ、生成時のプロンプトにも同じ語を入れることでLoRAを効かせやすくします。"
+    "例: ono_style, blue_eye, character_name"
+)
+TRIGGER_HELP_EN = (
+    "Important word used to invoke the LoRA. "
+    "Put this word in your captions during training, then include the same word in prompts when generating images. "
+    "Examples: ono_style, blue_eye, character_name"
+)
+
 
 def apply_dataset_tab_patch(desktop_app_class) -> None:
     def patched_dataset_tab(self) -> QWidget:
@@ -31,12 +42,8 @@ def apply_dataset_tab_patch(desktop_app_class) -> None:
         self.lora_type.setEditable(True)
         self.lora_type.addItems(preset_names())
         self.lora_type.setCurrentText(DEFAULT_CONCEPT)
-        self.lora_type.setToolTip(
-            "自由に入力できます。例: character_name, blue_eye, my_style, product_logo"
-            if self.lang != "English"
-            else "Editable. Examples: character_name, blue_eye, my_style, product_logo"
-        )
-        form.addRow(HelpLabel(self.t("label_lora_type"), HELP["lora_type"]), self.lora_type)
+        self.lora_type.setToolTip(TRIGGER_HELP_EN if self.lang == "English" else TRIGGER_HELP_JA)
+        form.addRow(HelpLabel(self.t("label_lora_type"), TRIGGER_HELP_EN if self.lang == "English" else TRIGGER_HELP_JA), self.lora_type)
         box.addLayout(form)
 
         buttons = QHBoxLayout()
