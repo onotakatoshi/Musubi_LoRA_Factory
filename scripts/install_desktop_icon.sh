@@ -8,6 +8,7 @@ DESKTOP_FILE_NAME="Musubi_LoRA_Factory.desktop"
 DESKTOP_FILE="$DESKTOP_DIR/$DESKTOP_FILE_NAME"
 APP_FILE="$APPLICATIONS_DIR/$DESKTOP_FILE_NAME"
 LAUNCHER="$APP_DIR/scripts/start_desktop_icon.sh"
+ICON_FILE="$APP_DIR/assets/icons/musubi_lora_factory.svg"
 
 mkdir -p "$DESKTOP_DIR" "$APPLICATIONS_DIR" "$APP_DIR/logs"
 chmod +x "$APP_DIR/scripts/start.sh" "$LAUNCHER"
@@ -19,6 +20,7 @@ Name=Musubi LoRA Factory
 Comment=Launch Musubi LoRA Factory GUI
 Exec=$LAUNCHER
 Path=$APP_DIR
+Icon=$ICON_FILE
 Terminal=false
 Categories=Development;Graphics;Utility;
 StartupNotify=true
@@ -36,5 +38,6 @@ if command -v update-desktop-database >/dev/null 2>&1; then
 fi
 
 echo "OK: Desktop icon created: $DESKTOP_FILE"
+echo "Icon: $ICON_FILE"
 echo "If GNOME asks, right-click the icon and choose 'Allow Launching'."
 echo "If launch fails, check: $APP_DIR/logs/desktop_launcher.log"
