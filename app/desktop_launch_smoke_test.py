@@ -8,6 +8,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 from PySide6.QtWidgets import QApplication, QTabWidget
 
 from desktop_main import DesktopApp
+from ui_font import apply_balanced_ui_font, choose_ui_font_family
 
 
 EXPECTED_TAB_KEYWORDS = [
@@ -24,6 +25,8 @@ EXPECTED_TAB_KEYWORDS = [
 
 def main() -> int:
     app = QApplication.instance() or QApplication(sys.argv)
+    family = apply_balanced_ui_font(app)
+    assert family == choose_ui_font_family()
     win = DesktopApp()
     tabs = win.centralWidget()
     assert isinstance(tabs, QTabWidget)
@@ -33,7 +36,7 @@ def main() -> int:
     assert win.windowTitle()
     win.close()
     app.processEvents()
-    print("Desktop launch smoke test OK")
+    print(f"Desktop launch smoke test OK; UI font: {family}")
     return 0
 
 
