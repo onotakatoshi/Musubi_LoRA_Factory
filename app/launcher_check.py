@@ -41,10 +41,13 @@ def main() -> int:
 
     start_text = (ROOT / "scripts" / "start.sh").read_text(encoding="utf-8")
     start_desktop_text = (ROOT / "scripts" / "start_desktop.sh").read_text(encoding="utf-8")
+    launcher_text = (ROOT / "app" / "desktop_launcher.py").read_text(encoding="utf-8")
     for text in [start_text, start_desktop_text]:
         assert "settings.example.toml" in text
         assert "startup_check.py" in text
-        assert "desktop_main.py" in text
+        assert "desktop_launcher.py" in text
+    assert "apply_balanced_ui_font" in launcher_text
+    assert "DesktopApp" in launcher_text
 
     print("Launcher check OK")
     return 0
