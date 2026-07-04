@@ -16,12 +16,25 @@ NOISE_WORDS = {
     "mouth": ["background", "clothes", "shirt", "hair", "full body"],
 }
 
+GENERIC_TYPES_WITHOUT_TARGET_CHECK = {"style", "clothing"}
+
 
 def _read_caption(path: Path) -> str:
     try:
         return path.read_text(encoding="utf-8").strip()
     except UnicodeDecodeError:
         return path.read_text(encoding="utf-8", errors="replace").strip()
+
+
+def _target_hints(lora_type: str) -> list[str]:
+    concept = (lora_type or "").strip()
+    if not concept:
+        return []
+    if concept in TARGET_HINTS:
+        return TARGET_HINTS[concept]
+    if concept in GENERIC_TYPES_WITHOUT_TARGET_CHECK:
+        return []
+    return [concept]
 
 
 def diagnose_captions(dataset_dir: Path, lora_type: str = "eye", lang: str = "日本語") -> str:
@@ -39,8 +52,8 @@ def diagnose_captions(dataset_dir: Path, lora_type: str = "eye", lang: str = "�
     total_words = 0
     caption_count = 0
 
-    hints = TARGET_HINTS.get(lora_type, [])
-    noise = NOISE_WORDS.get(lora_type, [])
+    hints = _target_hints(lora_type)
+    noise = NOISE_WORDS.get((lora_type or "").strip(), [])
 
     for img in imgs:
         txt = img.with_suffix(".txt")
