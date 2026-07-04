@@ -6,6 +6,7 @@ from pathlib import Path
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QApplication
 
+from button_i18n_patch import apply_button_i18n_patch
 from config_export_tab_patch import apply_config_export_tab_patch
 from dataset_tab_patch import apply_dataset_tab_patch
 from desktop_main import DesktopApp, HelpLabel
@@ -23,6 +24,7 @@ ICON_PATH = ROOT / "assets" / "icons" / "musubi_lora_factory.svg"
 
 apply_help_label_patch(HelpLabel)
 apply_training_engine_patch(TrainingEngine)
+apply_button_i18n_patch(DesktopApp)
 apply_dataset_tab_patch(DesktopApp)
 apply_config_export_tab_patch(DesktopApp)
 apply_training_tab_patch(DesktopApp)
