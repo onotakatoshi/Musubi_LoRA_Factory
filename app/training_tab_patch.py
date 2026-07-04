@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QComboBox,
     QDoubleSpinBox,
@@ -78,19 +79,27 @@ def _reset_button(button: QPushButton | None) -> None:
 
 def _training_param_row(self, name: str, widget: QSpinBox | QDoubleSpinBox) -> QHBoxLayout:
     title = QLabel(DISPLAY_NAMES[name])
-    title.setMinimumWidth(105)
+    title.setFixedWidth(118)
+    title.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+
     status = QLabel()
-    status.setMinimumWidth(94)
+    status.setFixedWidth(92)
+
+    widget.setFixedWidth(118)
+
     default = DEFAULTS[name]
     reason = _training_reason(name, self.lang)
     detail = QLabel(f"デフォルト {default}　{reason}" if self.lang != "English" else f"Default {default}  {reason}")
-    detail.setMinimumWidth(420)
+    detail.setMinimumWidth(260)
+    detail.setMaximumWidth(430)
+
     reset_text = "Reset" if self.lang == "English" else "デフォルトに戻す"
     reset = self._button(reset_text, lambda: widget.setValue(DEFAULTS[name]))
+    reset.setFixedWidth(150 if self.lang != "English" else 96)
 
     def refresh() -> None:
         if _is_default_value(name, widget.value()):
-            status.setText("推奨デフォルト" if self.lang != "English" else "Default")
+            status.setText("推奨" if self.lang != "English" else "Default")
         else:
             status.setText("ユーザー設定" if self.lang != "English" else "Custom")
 
@@ -103,8 +112,9 @@ def _training_param_row(self, name: str, widget: QSpinBox | QDoubleSpinBox) -> Q
     row.addWidget(title)
     row.addWidget(status)
     row.addWidget(widget)
-    row.addWidget(detail, 1)
+    row.addWidget(detail)
     row.addWidget(reset)
+    row.addStretch(1)
     return row
 
 
@@ -171,16 +181,30 @@ def _connect_training_ui_signals(self) -> None:
     self._training_ui_signals_connected = True
 
 
+def _make_log_column(title_text: str, log_widget: QTextEdit) -> QWidget:
+    box = QWidget()
+    layout = QVBoxLayout()
+    layout.setContentsMargins(0, 0, 0, 0)
+    layout.setSpacing(5)
+    label = QLabel(title_text)
+    label.setStyleSheet("font-weight: 700; color: #cfe5ff; background: transparent;")
+    layout.addWidget(label)
+    layout.addWidget(log_widget, 1)
+    box.setLayout(layout)
+    return box
+
+
 def _train_tab(self) -> QWidget:
     page = QVBoxLayout()
-    page.setContentsMargins(12, 10, 12, 10)
-    page.setSpacing(8)
+    page.setContentsMargins(10, 8, 10, 8)
+    page.setSpacing(6)
     _connect_training_ui_signals(self)
 
     header = QVBoxLayout()
     header.setContentsMargins(2, 0, 2, 0)
+    header.setSpacing(2)
     title = QLabel("Musubi LoRA Training")
-    title.setStyleSheet("font-size: 17pt; font-weight: 800; color: #ffffff; background: transparent;")
+    title.setStyleSheet("font-size: 14pt; font-weight: 800; color: #ffffff; background: transparent;")
     subtitle = QLabel("Latent Cache → Text Cache → 学習実行。必要なコマンド準備は自動化されています。成功した工程は緑になります。")
     subtitle.setStyleSheet("color: #9fb4d0; background: transparent;")
     header.addWidget(title)
@@ -215,8 +239,8 @@ def _train_tab(self) -> QWidget:
     page.addWidget(_group("1. 基本設定", top_form))
 
     param_box = QVBoxLayout()
-    param_box.setContentsMargins(8, 8, 8, 8)
-    param_box.setSpacing(6)
+    param_box.setContentsMargins(8, 6, 8, 6)
+    param_box.setSpacing(5)
 
     self.rank = QSpinBox()
     self.rank.setRange(4, 128)
@@ -243,14 +267,6 @@ def _train_tab(self) -> QWidget:
     param_box.addLayout(_training_param_row(self, "lr", self.lr))
     page.addWidget(_group("2. 学習パラメータ", param_box))
 
-    aux_row = QHBoxLayout()
-    aux_row.setSpacing(8)
-    aux_row.addWidget(self._button("Preset適用", self._apply_preset))
-    aux_row.addWidget(self._button("学習前レビュー", self._training_review))
-    aux_row.addWidget(self._button(self.t("estimate_training_load"), self._estimate_training_load))
-    aux_row.addStretch()
-    page.addWidget(_group("3. 補助", aux_row))
-
     run_row = QHBoxLayout()
     run_row.setSpacing(8)
     self.btn_latent_cache = self._button("1. Latent Cache", lambda: self._run_section_with_ui("latent_cache"))
@@ -263,20 +279,18 @@ def _train_tab(self) -> QWidget:
     run_row.addWidget(self._button(self.t("stop"), self._stop_process))
     run_row.addWidget(self._button(self.t("analyze_log"), lambda: self.analysis_log.setPlainText(self._analyze_current_logs())))
     run_row.addStretch()
-    page.addWidget(_group("4. 実行", run_row))
+    page.addWidget(_group("3. 実行", run_row))
 
     self.run_log = self._log()
-    log_label = QLabel(self.t("run_log"))
-    log_label.setStyleSheet("font-weight: 700; color: #cfe5ff; background: transparent;")
-    page.addWidget(log_label)
-    page.addWidget(self.run_log, 1)
-
     self.analysis_log = self._log()
-    self.analysis_log.setMaximumHeight(115)
-    analysis_label = QLabel(self.t("error_analysis"))
-    analysis_label.setStyleSheet("font-weight: 700; color: #cfe5ff; background: transparent;")
-    page.addWidget(analysis_label)
-    page.addWidget(self.analysis_log, 0)
+    self.run_log.setMinimumHeight(220)
+    self.analysis_log.setMinimumHeight(220)
+
+    logs_row = QHBoxLayout()
+    logs_row.setSpacing(8)
+    logs_row.addWidget(_make_log_column(self.t("run_log"), self.run_log), 3)
+    logs_row.addWidget(_make_log_column(self.t("error_analysis"), self.analysis_log), 2)
+    page.addLayout(logs_row, 1)
 
     self._sync_profile_task()
     w = QWidget()
