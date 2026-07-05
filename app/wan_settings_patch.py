@@ -4,6 +4,7 @@ from PySide6.QtWidgets import QComboBox, QGroupBox, QHBoxLayout, QTextEdit, QVBo
 
 from i18n import SUPPORTED_LANGUAGES
 from model_ui import available_model_labels, help_for_profile, label_for_profile, profile_id_from_label, v1_default_profile
+from settings_detect import validate_settings_paths
 from settings_io import load_settings, nested_get
 
 ZIMAGE_HELP_JA = {
@@ -68,10 +69,13 @@ def _settings_profile_id(self) -> str:
 def apply_wan_settings_patch(desktop_app_class) -> None:
     def refresh_model_settings_visibility(self) -> None:
         profile_id = _settings_profile_id(self)
+        is_zimage = profile_id == "z-image"
         if hasattr(self, "zimage_settings_group"):
-            self.zimage_settings_group.setVisible(profile_id == "z-image")
+            self.zimage_settings_group.setVisible(is_zimage)
         if hasattr(self, "wan_settings_group"):
             self.wan_settings_group.setVisible(profile_id == "wan2.2")
+        if hasattr(self, "detect_zimage_button"):
+            self.detect_zimage_button.setVisible(is_zimage)
         if hasattr(self, "model_settings_note"):
             self.model_settings_note.setPlainText(help_for_profile(profile_id, self.lang))
 
@@ -156,7 +160,8 @@ def apply_wan_settings_patch(desktop_app_class) -> None:
         row.setContentsMargins(0, 0, 0, 0)
         row.setSpacing(6)
         row.addWidget(self._button(self.t("validate_settings"), self._validate_settings))
-        row.addWidget(self._button(self.t("detect_zimage_files"), self._detect_zimage_files))
+        self.detect_zimage_button = self._button(self.t("detect_zimage_files"), self._detect_zimage_files)
+        row.addWidget(self.detect_zimage_button)
         row.addWidget(self._button(self.t("save_settings"), self._save_settings))
         row.addWidget(self._button(self.t("reload_settings"), self._reload_settings_fields))
         row.addStretch()
@@ -197,6 +202,9 @@ def apply_wan_settings_patch(desktop_app_class) -> None:
             })
         return values
 
+    def patched_validate_settings(self) -> None:
+        self.settings_log.setPlainText(validate_settings_paths(self._settings_values(), _settings_profile_id(self)))
+
     def patched_settings_data_from_fields(self) -> dict:
         data = load_settings(__import__("desktop_main").SETTINGS_PATH)
         data.setdefault("ui", {})["language"] = self.set_language.currentText()
@@ -219,5 +227,6 @@ def apply_wan_settings_patch(desktop_app_class) -> None:
 
     desktop_app_class._settings_tab = patched_settings_tab
     desktop_app_class._settings_values = patched_settings_values
+    desktop_app_class._validate_settings = patched_validate_settings
     desktop_app_class._settings_data_from_fields = patched_settings_data_from_fields
     desktop_app_class._refresh_model_settings_visibility = refresh_model_settings_visibility
