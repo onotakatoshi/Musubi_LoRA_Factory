@@ -3,7 +3,7 @@ from __future__ import annotations
 from PySide6.QtWidgets import QComboBox, QGroupBox, QHBoxLayout, QTextEdit, QVBoxLayout, QWidget
 
 from i18n import SUPPORTED_LANGUAGES
-from model_path_filename_search import apply_known_filename_search, search_summary
+from model_path_autofill_recursive import detect_paths
 from model_registry import get_profile
 from model_settings_catalog import MODEL_SETTINGS, all_model_path_keys, settings_spec
 from model_ui import available_model_labels, help_for_profile, label_for_profile, profile_id_from_label, v1_default_profile
@@ -47,6 +47,19 @@ def _field_help(self, profile_id: str, field_key: str) -> str:
     return field_key
 
 
+def _detected_summary(before: dict[str, str], detected: dict[str, str]) -> str:
+    lines: list[str] = []
+    for key, value in sorted(detected.items()):
+        old = before.get(key, "") or ""
+        if old == value:
+            lines.append(f"OK  {key}: {value}")
+        else:
+            lines.append(f"SET {key}: {value}")
+    if not lines:
+        return "No model paths were detected under ~/models."
+    return "\n".join(lines)
+
+
 def apply_wan_settings_patch(desktop_app_class) -> None:
     def refresh_model_settings_visibility(self) -> None:
         profile_id = _settings_profile_id(self)
@@ -65,17 +78,18 @@ def apply_wan_settings_patch(desktop_app_class) -> None:
         import desktop_main
 
         data = self._settings_data_from_fields()
-        before = dict(data.get("model_paths", {}))
-        data = apply_known_filename_search(data, overwrite=True)
-        after = data.get("model_paths", {})
+        model_paths = data.setdefault("model_paths", {})
+        before = dict(model_paths)
+        detected = detect_paths()
+        for key, value in detected.items():
+            model_paths[key] = value
         for key, line in getattr(self, "model_path_fields", {}).items():
-            line.setText(str(after.get(key, "") or ""))
+            line.setText(str(model_paths.get(key, "") or ""))
         save_settings(desktop_main.SETTINGS_PATH, data)
         self.settings = data
-        summary = search_summary(before, after)
         self.settings_log.setPlainText(
-            "# Known Filename Search\n\n"
-            + summary
+            "# ~/models Path Detection\n\n"
+            + _detected_summary(before, detected)
             + "\n\n# Current Settings Validation\n\n"
             + validate_settings_paths(self._settings_values(), _settings_profile_id(self))
         )
@@ -167,7 +181,7 @@ def apply_wan_settings_patch(desktop_app_class) -> None:
         row.addWidget(self._button(self.t("validate_settings"), self._validate_settings))
         self.detect_zimage_button = self._button(self.t("detect_zimage_files"), self._detect_zimage_files)
         row.addWidget(self.detect_zimage_button)
-        row.addWidget(self._button("ファイル名で検索して入力" if not _is_en(self) else "Search filenames and fill", self._search_known_filenames_and_save))
+        row.addWidget(self._button("~/modelsを検索して入力" if not _is_en(self) else "Detect ~/models and fill", self._search_known_filenames_and_save))
         row.addWidget(self._button(self.t("save_settings"), self._save_settings))
         row.addWidget(self._button(self.t("reload_settings"), self._reload_settings_fields))
         row.addStretch()
