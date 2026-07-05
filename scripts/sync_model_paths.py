@@ -5,14 +5,16 @@ import argparse
 import sys
 from pathlib import Path
 
-import toml
-
 ROOT = Path(__file__).resolve().parents[1]
 APP_DIR = ROOT / "app"
-if str(APP_DIR) not in sys.path:
-    sys.path.insert(0, str(APP_DIR))
+SCRIPT_DIR = ROOT / "scripts"
+for item in (APP_DIR, SCRIPT_DIR):
+    if str(item) not in sys.path:
+        sys.path.insert(0, str(item))
 
 from model_path_autofill_recursive import detect_paths  # noqa: E402
+from toml_compat import dumps as toml_dumps  # noqa: E402
+from toml_compat import load as toml_load  # noqa: E402
 
 DEFAULT_SETTINGS_PATH = ROOT / "configs" / "settings.toml"
 DEFAULT_EXAMPLE_PATH = ROOT / "configs" / "settings.example.toml"
@@ -21,9 +23,9 @@ DEFAULT_MODELS_DIR = ROOT.parent / "models"
 
 def load_settings(settings_path: Path) -> dict:
     if settings_path.exists():
-        return toml.load(settings_path)
+        return toml_load(settings_path)
     if DEFAULT_EXAMPLE_PATH.exists():
-        return toml.load(DEFAULT_EXAMPLE_PATH)
+        return toml_load(DEFAULT_EXAMPLE_PATH)
     return {}
 
 
@@ -64,7 +66,7 @@ def main() -> int:
         return 0
 
     settings_path.parent.mkdir(parents=True, exist_ok=True)
-    settings_path.write_text(toml.dumps(data), encoding="utf-8")
+    settings_path.write_text(toml_dumps(data), encoding="utf-8")
     print(f"Wrote: {settings_path}")
     return 0
 
