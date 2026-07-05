@@ -5,9 +5,28 @@ from typing import Any
 
 import toml
 
+from model_settings_catalog import all_model_path_keys
+
 
 ZIMAGE_MODEL_ROOT = "../models/z-image/Tongyi-MAI/Z-Image"
 WAN22_MODEL_ROOT = "../models/wan/Wan2.2-T2V-A14B"
+
+
+def default_model_paths() -> dict[str, str]:
+    paths = {key: "" for key in all_model_path_keys()}
+    paths.update(
+        {
+            "zimage_dit": f"{ZIMAGE_MODEL_ROOT}/transformer/diffusion_pytorch_model-00001-of-00002.safetensors",
+            "zimage_vae": f"{ZIMAGE_MODEL_ROOT}/vae/diffusion_pytorch_model.safetensors",
+            "zimage_text_encoder": f"{ZIMAGE_MODEL_ROOT}/text_encoder/model-00001-of-00003.safetensors",
+            "zimage_base_weights": "",
+            "wan_vae": f"{WAN22_MODEL_ROOT}/Wan2.1_VAE.pth",
+            "wan_t5": f"{WAN22_MODEL_ROOT}/models_t5_umt5-xxl-enc-bf16.pth",
+            "wan_dit": f"{WAN22_MODEL_ROOT}/low_noise_model/diffusion_pytorch_model.safetensors.index.json",
+            "wan_dit_high_noise": f"{WAN22_MODEL_ROOT}/high_noise_model/diffusion_pytorch_model.safetensors.index.json",
+        }
+    )
+    return paths
 
 
 def default_settings() -> dict[str, Any]:
@@ -31,16 +50,7 @@ def default_settings() -> dict[str, Any]:
             "llm_endpoint": "",
             "llm_model": "",
         },
-        "model_paths": {
-            "zimage_dit": f"{ZIMAGE_MODEL_ROOT}/transformer/diffusion_pytorch_model-00001-of-00002.safetensors",
-            "zimage_vae": f"{ZIMAGE_MODEL_ROOT}/vae/diffusion_pytorch_model.safetensors",
-            "zimage_text_encoder": f"{ZIMAGE_MODEL_ROOT}/text_encoder/model-00001-of-00003.safetensors",
-            "zimage_base_weights": "",
-            "wan_vae": f"{WAN22_MODEL_ROOT}/Wan2.1_VAE.pth",
-            "wan_t5": f"{WAN22_MODEL_ROOT}/models_t5_umt5-xxl-enc-bf16.pth",
-            "wan_dit": f"{WAN22_MODEL_ROOT}/low_noise_model/diffusion_pytorch_model.safetensors.index.json",
-            "wan_dit_high_noise": f"{WAN22_MODEL_ROOT}/high_noise_model/diffusion_pytorch_model.safetensors.index.json",
-        },
+        "model_paths": default_model_paths(),
     }
 
 
