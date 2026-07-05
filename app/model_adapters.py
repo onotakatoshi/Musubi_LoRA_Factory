@@ -77,10 +77,10 @@ class Wan22Adapter:
     profile_id = "wan2.2"
 
     def required_setting_keys(self) -> list[str]:
-        return ["wan_vae", "wan_t5", "wan_dit"]
+        return ["wan_vae", "wan_t5", "wan_dit", "wan_dit_high_noise"]
 
     def optional_setting_keys(self) -> list[str]:
-        return ["wan_dit_high_noise"]
+        return []
 
     def validate_model_paths(self, model_paths: dict) -> list[str]:
         missing: list[str] = []
