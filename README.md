@@ -83,7 +83,7 @@ PySide6のデスクトップウィンドウが開きます。
 
 ## モデルファイルの一括ダウンロード
 
-Hugging Faceから必要なモデルファイルをまとめて取得できます。
+Hugging Faceから必要なモデルファイルをまとめて取得できます。ダウンロード完了後、`configs/settings.toml` の `model_paths` も自動同期します。
 
 Wan2.2 T2V / I2V / TI2V をまとめて取得する場合:
 
@@ -115,6 +115,18 @@ bash ./scripts/download_model_assets.sh wan22-all --models-dir /mnt/models
 
 ```bash
 bash ./scripts/download_model_assets.sh wan22-all --dry-run
+```
+
+すでにダウンロード済みで、Settingsの空欄だけ自動入力したい場合:
+
+```bash
+python3 scripts/sync_model_paths.py --models-dir ~/models
+```
+
+既存の空欄だけでなく、古い値も上書きしたい場合:
+
+```bash
+python3 scripts/sync_model_paths.py --models-dir ~/models --overwrite
 ```
 
 ゲート付きモデルで失敗する場合は、先にHugging Faceでライセンス承認し、PGX上でログインします。
