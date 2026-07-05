@@ -17,6 +17,7 @@ from training_engine import TrainingEngine
 from training_engine_patch import apply_training_engine_patch
 from training_tab_patch import apply_training_tab_patch
 from ui_font import apply_balanced_ui_font
+from wan_settings_patch import apply_wan_settings_patch
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -28,6 +29,7 @@ apply_button_i18n_patch(DesktopApp)
 apply_dataset_tab_patch(DesktopApp)
 apply_config_export_tab_patch(DesktopApp)
 apply_training_tab_patch(DesktopApp)
+apply_wan_settings_patch(DesktopApp)
 apply_tab_layout_patch(DesktopApp)
 apply_ui_language_patch(DesktopApp)
 
