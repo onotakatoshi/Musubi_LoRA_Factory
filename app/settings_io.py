@@ -7,6 +7,7 @@ import toml
 
 
 ZIMAGE_MODEL_ROOT = "../models/z-image/Tongyi-MAI/Z-Image"
+WAN22_MODEL_ROOT = "../models/wan/Wan2.2-T2V-A14B"
 
 
 def default_settings() -> dict[str, Any]:
@@ -35,10 +36,10 @@ def default_settings() -> dict[str, Any]:
             "zimage_vae": f"{ZIMAGE_MODEL_ROOT}/vae/diffusion_pytorch_model.safetensors",
             "zimage_text_encoder": f"{ZIMAGE_MODEL_ROOT}/text_encoder/model-00001-of-00003.safetensors",
             "zimage_base_weights": "",
-            "wan_vae": "../models/wan/Wan2.1_VAE.pth",
-            "wan_t5": "../models/wan/models_t5_umt5-xxl-enc-bf16.pth",
-            "wan_dit": "../models/wan/wan2.2_low_noise.safetensors",
-            "wan_dit_high_noise": "../models/wan/wan2.2_high_noise.safetensors",
+            "wan_vae": f"{WAN22_MODEL_ROOT}/Wan2.1_VAE.pth",
+            "wan_t5": f"{WAN22_MODEL_ROOT}/models_t5_umt5-xxl-enc-bf16.pth",
+            "wan_dit": f"{WAN22_MODEL_ROOT}/low_noise_model/diffusion_pytorch_model.safetensors.index.json",
+            "wan_dit_high_noise": f"{WAN22_MODEL_ROOT}/high_noise_model/diffusion_pytorch_model.safetensors.index.json",
         },
     }
 
