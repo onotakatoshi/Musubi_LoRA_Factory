@@ -6,6 +6,7 @@ MODELS_DIR="${MODELS_DIR:-$HOME/models}"
 LOG_DIR="$ROOT_DIR/logs/model_downloads"
 DRY_RUN=0
 CONTINUE_ON_ERROR=1
+SYNC_SETTINGS=1
 TARGETS=()
 
 mkdir -p "$LOG_DIR"
@@ -77,10 +78,11 @@ Targets:
   flux2-klein
 
 Options:
-  --models-dir DIR  Download root. Default: $HOME/models
-  --dry-run         Show commands without downloading
-  --stop-on-error   Stop when one model fails
-  -h, --help        Show this help
+  --models-dir DIR    Download root. Default: $HOME/models
+  --dry-run           Show commands without downloading
+  --stop-on-error     Stop when one model fails
+  --no-sync-settings  Do not update configs/settings.toml after downloads
+  -h, --help          Show this help
 
 Examples:
   bash scripts/download_model_assets.sh core
@@ -93,7 +95,8 @@ Before gated downloads:
 Notes:
   - Downloads can be very large. Wan2.2 A14B repos alone are over 100GB each.
   - If a gated Hugging Face repo fails, open its model page in a browser, accept the license, run `hf auth login`, then rerun this script.
-  - This script intentionally keeps downloading the next target when one target fails, unless --stop-on-error is used.
+  - This script keeps downloading the next target when one target fails, unless --stop-on-error is used.
+  - After downloads, this script updates configs/settings.toml from the downloaded files unless --no-sync-settings is used.
 USAGE
 }
 
@@ -201,6 +204,28 @@ download_one() {
   return 0
 }
 
+sync_settings() {
+  if [[ "$SYNC_SETTINGS" != "1" ]]; then
+    return 0
+  fi
+  if [[ "$DRY_RUN" == "1" ]]; then
+    log "Dry run: skip settings sync."
+    return 0
+  fi
+  log ""
+  log "============================================================"
+  log "Sync downloaded model paths into configs/settings.toml"
+  log "============================================================"
+  python3 "$ROOT_DIR/scripts/sync_model_paths.py" --models-dir "$MODELS_DIR" 2>&1 | tee -a "$LOG_FILE"
+  local status=${PIPESTATUS[0]}
+  if [[ "$status" != "0" ]]; then
+    log "ERROR: settings sync failed, exit=$status"
+    if [[ "$CONTINUE_ON_ERROR" != "1" ]]; then
+      exit "$status"
+    fi
+  fi
+}
+
 print_summary() {
   log ""
   log "Download log: $LOG_FILE"
@@ -209,7 +234,7 @@ print_summary() {
   log "Next app steps:"
   log "  cd $ROOT_DIR"
   log "  bash ./scripts/start.sh"
-  log "  設定 -> Target model を選択 -> パスを確認 -> 設定を確認 -> 設定を保存"
+  log "  設定 -> Target model を選択 -> 設定を確認"
 }
 
 while [[ $# -gt 0 ]]; do
@@ -227,6 +252,9 @@ while [[ $# -gt 0 ]]; do
       ;;
     --stop-on-error)
       CONTINUE_ON_ERROR=0
+      ;;
+    --no-sync-settings)
+      SYNC_SETTINGS=0
       ;;
     -h|--help)
       usage
@@ -264,6 +292,7 @@ log "Started: $(date)"
 log "Dry run: $DRY_RUN"
 log "Targets: ${TARGETS[*]}"
 log "Models dir: $MODELS_DIR"
+log "Sync settings: $SYNC_SETTINGS"
 
 FAILED=0
 for target in "${TARGETS[@]}"; do
@@ -272,10 +301,11 @@ for target in "${TARGETS[@]}"; do
   fi
 done
 
+sync_settings
 print_summary
 
 if [[ "$FAILED" == "1" ]]; then
-  log "Result: some downloads failed. Check gated license/auth errors above."
+  log "Result: some downloads failed. Check gated license/auth errors above. Settings sync was still attempted."
   exit 1
 fi
 
