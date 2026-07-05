@@ -38,16 +38,38 @@ MODEL_SETTINGS: dict[str, ModelSettingsSpec] = {
             field("zimage_base_weights", "Z-Image base weights", "任意設定です。必要な場合だけ指定します。", "Optional base weights. Set only when needed.", required=False),
         ),
     ),
-    "wan2.2": ModelSettingsSpec(
-        profile_id="wan2.2",
-        group_title="Wan2.2 Model Paths",
+    "wan2.2-t2v-a14b": ModelSettingsSpec(
+        profile_id="wan2.2-t2v-a14b",
+        group_title="Wan2.2 T2V-A14B Model Paths",
         command_status="implemented",
         scripts=("wan_train_network.py", "wan_cache_latents.py", "wan_cache_text_encoder_outputs.py"),
         fields=(
-            field("wan_vae", "Wan VAE", "Wan用VAEファイルです。例: Wan2.1_VAE.pth", "Wan VAE file. Example: Wan2.1_VAE.pth"),
-            field("wan_t5", "Wan T5", "Wan用Text Encoder/T5ファイルです。例: models_t5_umt5-xxl-enc-bf16.pth", "Wan Text Encoder/T5 file."),
-            field("wan_dit", "Wan2.2 DiT low noise", "Wan2.2のlow-noise側DiTです。t2v-A14Bの2系統DiT構成で必要です。", "Wan2.2 low-noise DiT. Required for t2v-A14B."),
-            field("wan_dit_high_noise", "Wan2.2 DiT high noise", "Wan2.2のhigh-noise側DiTです。low-noise側とセットで必要です。", "Wan2.2 high-noise DiT. Required with the low-noise DiT."),
+            field("wan_vae", "Wan2.2 T2V VAE", "Wan2.2 T2V-A14B用VAEファイルです。例: Wan2.1_VAE.pth", "Wan2.2 T2V-A14B VAE file."),
+            field("wan_t5", "Wan2.2 T2V T5", "Wan2.2 T2V-A14B用Text Encoder/T5です。", "Wan2.2 T2V-A14B Text Encoder/T5 file."),
+            field("wan_dit", "Wan2.2 T2V DiT low noise", "Wan2.2 T2V-A14Bのlow-noise側DiTです。", "Wan2.2 T2V-A14B low-noise DiT."),
+            field("wan_dit_high_noise", "Wan2.2 T2V DiT high noise", "Wan2.2 T2V-A14Bのhigh-noise側DiTです。", "Wan2.2 T2V-A14B high-noise DiT."),
+        ),
+    ),
+    "wan2.2-i2v-a14b": ModelSettingsSpec(
+        profile_id="wan2.2-i2v-a14b",
+        group_title="Wan2.2 I2V-A14B Model Paths",
+        command_status="implemented",
+        scripts=("wan_train_network.py", "wan_cache_latents.py", "wan_cache_text_encoder_outputs.py"),
+        fields=(
+            field("wan22_i2v_vae", "Wan2.2 I2V VAE", "Wan2.2 I2V-A14B用VAEファイルです。", "Wan2.2 I2V-A14B VAE file."),
+            field("wan22_i2v_t5", "Wan2.2 I2V T5", "Wan2.2 I2V-A14B用Text Encoder/T5です。", "Wan2.2 I2V-A14B Text Encoder/T5 file."),
+            field("wan22_i2v_dit", "Wan2.2 I2V DiT low noise", "Wan2.2 I2V-A14Bのlow-noise側DiTです。Latent cacheではI2V指定を使います。", "Wan2.2 I2V-A14B low-noise DiT. Latent cache uses the I2V option."),
+            field("wan22_i2v_dit_high_noise", "Wan2.2 I2V DiT high noise", "Wan2.2 I2V-A14Bのhigh-noise側DiTです。", "Wan2.2 I2V-A14B high-noise DiT."),
+        ),
+    ),
+    "wan2.2-ti2v-5b": ModelSettingsSpec(
+        profile_id="wan2.2-ti2v-5b",
+        group_title="Wan2.2 TI2V-5B Model Paths",
+        scripts=("wan_train_network.py", "wan_cache_latents.py", "wan_cache_text_encoder_outputs.py"),
+        fields=(
+            field("wan22_ti2v_vae", "Wan2.2 TI2V VAE", "Wan2.2 TI2V-5B用VAEです。公式生成では高圧縮VAEを使います。", "Wan2.2 TI2V-5B VAE file. Official inference uses the high-compression VAE."),
+            field("wan22_ti2v_t5", "Wan2.2 TI2V T5", "Wan2.2 TI2V-5B用Text Encoder/T5です。", "Wan2.2 TI2V-5B Text Encoder/T5 file."),
+            field("wan22_ti2v_dit", "Wan2.2 TI2V DiT", "Wan2.2 TI2V-5BのDiTです。Musubi Tunerでの学習コマンドは検証待ちです。", "Wan2.2 TI2V-5B DiT file. Musubi training command is not verified yet."),
         ),
     ),
     "wan2.1": ModelSettingsSpec(
@@ -194,8 +216,17 @@ MODEL_SETTINGS: dict[str, ModelSettingsSpec] = {
 }
 
 
+ALIASES = {
+    "wan2.2": "wan2.2-t2v-a14b",
+}
+
+
+def normalize_profile_id(profile_id: str) -> str:
+    return ALIASES.get(profile_id, profile_id)
+
+
 def settings_spec(profile_id: str) -> ModelSettingsSpec:
-    return MODEL_SETTINGS.get(profile_id, MODEL_SETTINGS["z-image"])
+    return MODEL_SETTINGS.get(normalize_profile_id(profile_id), MODEL_SETTINGS["z-image"])
 
 
 def required_keys(profile_id: str) -> list[str]:
