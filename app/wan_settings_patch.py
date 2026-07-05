@@ -3,7 +3,7 @@ from __future__ import annotations
 from PySide6.QtWidgets import QComboBox, QGroupBox, QHBoxLayout, QTextEdit, QVBoxLayout, QWidget
 
 from i18n import SUPPORTED_LANGUAGES
-from model_path_autofill_recursive import autofill_model_paths, autofill_summary
+from model_path_filename_search import apply_known_filename_search, search_summary
 from model_registry import get_profile
 from model_settings_catalog import MODEL_SETTINGS, all_model_path_keys, settings_spec
 from model_ui import available_model_labels, help_for_profile, label_for_profile, profile_id_from_label, v1_default_profile
@@ -61,20 +61,20 @@ def apply_wan_settings_patch(desktop_app_class) -> None:
         if hasattr(self, "model_settings_note"):
             self.model_settings_note.setPlainText(help_for_profile(profile_id, self.lang))
 
-    def autofill_downloaded_model_paths(self) -> None:
+    def search_known_filenames_and_save(self) -> None:
         import desktop_main
 
         data = self._settings_data_from_fields()
         before = dict(data.get("model_paths", {}))
-        data = autofill_model_paths(data, overwrite_empty_only=True)
+        data = apply_known_filename_search(data, overwrite=True)
         after = data.get("model_paths", {})
         for key, line in getattr(self, "model_path_fields", {}).items():
             line.setText(str(after.get(key, "") or ""))
         save_settings(desktop_main.SETTINGS_PATH, data)
         self.settings = data
-        summary = autofill_summary(before, after)
+        summary = search_summary(before, after)
         self.settings_log.setPlainText(
-            "# Downloaded Model Path Autofill\n\n"
+            "# Known Filename Search\n\n"
             + summary
             + "\n\n# Current Settings Validation\n\n"
             + validate_settings_paths(self._settings_values(), _settings_profile_id(self))
@@ -167,7 +167,7 @@ def apply_wan_settings_patch(desktop_app_class) -> None:
         row.addWidget(self._button(self.t("validate_settings"), self._validate_settings))
         self.detect_zimage_button = self._button(self.t("detect_zimage_files"), self._detect_zimage_files)
         row.addWidget(self.detect_zimage_button)
-        row.addWidget(self._button("ダウンロード済みパスを自動入力" if not _is_en(self) else "Autofill downloaded paths", self._autofill_downloaded_model_paths))
+        row.addWidget(self._button("ファイル名で検索して入力" if not _is_en(self) else "Search filenames and fill", self._search_known_filenames_and_save))
         row.addWidget(self._button(self.t("save_settings"), self._save_settings))
         row.addWidget(self._button(self.t("reload_settings"), self._reload_settings_fields))
         row.addStretch()
@@ -219,4 +219,4 @@ def apply_wan_settings_patch(desktop_app_class) -> None:
     desktop_app_class._validate_settings = patched_validate_settings
     desktop_app_class._settings_data_from_fields = patched_settings_data_from_fields
     desktop_app_class._refresh_model_settings_visibility = refresh_model_settings_visibility
-    desktop_app_class._autofill_downloaded_model_paths = autofill_downloaded_model_paths
+    desktop_app_class._search_known_filenames_and_save = search_known_filenames_and_save
