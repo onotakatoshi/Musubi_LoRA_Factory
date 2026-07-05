@@ -3,6 +3,8 @@ from __future__ import annotations
 from PySide6.QtWidgets import QComboBox, QGroupBox, QHBoxLayout, QTextEdit, QVBoxLayout, QWidget
 
 from i18n import SUPPORTED_LANGUAGES
+from model_registry import get_profile
+from model_settings_catalog import MODEL_SETTINGS, all_model_path_keys, settings_spec
 from model_ui import available_model_labels, help_for_profile, label_for_profile, profile_id_from_label, v1_default_profile
 from settings_detect import validate_settings_paths
 from settings_io import load_settings, nested_get
@@ -12,56 +14,9 @@ MODEL_NOTE_HEIGHT = 102
 MODEL_GROUP_SPACING = 18
 MODEL_PATH_GROUP_MIN_HEIGHT = 206
 
-ZIMAGE_HELP_JA = {
-    "zimage_dit": "Z-Imageの学習対象DiTです。BaseまたはDe-Turbo系を指定します。",
-    "zimage_vae": "Z-Image用VAEファイルです。",
-    "zimage_text_encoder": "Z-Image用Text Encoderです。",
-    "zimage_base_weights": "任意設定です。必要な場合だけ指定します。",
-}
-ZIMAGE_HELP_EN = {
-    "zimage_dit": "Z-Image DiT to train. Usually use Base or De-Turbo weights.",
-    "zimage_vae": "Z-Image VAE file.",
-    "zimage_text_encoder": "Z-Image text encoder file.",
-    "zimage_base_weights": "Optional base weights. Set only when needed.",
-}
-
-WAN_HELP_JA = {
-    "wan_vae": "Wan用VAEファイルです。例: Wan2.1_VAE.pth",
-    "wan_t5": "Wan用Text Encoder/T5ファイルです。例: models_t5_umt5-xxl-enc-bf16.pth",
-    "wan_dit": "Wan2.2のlow-noise側DiTです。t2v-A14Bの2系統DiT構成で必要です。",
-    "wan_dit_high_noise": "Wan2.2のhigh-noise側DiTです。t2v-A14Bではlow-noise側とセットで必要です。",
-}
-WAN_HELP_EN = {
-    "wan_vae": "Wan VAE file. Example: Wan2.1_VAE.pth",
-    "wan_t5": "Wan Text Encoder/T5 file. Example: models_t5_umt5-xxl-enc-bf16.pth",
-    "wan_dit": "Wan2.2 low-noise DiT. Required for the t2v-A14B dual-DiT setup.",
-    "wan_dit_high_noise": "Wan2.2 high-noise DiT. Required together with the low-noise DiT for t2v-A14B.",
-}
-
-ZIMAGE_LABELS = {
-    "zimage_dit": "Z-Image DiT",
-    "zimage_vae": "Z-Image VAE",
-    "zimage_text_encoder": "Z-Image text encoder",
-    "zimage_base_weights": "Z-Image base weights",
-}
-WAN_LABELS = {
-    "wan_vae": "Wan VAE",
-    "wan_t5": "Wan T5",
-    "wan_dit": "Wan2.2 DiT low noise",
-    "wan_dit_high_noise": "Wan2.2 DiT high noise",
-}
-
 
 def _is_en(self) -> bool:
     return getattr(self, "lang", "日本語") == "English"
-
-
-def _z_help(self, key: str) -> str:
-    return (ZIMAGE_HELP_EN if _is_en(self) else ZIMAGE_HELP_JA)[key]
-
-
-def _wan_help(self, key: str) -> str:
-    return (WAN_HELP_EN if _is_en(self) else WAN_HELP_JA)[key]
 
 
 def _settings_profile_id(self) -> str:
@@ -72,13 +27,23 @@ def _settings_profile_id(self) -> str:
 
 
 def _settings_intro_text(self, profile_id: str) -> str:
+    profile = get_profile(profile_id)
+    spec = settings_spec(profile_id)
+    required = [field.label for field in spec.fields if field.required]
+    required_text = ", ".join(required) if required else "(none)"
     if _is_en(self):
-        if profile_id == "wan2.2":
-            return "Settings / Wan2.2\nConfigure common paths, then set four required files on the right: Wan VAE, Wan T5, Wan2.2 low-noise DiT, and Wan2.2 high-noise DiT."
-        return "Settings / Z-Image / Z-Image-Turbo\nConfigure the common paths, then set the Z-Image DiT, VAE, and Text Encoder paths on the right. Selecting Z-Image also synchronizes the Train tab target model."
-    if profile_id == "wan2.2":
-        return "設定 / Wan2.2\n共通パスを確認し、右側で必要な4ファイルを指定します: Wan VAE、Wan T5、Wan2.2 DiT low noise、Wan2.2 DiT high noise。"
-    return "設定 / Z-Image / Z-Image-Turbo\n共通パスを確認し、右側で Z-Image DiT、VAE、Text Encoder を指定します。Z-Imageを選ぶと、学習タブのTarget modelもZ-Imageへ同期します。"
+        return f"Settings / {profile.display_name}\nCheck the common paths, then set the required files on the right: {required_text}."
+    return f"設定 / {profile.display_name}\n共通パスを確認し、右側で必要ファイルを指定します: {required_text}。"
+
+
+def _field_help(self, profile_id: str, field_key: str) -> str:
+    for field in settings_spec(profile_id).fields:
+        if field.key == field_key:
+            text = field.help_en if _is_en(self) else field.help_ja
+            if not field.required:
+                text += "\nOptional." if _is_en(self) else "\n任意設定です。"
+            return text
+    return field_key
 
 
 def apply_wan_settings_patch(desktop_app_class) -> None:
@@ -87,10 +52,9 @@ def apply_wan_settings_patch(desktop_app_class) -> None:
         is_zimage = profile_id == "z-image"
         if hasattr(self, "settings_guide_box"):
             self.settings_guide_box.setPlainText(_settings_intro_text(self, profile_id))
-        if hasattr(self, "zimage_settings_group"):
-            self.zimage_settings_group.setVisible(is_zimage)
-        if hasattr(self, "wan_settings_group"):
-            self.wan_settings_group.setVisible(profile_id == "wan2.2")
+        if hasattr(self, "model_setting_groups"):
+            for group_profile_id, group in self.model_setting_groups.items():
+                group.setVisible(group_profile_id == profile_id)
         if hasattr(self, "detect_zimage_button"):
             self.detect_zimage_button.setVisible(is_zimage)
         if hasattr(self, "model_settings_note"):
@@ -142,43 +106,31 @@ def apply_wan_settings_patch(desktop_app_class) -> None:
         self.model_settings_note.setMinimumHeight(MODEL_NOTE_HEIGHT)
         self.model_settings_note.setMaximumHeight(MODEL_NOTE_HEIGHT)
 
-        z_form = self._compact_form()
-        self.set_zimage_dit = self._line(nested_get(self.settings, "model_paths", "zimage_dit"))
-        self.set_zimage_vae = self._line(nested_get(self.settings, "model_paths", "zimage_vae"))
-        self.set_zimage_text_encoder = self._line(nested_get(self.settings, "model_paths", "zimage_text_encoder"))
-        self.set_zimage_base_weights = self._line(nested_get(self.settings, "model_paths", "zimage_base_weights"))
-        z_form.addRow(HelpLabel(ZIMAGE_LABELS["zimage_dit"], _z_help(self, "zimage_dit")), self._browse_file_row(self.set_zimage_dit))
-        z_form.addRow(HelpLabel(ZIMAGE_LABELS["zimage_vae"], _z_help(self, "zimage_vae")), self._browse_file_row(self.set_zimage_vae))
-        z_form.addRow(HelpLabel(ZIMAGE_LABELS["zimage_text_encoder"], _z_help(self, "zimage_text_encoder")), self._browse_file_row(self.set_zimage_text_encoder))
-        z_form.addRow(HelpLabel(ZIMAGE_LABELS["zimage_base_weights"], _z_help(self, "zimage_base_weights")), self._browse_file_row(self.set_zimage_base_weights))
-        self.zimage_settings_group = QGroupBox("Z-Image / Z-Image-Turbo Model Paths")
-        self.zimage_settings_group.setMinimumHeight(MODEL_PATH_GROUP_MIN_HEIGHT)
-        z_layout = QVBoxLayout()
-        z_layout.addLayout(z_form)
-        self.zimage_settings_group.setLayout(z_layout)
-
-        wan_form = self._compact_form()
-        self.set_wan_vae = self._line(nested_get(self.settings, "model_paths", "wan_vae"))
-        self.set_wan_t5 = self._line(nested_get(self.settings, "model_paths", "wan_t5"))
-        self.set_wan_dit = self._line(nested_get(self.settings, "model_paths", "wan_dit"))
-        self.set_wan_dit_high_noise = self._line(nested_get(self.settings, "model_paths", "wan_dit_high_noise"))
-        wan_form.addRow(HelpLabel(WAN_LABELS["wan_vae"], _wan_help(self, "wan_vae")), self._browse_file_row(self.set_wan_vae))
-        wan_form.addRow(HelpLabel(WAN_LABELS["wan_t5"], _wan_help(self, "wan_t5")), self._browse_file_row(self.set_wan_t5))
-        wan_form.addRow(HelpLabel(WAN_LABELS["wan_dit"], _wan_help(self, "wan_dit")), self._browse_file_row(self.set_wan_dit))
-        wan_form.addRow(HelpLabel(WAN_LABELS["wan_dit_high_noise"], _wan_help(self, "wan_dit_high_noise")), self._browse_file_row(self.set_wan_dit_high_noise))
-        self.wan_settings_group = QGroupBox("Wan2.2 Model Paths")
-        self.wan_settings_group.setMinimumHeight(MODEL_PATH_GROUP_MIN_HEIGHT)
-        wan_layout = QVBoxLayout()
-        wan_layout.addLayout(wan_form)
-        self.wan_settings_group.setLayout(wan_layout)
+        self.model_path_fields = {}
+        self.model_setting_groups = {}
+        model_groups: list[QGroupBox] = []
+        for profile_id, spec in MODEL_SETTINGS.items():
+            model_form = self._compact_form()
+            for item in spec.fields:
+                line = self._line(nested_get(self.settings, "model_paths", item.key))
+                self.model_path_fields[item.key] = line
+                label = item.label if item.required else f"{item.label} (optional)"
+                model_form.addRow(HelpLabel(label, _field_help(self, profile_id, item.key)), self._browse_file_row(line))
+            group = QGroupBox(spec.group_title)
+            group.setMinimumHeight(MODEL_PATH_GROUP_MIN_HEIGHT)
+            group_layout = QVBoxLayout()
+            group_layout.addLayout(model_form)
+            group.setLayout(group_layout)
+            self.model_setting_groups[profile_id] = group
+            model_groups.append(group)
 
         right_panel = QWidget()
         right_layout = QVBoxLayout()
         right_layout.setContentsMargins(0, RIGHT_PANEL_TOP_OFFSET, 0, 0)
         right_layout.setSpacing(MODEL_GROUP_SPACING)
         right_layout.addWidget(self.model_settings_note, 0)
-        right_layout.addWidget(self.zimage_settings_group, 0)
-        right_layout.addWidget(self.wan_settings_group, 0)
+        for group in model_groups:
+            right_layout.addWidget(group, 0)
         right_layout.addStretch(1)
         right_panel.setLayout(right_layout)
 
@@ -218,21 +170,9 @@ def apply_wan_settings_patch(desktop_app_class) -> None:
             "outputs_dir": self.set_outputs_dir.text(),
             "comfyui_loras_dir": self.set_comfyui_loras_dir.text(),
         }
-        profile_id = _settings_profile_id(self)
-        if profile_id == "wan2.2":
-            values.update({
-                "wan_vae": self.set_wan_vae.text(),
-                "wan_t5": self.set_wan_t5.text(),
-                "wan_dit": self.set_wan_dit.text(),
-                "wan_dit_high_noise": self.set_wan_dit_high_noise.text(),
-            })
-        else:
-            values.update({
-                "zimage_dit": self.set_zimage_dit.text(),
-                "zimage_vae": self.set_zimage_vae.text(),
-                "zimage_text_encoder": self.set_zimage_text_encoder.text(),
-                "zimage_base_weights": self.set_zimage_base_weights.text(),
-            })
+        for item in settings_spec(_settings_profile_id(self)).fields:
+            if item.key in self.model_path_fields:
+                values[item.key] = self.model_path_fields[item.key].text()
         return values
 
     def patched_validate_settings(self) -> None:
@@ -248,14 +188,9 @@ def apply_wan_settings_patch(desktop_app_class) -> None:
         data["paths"]["outputs_dir"] = self.set_outputs_dir.text()
         data["paths"]["comfyui_loras_dir"] = self.set_comfyui_loras_dir.text()
         model_paths = data.setdefault("model_paths", {})
-        model_paths["zimage_dit"] = self.set_zimage_dit.text()
-        model_paths["zimage_vae"] = self.set_zimage_vae.text()
-        model_paths["zimage_text_encoder"] = self.set_zimage_text_encoder.text()
-        model_paths["zimage_base_weights"] = self.set_zimage_base_weights.text()
-        model_paths["wan_vae"] = self.set_wan_vae.text()
-        model_paths["wan_t5"] = self.set_wan_t5.text()
-        model_paths["wan_dit"] = self.set_wan_dit.text()
-        model_paths["wan_dit_high_noise"] = self.set_wan_dit_high_noise.text()
+        for key in all_model_path_keys():
+            if key in self.model_path_fields:
+                model_paths[key] = self.model_path_fields[key].text()
         return data
 
     desktop_app_class._settings_tab = patched_settings_tab
