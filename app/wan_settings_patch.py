@@ -23,14 +23,14 @@ ZIMAGE_HELP_EN = {
 WAN_HELP_JA = {
     "wan_vae": "Wan用VAEファイルです。例: Wan2.1_VAE.pth",
     "wan_t5": "Wan用Text Encoder/T5ファイルです。例: models_t5_umt5-xxl-enc-bf16.pth",
-    "wan_dit": "Wan2.2のlow-noise側DiTです。t2v-A14Bでは主DiTとして使います。",
-    "wan_dit_high_noise": "Wan2.2のhigh-noise側DiTです。指定するとhigh/low 2系統DiTで学習コマンドを作ります。",
+    "wan_dit": "Wan2.2のlow-noise側DiTです。t2v-A14Bの2系統DiT構成で必要です。",
+    "wan_dit_high_noise": "Wan2.2のhigh-noise側DiTです。t2v-A14Bではlow-noise側とセットで必要です。",
 }
 WAN_HELP_EN = {
     "wan_vae": "Wan VAE file. Example: Wan2.1_VAE.pth",
     "wan_t5": "Wan Text Encoder/T5 file. Example: models_t5_umt5-xxl-enc-bf16.pth",
-    "wan_dit": "Wan2.2 low-noise DiT. Used as the main DiT for t2v-A14B.",
-    "wan_dit_high_noise": "Wan2.2 high-noise DiT. When set, commands use both high/low noise DiTs.",
+    "wan_dit": "Wan2.2 low-noise DiT. Required for the t2v-A14B dual-DiT setup.",
+    "wan_dit_high_noise": "Wan2.2 high-noise DiT. Required together with the low-noise DiT for t2v-A14B.",
 }
 
 ZIMAGE_LABELS = {
@@ -69,10 +69,10 @@ def _settings_profile_id(self) -> str:
 def _settings_intro_text(self, profile_id: str) -> str:
     if _is_en(self):
         if profile_id == "wan2.2":
-            return "Settings / Wan2.2\nConfigure the common paths, then set the Wan VAE, Wan T5, and Wan2.2 DiT paths on the right. Selecting Wan2.2 also synchronizes the Train tab target model."
+            return "Settings / Wan2.2\nConfigure common paths, then set four required files on the right: Wan VAE, Wan T5, Wan2.2 low-noise DiT, and Wan2.2 high-noise DiT."
         return "Settings / Z-Image / Z-Image-Turbo\nConfigure the common paths, then set the Z-Image DiT, VAE, and Text Encoder paths on the right. Selecting Z-Image also synchronizes the Train tab target model."
     if profile_id == "wan2.2":
-        return "設定 / Wan2.2\n共通パスを確認し、右側で Wan VAE、Wan T5、Wan2.2 DiT low noise を指定します。Wan2.2を選ぶと、学習タブのTarget modelもWan2.2へ同期します。"
+        return "設定 / Wan2.2\n共通パスを確認し、右側で必要な4ファイルを指定します: Wan VAE、Wan T5、Wan2.2 DiT low noise、Wan2.2 DiT high noise。"
     return "設定 / Z-Image / Z-Image-Turbo\n共通パスを確認し、右側で Z-Image DiT、VAE、Text Encoder を指定します。Z-Imageを選ぶと、学習タブのTarget modelもZ-Imageへ同期します。"
 
 
