@@ -2,11 +2,28 @@
 
 PGX向けのmusubi-tuner用ローカルデスクトップGUIです。
 
-**現在は Z-Image / Z-Image-Turbo と Wan2.2 のLoRA作成に対応を進めています。**
+**Musubi TunerでLoRA作成スクリプトが用意されている主要Target modelを、設定画面の選択肢として追加しています。**
 
-最初の安定対象は Z-Image / Z-Image-Turbo です。Wan2.2 は初期対応として t2v-A14B プロファイル、VAE、T5、low-noise/high-noise DiT のパス指定、コマンド生成、Preflight Check に対応します。
+現在、学習コマンド生成まで実装済みなのは Z-Image / Z-Image-Turbo と Wan2.2 です。その他のTarget modelは、Settingsのモデル別パス管理・設定確認・保存後ログ・musubiスクリプト確認までを先に追加し、学習コマンドテンプレートは検証フェーズで順次有効化します。
 
-FLUX、SDXL、その他モデルへの対応は、Z-Image / Wan2.2 の実用確認後に追加します。
+追加対象:
+
+- Z-Image / Z-Image-Turbo
+- Wan2.2
+- Wan2.1
+- Wan2.1/2.2 Single Frame
+- HunyuanVideo
+- HunyuanVideo 1.5
+- FramePack
+- FramePack Single Frame
+- FLUX.1 Kontext
+- FLUX.2 dev
+- FLUX.2 klein
+- Qwen-Image
+- HiDream-O1-Image
+- Kandinsky 5
+- Ideogram4
+- Krea 2
 
 Z-Imageで最初に試す場合は、まず [PGX Z-Image setup notes](docs/pgx_zimage_setup.md) を見てください。
 
@@ -19,6 +36,7 @@ Ver 1.0の合格条件は [Ver 1.0 Acceptance Checklist](docs/v1_acceptance_chec
 目的:
 - Z-Image / Z-Image-Turbo 用LoRA作成
 - Wan2.2 用LoRA作成
+- Musubi Tuner対応Target modelの設定管理
 - データセット選択
 - キャプション診断
 - キャプション一覧編集
@@ -86,13 +104,13 @@ bash ./scripts/start.sh
 
 ## 基本の流れ
 
-1. `設定` タブで `musubi-tuner / Z-Image / Wan2.2 / ComfyUI` のパスを設定
+1. `設定` タブで `musubi-tuner / Target model / ComfyUI` のパスを設定
 2. `System` タブで実行環境チェック
 3. `Dataset` タブで画像フォルダ、学習対象、出力先を指定
 4. `Caption編集` タブでcaptionを確認・編集
 5. `画像プレビュー` タブで画像とcaptionを最終確認
 6. `Config` タブで `dataset.toml` を生成
-7. `学習` タブでTarget modelを選び、Preflight Check後にcache/trainを実行
+7. `学習` タブでTarget modelを確認し、Preflight Check後にcache/trainを実行
 8. `Export` タブで完成LoRAをComfyUIへコピー
 
 ## 設定ファイル
@@ -103,34 +121,11 @@ bash ./scripts/start.sh
 cp configs/settings.example.toml configs/settings.toml
 ```
 
-主な項目:
-
-```toml
-[musubi]
-repo_path = "../musubi-tuner"
-python_path = "../musubi-tuner/.venv/bin/python"
-
-[paths]
-datasets_dir = "datasets/lora"
-outputs_dir = "outputs/lora"
-comfyui_loras_dir = "../ComfyUI/models/loras"
-
-[model_paths]
-zimage_dit = "../models/z-image/Tongyi-MAI/Z-Image/transformer/diffusion_pytorch_model-00001-of-00002.safetensors"
-zimage_vae = "../models/z-image/Tongyi-MAI/Z-Image/vae/diffusion_pytorch_model.safetensors"
-zimage_text_encoder = "../models/z-image/Tongyi-MAI/Z-Image/text_encoder/model-00001-of-00003.safetensors"
-zimage_base_weights = ""
-wan_vae = "../models/wan/Wan2.2-T2V-A14B/Wan2.1_VAE.pth"
-wan_t5 = "../models/wan/Wan2.2-T2V-A14B/models_t5_umt5-xxl-enc-bf16.pth"
-wan_dit = "../models/wan/Wan2.2-T2V-A14B/low_noise_model/diffusion_pytorch_model.safetensors.index.json"
-wan_dit_high_noise = "../models/wan/Wan2.2-T2V-A14B/high_noise_model/diffusion_pytorch_model.safetensors.index.json"
-```
-
 GUIの `設定` タブからBrowseで指定するのが安全です。
 
 ## 開発方針
 
-このGUIは、最初にZ-Image / Z-Image-Turbo LoRA作成を安定させることを優先します。
+このGUIは、最初にZ-Image / Z-Image-Turbo LoRA作成を安定させ、次にWan2.2、その他Musubi Tuner対応モデルへ広げます。
 
 ## 現在できること
 
@@ -151,6 +146,6 @@ GUIの `設定` タブからBrowseで指定するのが安全です。
 
 ## 現時点で対象外
 
-- FLUX / HunyuanVideo / SDXLなどの本格対応
+- 未検証Target modelの学習コマンド実行
 - マルチGPU分散
 - クラウド実行
