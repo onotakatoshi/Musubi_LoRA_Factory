@@ -118,7 +118,7 @@ def zimage_train_command(
         "--dataset_config", q(dataset_toml), "--sdpa", "--mixed_precision", mixed_precision, "--timestep_sampling", "shift",
         "--weighting_scheme", "none", "--discrete_flow_shift", "2.0", "--optimizer_type", optimizer, "--learning_rate", str(lr),
         "--gradient_checkpointing", "--max_data_loader_n_workers", "2", "--persistent_data_loader_workers",
-        "--network_module", "networks.lora_zimage", "--network_dim", str(rank), "--network_alpha", str(alpha),
+        "--network_module", "networks.lora_z_image", "--network_dim", str(rank), "--network_alpha", str(alpha),
         "--max_train_epochs", str(epochs), "--save_every_n_epochs", "1", "--seed", "42",
         "--output_dir", q(output_dir), "--output_name", q(output_name),
     ]
@@ -148,11 +148,7 @@ def build_zimage_preview(musubi_python: Path, musubi_repo: Path, dataset_toml: P
     ])
 
 
-def build_command_preview(target_model: str, musubi_python: Path, musubi_repo: Path, dataset_toml: Path, output_dir: Path, output_name: str, paths: ModelPaths, rank: int, alpha: int, epochs: int, lr: float, task: str = "t2v-A14B") -> str:
-    if target_model == "z-image":
-        return build_zimage_preview(musubi_python=musubi_python, musubi_repo=musubi_repo, dataset_toml=dataset_toml, output_dir=output_dir, output_name=output_name, paths=paths, rank=rank, alpha=alpha, epochs=epochs, lr=lr)
-    if target_model != "wan2.2":
-        return f"# {target_model} command template is not implemented yet.\n# Next target: add FLUX / HunyuanVideo profiles."
+def build_wan_preview(musubi_python: Path, musubi_repo: Path, dataset_toml: Path, output_dir: Path, output_name: str, paths: ModelPaths, rank: int, alpha: int, epochs: int, lr: float, task: str) -> str:
     return "\n".join([
         "# 1. Latent cache",
         wan_cache_latents_command(musubi_python, musubi_repo, dataset_toml, paths, i2v=task.startswith("i2v")),
@@ -163,3 +159,11 @@ def build_command_preview(target_model: str, musubi_python: Path, musubi_repo: P
         "# 3. Train LoRA",
         wan_train_command(musubi_python=musubi_python, musubi_repo=musubi_repo, dataset_toml=dataset_toml, paths=paths, output_dir=output_dir, output_name=output_name, task=task, rank=rank, alpha=alpha, epochs=epochs, lr=lr),
     ])
+
+
+def build_command_preview(target_model: str, musubi_python: Path, musubi_repo: Path, dataset_toml: Path, output_dir: Path, output_name: str, paths: ModelPaths, rank: int, alpha: int, epochs: int, lr: float, task: str = "t2v-A14B") -> str:
+    if target_model == "z-image":
+        return build_zimage_preview(musubi_python=musubi_python, musubi_repo=musubi_repo, dataset_toml=dataset_toml, output_dir=output_dir, output_name=output_name, paths=paths, rank=rank, alpha=alpha, epochs=epochs, lr=lr)
+    if target_model in {"wan2.2", "wan2.2-t2v-a14b", "wan2.2-i2v-a14b"}:
+        return build_wan_preview(musubi_python=musubi_python, musubi_repo=musubi_repo, dataset_toml=dataset_toml, output_dir=output_dir, output_name=output_name, paths=paths, rank=rank, alpha=alpha, epochs=epochs, lr=lr, task=task)
+    return f"# {target_model} command template is not implemented yet."
