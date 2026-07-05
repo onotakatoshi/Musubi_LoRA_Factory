@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Protocol
 
 from commands import ModelPaths, build_command_preview
-from model_registry import get_profile, profile_ids
+from model_registry import get_profile, normalize_profile_id, profile_ids
 from model_settings_catalog import optional_keys, required_keys
 
 
@@ -88,16 +88,17 @@ class ZImageAdapter(CatalogAdapter):
         )
 
 
-class Wan22Adapter(CatalogAdapter):
-    def __init__(self) -> None:
-        super().__init__("wan2.2")
+class Wan22A14BAdapter(CatalogAdapter):
+    def __init__(self, profile_id: str, *, prefix: str) -> None:
+        super().__init__(profile_id)
+        self.prefix = prefix
 
     def _paths(self, model_paths: dict) -> ModelPaths:
         return ModelPaths(
-            vae=model_paths.get("wan_vae", ""),
-            t5=model_paths.get("wan_t5", ""),
-            dit=model_paths.get("wan_dit", ""),
-            dit_high_noise=model_paths.get("wan_dit_high_noise", ""),
+            vae=model_paths.get(f"{self.prefix}_vae", ""),
+            t5=model_paths.get(f"{self.prefix}_t5", ""),
+            dit=model_paths.get(f"{self.prefix}_dit", ""),
+            dit_high_noise=model_paths.get(f"{self.prefix}_dit_high_noise", ""),
         )
 
     def build_commands(self, context: CommandContext) -> str:
@@ -120,14 +121,16 @@ class Wan22Adapter(CatalogAdapter):
 
 ADAPTERS: dict[str, ModelAdapter] = {profile_id: CatalogAdapter(profile_id) for profile_id in profile_ids(include_future=True)}
 ADAPTERS["z-image"] = ZImageAdapter()
-ADAPTERS["wan2.2"] = Wan22Adapter()
+ADAPTERS["wan2.2-t2v-a14b"] = Wan22A14BAdapter("wan2.2-t2v-a14b", prefix="wan")
+ADAPTERS["wan2.2-i2v-a14b"] = Wan22A14BAdapter("wan2.2-i2v-a14b", prefix="wan22_i2v")
 
 
 def get_adapter(profile_id: str) -> ModelAdapter:
-    if profile_id not in ADAPTERS:
-        profile = get_profile(profile_id)
+    resolved_profile_id = normalize_profile_id(profile_id)
+    if resolved_profile_id not in ADAPTERS:
+        profile = get_profile(resolved_profile_id)
         raise NotImplementedError(f"{profile.display_name} adapter is not implemented yet")
-    return ADAPTERS[profile_id]
+    return ADAPTERS[resolved_profile_id]
 
 
 def adapter_ids() -> list[str]:
