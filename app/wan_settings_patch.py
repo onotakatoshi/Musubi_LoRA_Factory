@@ -3,7 +3,7 @@ from __future__ import annotations
 from PySide6.QtWidgets import QComboBox, QGroupBox, QHBoxLayout, QTextEdit, QVBoxLayout, QWidget
 
 from i18n import SUPPORTED_LANGUAGES
-from model_path_autofill import autofill_model_paths, autofill_summary
+from model_path_autofill_recursive import autofill_model_paths, autofill_summary
 from model_registry import get_profile
 from model_settings_catalog import MODEL_SETTINGS, all_model_path_keys, settings_spec
 from model_ui import available_model_labels, help_for_profile, label_for_profile, profile_id_from_label, v1_default_profile
