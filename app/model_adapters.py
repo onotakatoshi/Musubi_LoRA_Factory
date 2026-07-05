@@ -73,8 +73,51 @@ class ZImageAdapter:
         )
 
 
+class Wan22Adapter:
+    profile_id = "wan2.2"
+
+    def required_setting_keys(self) -> list[str]:
+        return ["wan_vae", "wan_t5", "wan_dit"]
+
+    def optional_setting_keys(self) -> list[str]:
+        return ["wan_dit_high_noise"]
+
+    def validate_model_paths(self, model_paths: dict) -> list[str]:
+        missing: list[str] = []
+        for key in self.required_setting_keys():
+            if not model_paths.get(key):
+                missing.append(f"model_paths.{key}")
+        return missing
+
+    def _paths(self, model_paths: dict) -> ModelPaths:
+        return ModelPaths(
+            vae=model_paths.get("wan_vae", ""),
+            t5=model_paths.get("wan_t5", ""),
+            dit=model_paths.get("wan_dit", ""),
+            dit_high_noise=model_paths.get("wan_dit_high_noise", ""),
+        )
+
+    def build_commands(self, context: CommandContext) -> str:
+        profile = get_profile(self.profile_id)
+        return build_command_preview(
+            target_model=profile.id,
+            musubi_python=context.musubi_python,
+            musubi_repo=context.musubi_repo,
+            dataset_toml=context.dataset_toml,
+            output_dir=context.output_dir,
+            output_name=context.output_name,
+            paths=self._paths(context.model_paths),
+            rank=context.rank,
+            alpha=context.alpha,
+            epochs=context.epochs,
+            lr=context.lr,
+            task=profile.task,
+        )
+
+
 ADAPTERS: dict[str, ModelAdapter] = {
     "z-image": ZImageAdapter(),
+    "wan2.2": Wan22Adapter(),
 }
 
 
