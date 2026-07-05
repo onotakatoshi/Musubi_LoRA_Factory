@@ -18,10 +18,10 @@ llm_endpoint = "http://localhost:8000/v1/chat/completions"
 llm_model = "qwen-caption-helper"
 
 [model_paths]
-wan_vae = "../models/wan/Wan2.1_VAE.pth"
-wan_t5 = "../models/wan/models_t5_umt5-xxl-enc-bf16.pth"
-wan_dit = "../models/wan/wan2.2_low_noise.safetensors"
-wan_dit_high_noise = "../models/wan/wan2.2_high_noise.safetensors"
+wan_vae = "../models/wan/Wan2.2-T2V-A14B/Wan2.1_VAE.pth"
+wan_t5 = "../models/wan/Wan2.2-T2V-A14B/models_t5_umt5-xxl-enc-bf16.pth"
+wan_dit = "../models/wan/Wan2.2-T2V-A14B/low_noise_model/diffusion_pytorch_model.safetensors.index.json"
+wan_dit_high_noise = "../models/wan/Wan2.2-T2V-A14B/high_noise_model/diffusion_pytorch_model.safetensors.index.json"
 
 zimage_dit = "../models/z-image/Tongyi-MAI/Z-Image/transformer/diffusion_pytorch_model-00001-of-00002.safetensors"
 zimage_vae = "../models/z-image/Tongyi-MAI/Z-Image/vae/diffusion_pytorch_model.safetensors"
