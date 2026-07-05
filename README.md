@@ -60,7 +60,7 @@ Ver 1.0の合格条件は [Ver 1.0 Acceptance Checklist](docs/v1_acceptance_chec
 ```bash
 git clone https://github.com/onotakatoshi/Musubi_LoRA_Factory.git
 cd Musubi_LoRA_Factory
-chmod +x scripts/setup.sh scripts/start.sh scripts/check.sh scripts/update.sh scripts/create_desktop_launcher.sh scripts/download_model_assets.sh
+chmod +x scripts/setup.sh scripts/start.sh scripts/check.sh scripts/update.sh scripts/create_desktop_launcher.sh scripts/download_model_assets.sh scripts/download_selectable_model_assets.sh
 ./scripts/setup.sh
 ./scripts/check.sh
 ```
@@ -85,11 +85,17 @@ PySide6のデスクトップウィンドウが開きます。
 
 Hugging Faceから必要なモデルファイルをまとめて取得できます。ダウンロード完了後、`configs/settings.toml` の `model_paths` も自動同期します。
 
-Wan2.2 T2V / I2V / TI2V をまとめて取得する場合:
+現在Target modelで選べるモデルをまとめて取得する場合:
 
 ```bash
 cd ~/Musubi_LoRA_Factory
 git pull --ff-only
+bash ./scripts/download_selectable_model_assets.sh
+```
+
+Wan2.2 T2V / I2V / TI2V をまとめて取得する場合:
+
+```bash
 bash ./scripts/download_model_assets.sh wan22-all
 ```
 
@@ -99,22 +105,16 @@ Z-Image + Wan2.2 T2V + Wan2.2 I2V の基本セット:
 bash ./scripts/download_model_assets.sh core
 ```
 
-スクリプトに登録済みの既知モデルをまとめて取得する場合:
-
-```bash
-bash ./scripts/download_model_assets.sh all-known
-```
-
 保存先を変える場合:
 
 ```bash
-bash ./scripts/download_model_assets.sh wan22-all --models-dir /mnt/models
+bash ./scripts/download_selectable_model_assets.sh --models-dir /mnt/models
 ```
 
 事前確認だけ行う場合:
 
 ```bash
-bash ./scripts/download_model_assets.sh wan22-all --dry-run
+bash ./scripts/download_selectable_model_assets.sh --dry-run
 ```
 
 すでにダウンロード済みで、Settingsへパスを反映したい場合:
