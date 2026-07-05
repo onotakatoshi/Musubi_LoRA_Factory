@@ -17,6 +17,7 @@ from training_engine import TrainingEngine
 from training_engine_patch import apply_training_engine_patch
 from training_lr_display_patch import apply_training_lr_display_patch
 from training_tab_patch import apply_training_tab_patch
+from training_target_model_patch import apply_training_target_model_patch
 from ui_font import apply_balanced_ui_font
 from wan_settings_patch import apply_wan_settings_patch
 
@@ -27,6 +28,7 @@ ICON_PATH = ROOT / "assets" / "icons" / "musubi_lora_factory.svg"
 apply_help_label_patch(HelpLabel)
 apply_training_engine_patch(TrainingEngine)
 apply_training_lr_display_patch()
+apply_training_target_model_patch()
 apply_button_i18n_patch(DesktopApp)
 apply_dataset_tab_patch(DesktopApp)
 apply_config_export_tab_patch(DesktopApp)
