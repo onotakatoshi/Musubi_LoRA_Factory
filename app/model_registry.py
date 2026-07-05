@@ -27,8 +27,8 @@ PROFILES = {
         display_name="Wan2.2",
         task="t2v-A14B",
         enabled_in_v1=True,
-        description_ja="Wan2.2用LoRAを作成します。必要設定はWan VAE、Wan T5、Wan2.2 low-noise DiTです。high-noise DiTを指定すると2系統DiTでコマンドを作ります。",
-        description_en="Create a Wan2.2 LoRA. Required settings are Wan VAE, Wan T5, and Wan2.2 low-noise DiT. If high-noise DiT is set, commands use the dual-DiT setup.",
+        description_ja="Wan2.2用LoRAを作成します。必要設定はWan VAE、Wan T5、Wan2.2 low-noise DiT、Wan2.2 high-noise DiTの4つです。low/high 2系統DiTでコマンドを作ります。",
+        description_en="Create a Wan2.2 LoRA. Required settings are Wan VAE, Wan T5, Wan2.2 low-noise DiT, and Wan2.2 high-noise DiT. Commands use the dual-DiT setup.",
     ),
 }
 
