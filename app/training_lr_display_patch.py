@@ -7,6 +7,10 @@ import training_tab_patch
 from recommended_defaults import DEFAULTS
 
 
+DETAIL_LABEL_MIN_WIDTH = 520
+DETAIL_LABEL_MAX_WIDTH = 760
+
+
 def _format_default_value(name: str) -> str:
     value = DEFAULTS[name]
     if name == "lr":
@@ -42,8 +46,8 @@ def apply_training_lr_display_patch() -> None:
         default = _format_default_value(name)
         reason = original_reason(name, self.lang)
         detail = QLabel(f"Default {default}  {reason}" if original_en(self) else f"デフォルト {default}　{reason}")
-        detail.setMinimumWidth(220)
-        detail.setMaximumWidth(360)
+        detail.setMinimumWidth(DETAIL_LABEL_MIN_WIDTH)
+        detail.setMaximumWidth(DETAIL_LABEL_MAX_WIDTH)
 
         def refresh() -> None:
             if original_is_default(name, widget.value()):
