@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Callable
 
 
 @dataclass(frozen=True)
@@ -20,16 +19,16 @@ PROFILES = {
         display_name="Z-Image / Z-Image-Turbo",
         task="z-image",
         enabled_in_v1=True,
-        description_ja="Ver 1.0の対象。Z-Image系DiTを学習し、Z-Image-Turbo生成ワークフローでLoRAを使います。",
-        description_en="Target for Ver 1.0. Train a Z-Image-family DiT and use the LoRA in a Z-Image-Turbo generation workflow.",
+        description_ja="Z-Image系DiTを学習し、Z-Image-Turbo生成ワークフローでLoRAを使います。",
+        description_en="Train a Z-Image-family DiT and use the LoRA in a Z-Image-Turbo generation workflow.",
     ),
     "wan2.2": ModelProfile(
         id="wan2.2",
         display_name="Wan2.2",
         task="t2v-A14B",
-        enabled_in_v1=False,
-        description_ja="Ver 1.0では非表示。Z-Image-Turboの実用確認後に追加します。",
-        description_en="Hidden in Ver 1.0. Will be added after Z-Image-Turbo LoRA generation is validated.",
+        enabled_in_v1=True,
+        description_ja="Wan2.2用LoRAを作成します。初期実装ではt2v-A14Bを対象にし、low-noise/high-noise DiTの2系統指定に対応します。",
+        description_en="Create a Wan2.2 LoRA. The initial implementation targets t2v-A14B and supports separate low-noise/high-noise DiT paths.",
     ),
 }
 
@@ -58,5 +57,5 @@ def profile_summary(profile_id: str, lang: str = "日本語") -> str:
     description = p.description_en if lang == "English" else p.description_ja
     status = "Enabled" if p.enabled_in_v1 else "Future"
     if lang == "日本語":
-        status = "Ver 1.0対応" if p.enabled_in_v1 else "将来対応"
+        status = "対応" if p.enabled_in_v1 else "将来対応"
     return f"{p.display_name}\nProfile ID: {p.id}\nTask: {p.task}\nStatus: {status}\n{description}"
