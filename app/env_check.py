@@ -40,6 +40,10 @@ def _check_musubi_scripts(repo: Path, profile_id: str) -> list[str]:
         lines.append(_path_status("zimage_train_network.py", str(src / "zimage_train_network.py")))
         lines.append(_path_status("zimage_cache_latents.py", str(src / "zimage_cache_latents.py")))
         lines.append(_path_status("zimage_cache_text_encoder_outputs.py", str(src / "zimage_cache_text_encoder_outputs.py")))
+    elif profile_id == "wan2.2":
+        lines.append(_path_status("wan_train_network.py", str(src / "wan_train_network.py")))
+        lines.append(_path_status("wan_cache_latents.py", str(src / "wan_cache_latents.py")))
+        lines.append(_path_status("wan_cache_text_encoder_outputs.py", str(src / "wan_cache_text_encoder_outputs.py")))
     else:
         lines.append(f"ℹ️ script check for {profile_id}: not implemented yet")
     return lines
