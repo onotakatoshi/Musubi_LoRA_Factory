@@ -5,7 +5,8 @@ from pathlib import Path
 from typing import Protocol
 
 from commands import ModelPaths, build_command_preview
-from model_registry import get_profile
+from model_registry import get_profile, profile_ids
+from model_settings_catalog import optional_keys, required_keys
 
 
 @dataclass(frozen=True)
@@ -31,14 +32,15 @@ class ModelAdapter(Protocol):
     def build_commands(self, context: CommandContext) -> str: ...
 
 
-class ZImageAdapter:
-    profile_id = "z-image"
+class CatalogAdapter:
+    def __init__(self, profile_id: str) -> None:
+        self.profile_id = profile_id
 
     def required_setting_keys(self) -> list[str]:
-        return ["zimage_vae", "zimage_dit", "zimage_text_encoder"]
+        return required_keys(self.profile_id)
 
     def optional_setting_keys(self) -> list[str]:
-        return ["zimage_base_weights"]
+        return optional_keys(self.profile_id)
 
     def validate_model_paths(self, model_paths: dict) -> list[str]:
         missing: list[str] = []
@@ -46,6 +48,19 @@ class ZImageAdapter:
             if not model_paths.get(key):
                 missing.append(f"model_paths.{key}")
         return missing
+
+    def build_commands(self, context: CommandContext) -> str:
+        profile = get_profile(self.profile_id)
+        return (
+            f"NG: {profile.display_name} はTarget modelとして追加済みですが、"
+            "学習コマンドテンプレートは未検証です。"
+            "Settingsの必要ファイル確認までは使えます。"
+        )
+
+
+class ZImageAdapter(CatalogAdapter):
+    def __init__(self) -> None:
+        super().__init__("z-image")
 
     def _paths(self, model_paths: dict) -> ModelPaths:
         return ModelPaths(
@@ -73,21 +88,9 @@ class ZImageAdapter:
         )
 
 
-class Wan22Adapter:
-    profile_id = "wan2.2"
-
-    def required_setting_keys(self) -> list[str]:
-        return ["wan_vae", "wan_t5", "wan_dit", "wan_dit_high_noise"]
-
-    def optional_setting_keys(self) -> list[str]:
-        return []
-
-    def validate_model_paths(self, model_paths: dict) -> list[str]:
-        missing: list[str] = []
-        for key in self.required_setting_keys():
-            if not model_paths.get(key):
-                missing.append(f"model_paths.{key}")
-        return missing
+class Wan22Adapter(CatalogAdapter):
+    def __init__(self) -> None:
+        super().__init__("wan2.2")
 
     def _paths(self, model_paths: dict) -> ModelPaths:
         return ModelPaths(
@@ -115,10 +118,9 @@ class Wan22Adapter:
         )
 
 
-ADAPTERS: dict[str, ModelAdapter] = {
-    "z-image": ZImageAdapter(),
-    "wan2.2": Wan22Adapter(),
-}
+ADAPTERS: dict[str, ModelAdapter] = {profile_id: CatalogAdapter(profile_id) for profile_id in profile_ids(include_future=True)}
+ADAPTERS["z-image"] = ZImageAdapter()
+ADAPTERS["wan2.2"] = Wan22Adapter()
 
 
 def get_adapter(profile_id: str) -> ModelAdapter:
