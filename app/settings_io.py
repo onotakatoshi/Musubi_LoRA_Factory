@@ -5,7 +5,7 @@ from typing import Any
 
 import toml
 
-from model_path_autofill import autofill_model_paths
+from model_path_autofill_recursive import autofill_model_paths
 from model_settings_catalog import all_model_path_keys
 
 
