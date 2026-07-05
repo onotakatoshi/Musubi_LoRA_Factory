@@ -66,10 +66,22 @@ def _settings_profile_id(self) -> str:
     return saved or v1_default_profile().id
 
 
+def _settings_intro_text(self, profile_id: str) -> str:
+    if _is_en(self):
+        if profile_id == "wan2.2":
+            return "Settings / Wan2.2\nConfigure the common paths, then set the Wan VAE, Wan T5, and Wan2.2 DiT paths on the right. Selecting Wan2.2 also synchronizes the Train tab target model."
+        return "Settings / Z-Image / Z-Image-Turbo\nConfigure the common paths, then set the Z-Image DiT, VAE, and Text Encoder paths on the right. Selecting Z-Image also synchronizes the Train tab target model."
+    if profile_id == "wan2.2":
+        return "設定 / Wan2.2\n共通パスを確認し、右側で Wan VAE、Wan T5、Wan2.2 DiT low noise を指定します。Wan2.2を選ぶと、学習タブのTarget modelもWan2.2へ同期します。"
+    return "設定 / Z-Image / Z-Image-Turbo\n共通パスを確認し、右側で Z-Image DiT、VAE、Text Encoder を指定します。Z-Imageを選ぶと、学習タブのTarget modelもZ-Imageへ同期します。"
+
+
 def apply_wan_settings_patch(desktop_app_class) -> None:
     def refresh_model_settings_visibility(self) -> None:
         profile_id = _settings_profile_id(self)
         is_zimage = profile_id == "z-image"
+        if hasattr(self, "settings_guide_box"):
+            self.settings_guide_box.setPlainText(_settings_intro_text(self, profile_id))
         if hasattr(self, "zimage_settings_group"):
             self.zimage_settings_group.setVisible(is_zimage)
         if hasattr(self, "wan_settings_group"):
@@ -86,11 +98,11 @@ def apply_wan_settings_patch(desktop_app_class) -> None:
         box.setContentsMargins(8, 8, 8, 8)
         box.setSpacing(6)
 
-        guide_box = QTextEdit()
-        guide_box.setReadOnly(True)
-        guide_box.setPlainText(self.t("settings_intro"))
-        guide_box.setMaximumHeight(64)
-        box.addWidget(guide_box, 0)
+        self.settings_guide_box = QTextEdit()
+        self.settings_guide_box.setReadOnly(True)
+        self.settings_guide_box.setPlainText(_settings_intro_text(self, _settings_profile_id(self)))
+        self.settings_guide_box.setMaximumHeight(64)
+        box.addWidget(self.settings_guide_box, 0)
 
         common_form = self._compact_form()
         self.set_language = QComboBox()
