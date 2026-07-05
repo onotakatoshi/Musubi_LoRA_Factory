@@ -8,6 +8,7 @@ import toml
 
 from model_adapters import get_adapter
 from model_registry import get_profile
+from model_settings_catalog import scripts_for_profile
 from musubi_runtime_check import check_musubi_runtime
 from path_resolver import resolve_path
 from verification_readiness import verification_readiness
@@ -36,16 +37,12 @@ def _run_version(cmd: list[str]) -> str:
 def _check_musubi_scripts(repo: Path, profile_id: str) -> list[str]:
     src = repo / "src" / "musubi_tuner"
     lines = [_path_status("src/musubi_tuner", str(src))]
-    if profile_id == "z-image":
-        lines.append(_path_status("zimage_train_network.py", str(src / "zimage_train_network.py")))
-        lines.append(_path_status("zimage_cache_latents.py", str(src / "zimage_cache_latents.py")))
-        lines.append(_path_status("zimage_cache_text_encoder_outputs.py", str(src / "zimage_cache_text_encoder_outputs.py")))
-    elif profile_id == "wan2.2":
-        lines.append(_path_status("wan_train_network.py", str(src / "wan_train_network.py")))
-        lines.append(_path_status("wan_cache_latents.py", str(src / "wan_cache_latents.py")))
-        lines.append(_path_status("wan_cache_text_encoder_outputs.py", str(src / "wan_cache_text_encoder_outputs.py")))
-    else:
-        lines.append(f"ℹ️ script check for {profile_id}: not implemented yet")
+    scripts = scripts_for_profile(profile_id)
+    if not scripts:
+        lines.append(f"ℹ️ script check for {profile_id}: no scripts registered")
+        return lines
+    for script in scripts:
+        lines.append(_path_status(script, str(src / script)))
     return lines
 
 
