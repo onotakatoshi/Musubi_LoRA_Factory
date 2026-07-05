@@ -13,6 +13,7 @@ from desktop_main import DesktopApp, HelpLabel
 from help_label_patch import apply_help_label_patch
 from language_patch import apply_language_patch as apply_ui_language_patch
 from model_sync_patch import apply_model_sync_patch
+from settings_save_profile_patch import apply_settings_save_profile_patch
 from tab_layout_patch import apply_tab_layout_patch
 from training_engine import TrainingEngine
 from training_engine_patch import apply_training_engine_patch
@@ -36,6 +37,7 @@ apply_config_export_tab_patch(DesktopApp)
 apply_training_tab_patch(DesktopApp)
 apply_wan_settings_patch(DesktopApp)
 apply_model_sync_patch(DesktopApp)
+apply_settings_save_profile_patch(DesktopApp)
 apply_tab_layout_patch(DesktopApp)
 apply_ui_language_patch(DesktopApp)
 
