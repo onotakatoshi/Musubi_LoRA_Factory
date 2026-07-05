@@ -24,6 +24,11 @@ def profile(profile_id: str, display_name: str, task: str, ja: str, en: str) -> 
     )
 
 
+ALIASES = {
+    "wan2.2": "wan2.2-t2v-a14b",
+}
+
+
 PROFILES = {
     "z-image": profile(
         "z-image",
@@ -32,12 +37,26 @@ PROFILES = {
         "Z-Image系DiT用のLoRAを作成します。必要設定はZ-Image DiT、VAE、Text Encoderです。",
         "Create a LoRA for a Z-Image-family DiT. Required settings are Z-Image DiT, VAE, and Text Encoder.",
     ),
-    "wan2.2": profile(
-        "wan2.2",
-        "Wan2.2",
+    "wan2.2-t2v-a14b": profile(
+        "wan2.2-t2v-a14b",
+        "Wan2.2 T2V-A14B",
         "t2v-A14B",
-        "Wan2.2用LoRAを作成します。必要設定はWan VAE、Wan T5、Wan2.2 low-noise DiT、Wan2.2 high-noise DiTの4つです。",
-        "Create a Wan2.2 LoRA. Required settings are Wan VAE, Wan T5, low-noise DiT, and high-noise DiT.",
+        "Wan2.2 Text-to-Video A14B用LoRAを作成します。必要設定はWan VAE、Wan T5、low-noise DiT、high-noise DiTです。",
+        "Create a Wan2.2 Text-to-Video A14B LoRA. Required settings are Wan VAE, Wan T5, low-noise DiT, and high-noise DiT.",
+    ),
+    "wan2.2-i2v-a14b": profile(
+        "wan2.2-i2v-a14b",
+        "Wan2.2 I2V-A14B",
+        "i2v-A14B",
+        "Wan2.2 Image-to-Video A14B用LoRAを作成します。I2V用のキャッシュでは画像条件を使うため、Latent cacheにI2V指定を入れます。",
+        "Create a Wan2.2 Image-to-Video A14B LoRA. I2V caching uses the image-conditioning option.",
+    ),
+    "wan2.2-ti2v-5b": profile(
+        "wan2.2-ti2v-5b",
+        "Wan2.2 TI2V-5B",
+        "ti2v-5B",
+        "Wan2.2 Text-Image-to-Video 5B用プロファイルです。公式生成はT2V/I2V両対応ですが、Musubi Tunerでの学習コマンドは検証待ちです。",
+        "Profile for Wan2.2 Text-Image-to-Video 5B. Official inference supports both T2V and I2V, but the Musubi training command is not verified yet.",
     ),
     "wan2.1": profile(
         "wan2.1",
@@ -140,8 +159,12 @@ PROFILES = {
 }
 
 
+def normalize_profile_id(profile_id: str) -> str:
+    return ALIASES.get(profile_id, profile_id)
+
+
 def get_profile(profile_id: str) -> ModelProfile:
-    return PROFILES.get(profile_id, PROFILES["z-image"])
+    return PROFILES.get(normalize_profile_id(profile_id), PROFILES["z-image"])
 
 
 def enabled_profiles(include_future: bool = False) -> list[ModelProfile]:
