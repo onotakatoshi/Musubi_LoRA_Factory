@@ -13,6 +13,7 @@ def default_settings() -> dict[str, Any]:
     return {
         "ui": {
             "language": "日本語",
+            "target_model": "z-image",
         },
         "musubi": {
             "repo_path": "../musubi-tuner",
