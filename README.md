@@ -4,12 +4,14 @@ PGX向けのmusubi-tuner用ローカルデスクトップGUIです。
 
 **Musubi TunerでLoRA作成スクリプトが用意されている主要Target modelを、設定画面の選択肢として追加しています。**
 
-現在、学習コマンド生成まで実装済みなのは Z-Image / Z-Image-Turbo と Wan2.2 です。その他のTarget modelは、Settingsのモデル別パス管理・設定確認・保存後ログ・musubiスクリプト確認までを先に追加し、学習コマンドテンプレートは検証フェーズで順次有効化します。
+現在、学習コマンド生成まで実装済みなのは Z-Image / Z-Image-Turbo、Wan2.2 T2V-A14B、Wan2.2 I2V-A14B です。Wan2.2 TI2V-5B とその他のTarget modelは、Settingsのモデル別パス管理・設定確認・保存後ログ・musubiスクリプト確認までを先に追加し、学習コマンドテンプレートは検証フェーズで順次有効化します。
 
 追加対象:
 
 - Z-Image / Z-Image-Turbo
-- Wan2.2
+- Wan2.2 T2V-A14B
+- Wan2.2 I2V-A14B
+- Wan2.2 TI2V-5B
 - Wan2.1
 - Wan2.1/2.2 Single Frame
 - HunyuanVideo
@@ -35,7 +37,8 @@ Ver 1.0の合格条件は [Ver 1.0 Acceptance Checklist](docs/v1_acceptance_chec
 
 目的:
 - Z-Image / Z-Image-Turbo 用LoRA作成
-- Wan2.2 用LoRA作成
+- Wan2.2 T2V-A14B 用LoRA作成
+- Wan2.2 I2V-A14B 用LoRA作成
 - Musubi Tuner対応Target modelの設定管理
 - データセット選択
 - キャプション診断
@@ -146,6 +149,6 @@ GUIの `設定` タブからBrowseで指定するのが安全です。
 
 ## 現時点で対象外
 
-- 未検証Target modelの学習コマンド実行
+- Wan2.2 TI2V-5Bおよび未検証Target modelの学習コマンド実行
 - マルチGPU分散
 - クラウド実行
