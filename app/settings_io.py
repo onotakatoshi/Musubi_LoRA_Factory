@@ -5,6 +5,7 @@ from typing import Any
 
 import toml
 
+from model_path_autofill import autofill_model_paths
 from model_settings_catalog import all_model_path_keys
 
 
@@ -72,7 +73,7 @@ def load_settings(path: Path) -> dict[str, Any]:
                 data[section].update(values)
             else:
                 data[section] = values
-    return data
+    return autofill_model_paths(data, overwrite_empty_only=True)
 
 
 def save_settings(path: Path, data: dict[str, Any]) -> None:
