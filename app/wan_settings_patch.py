@@ -89,7 +89,7 @@ def apply_wan_settings_patch(desktop_app_class) -> None:
         guide_box = QTextEdit()
         guide_box.setReadOnly(True)
         guide_box.setPlainText(self.t("settings_intro"))
-        guide_box.setMaximumHeight(82)
+        guide_box.setMaximumHeight(64)
         box.addWidget(guide_box, 0)
 
         common_form = self._compact_form()
@@ -119,12 +119,10 @@ def apply_wan_settings_patch(desktop_app_class) -> None:
         common_layout = QVBoxLayout()
         common_layout.addLayout(common_form)
         common_group.setLayout(common_layout)
-        box.addWidget(common_group, 0)
 
         self.model_settings_note = QTextEdit()
         self.model_settings_note.setReadOnly(True)
-        self.model_settings_note.setMaximumHeight(96)
-        box.addWidget(self.model_settings_note, 0)
+        self.model_settings_note.setMaximumHeight(74)
 
         z_form = self._compact_form()
         self.set_zimage_dit = self._line(nested_get(self.settings, "model_paths", "zimage_dit"))
@@ -139,7 +137,6 @@ def apply_wan_settings_patch(desktop_app_class) -> None:
         z_layout = QVBoxLayout()
         z_layout.addLayout(z_form)
         self.zimage_settings_group.setLayout(z_layout)
-        box.addWidget(self.zimage_settings_group, 0)
 
         wan_form = self._compact_form()
         self.set_wan_vae = self._line(nested_get(self.settings, "model_paths", "wan_vae"))
@@ -154,7 +151,23 @@ def apply_wan_settings_patch(desktop_app_class) -> None:
         wan_layout = QVBoxLayout()
         wan_layout.addLayout(wan_form)
         self.wan_settings_group.setLayout(wan_layout)
-        box.addWidget(self.wan_settings_group, 0)
+
+        right_panel = QWidget()
+        right_layout = QVBoxLayout()
+        right_layout.setContentsMargins(0, 0, 0, 0)
+        right_layout.setSpacing(6)
+        right_layout.addWidget(self.model_settings_note, 0)
+        right_layout.addWidget(self.zimage_settings_group, 0)
+        right_layout.addWidget(self.wan_settings_group, 0)
+        right_layout.addStretch(1)
+        right_panel.setLayout(right_layout)
+
+        settings_row = QHBoxLayout()
+        settings_row.setContentsMargins(0, 0, 0, 0)
+        settings_row.setSpacing(8)
+        settings_row.addWidget(common_group, 1)
+        settings_row.addWidget(right_panel, 1)
+        box.addLayout(settings_row, 0)
 
         row = QHBoxLayout()
         row.setContentsMargins(0, 0, 0, 0)
@@ -168,7 +181,7 @@ def apply_wan_settings_patch(desktop_app_class) -> None:
         box.addLayout(row)
 
         self.settings_log = self._log()
-        self.settings_log.setMinimumHeight(220)
+        self.settings_log.setMinimumHeight(150)
         box.addWidget(self.settings_log, 1)
 
         self.set_target_model.currentTextChanged.connect(lambda _value: self._refresh_model_settings_visibility())
