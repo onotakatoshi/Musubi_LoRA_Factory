@@ -1,8 +1,23 @@
 from __future__ import annotations
 
-from PySide6.QtWidgets import QGroupBox, QVBoxLayout
+from PySide6.QtWidgets import QComboBox, QGroupBox, QHBoxLayout, QTextEdit, QVBoxLayout, QWidget
 
-from settings_io import nested_get
+from i18n import SUPPORTED_LANGUAGES
+from model_ui import available_model_labels, help_for_profile, label_for_profile, profile_id_from_label, v1_default_profile
+from settings_io import load_settings, nested_get
+
+ZIMAGE_HELP_JA = {
+    "zimage_dit": "Z-Imageの学習対象DiTです。BaseまたはDe-Turbo系を指定します。",
+    "zimage_vae": "Z-Image用VAEファイルです。",
+    "zimage_text_encoder": "Z-Image用Text Encoderです。",
+    "zimage_base_weights": "任意設定です。必要な場合だけ指定します。",
+}
+ZIMAGE_HELP_EN = {
+    "zimage_dit": "Z-Image DiT to train. Usually use Base or De-Turbo weights.",
+    "zimage_vae": "Z-Image VAE file.",
+    "zimage_text_encoder": "Z-Image text encoder file.",
+    "zimage_base_weights": "Optional base weights. Set only when needed.",
+}
 
 WAN_HELP_JA = {
     "wan_vae": "Wan用VAEファイルです。例: Wan2.1_VAE.pth",
@@ -10,7 +25,6 @@ WAN_HELP_JA = {
     "wan_dit": "Wan2.2のlow-noise側DiTです。t2v-A14Bでは主DiTとして使います。",
     "wan_dit_high_noise": "Wan2.2のhigh-noise側DiTです。指定するとhigh/low 2系統DiTで学習コマンドを作ります。",
 }
-
 WAN_HELP_EN = {
     "wan_vae": "Wan VAE file. Example: Wan2.1_VAE.pth",
     "wan_t5": "Wan Text Encoder/T5 file. Example: models_t5_umt5-xxl-enc-bf16.pth",
@@ -18,6 +32,12 @@ WAN_HELP_EN = {
     "wan_dit_high_noise": "Wan2.2 high-noise DiT. When set, commands use both high/low noise DiTs.",
 }
 
+ZIMAGE_LABELS = {
+    "zimage_dit": "Z-Image DiT",
+    "zimage_vae": "Z-Image VAE",
+    "zimage_text_encoder": "Z-Image text encoder",
+    "zimage_base_weights": "Z-Image base weights",
+}
 WAN_LABELS = {
     "wan_vae": "Wan VAE",
     "wan_t5": "Wan T5",
@@ -26,51 +46,178 @@ WAN_LABELS = {
 }
 
 
-def _help(self, key: str) -> str:
-    return (WAN_HELP_EN if getattr(self, "lang", "日本語") == "English" else WAN_HELP_JA)[key]
+def _is_en(self) -> bool:
+    return getattr(self, "lang", "日本語") == "English"
+
+
+def _z_help(self, key: str) -> str:
+    return (ZIMAGE_HELP_EN if _is_en(self) else ZIMAGE_HELP_JA)[key]
+
+
+def _wan_help(self, key: str) -> str:
+    return (WAN_HELP_EN if _is_en(self) else WAN_HELP_JA)[key]
+
+
+def _settings_profile_id(self) -> str:
+    if hasattr(self, "set_target_model"):
+        return profile_id_from_label(self.set_target_model.currentText())
+    saved = nested_get(self.settings, "ui", "target_model", v1_default_profile().id)
+    return saved or v1_default_profile().id
 
 
 def apply_wan_settings_patch(desktop_app_class) -> None:
-    original_settings_tab = desktop_app_class._settings_tab
-    original_settings_data = desktop_app_class._settings_data_from_fields
+    def refresh_model_settings_visibility(self) -> None:
+        profile_id = _settings_profile_id(self)
+        if hasattr(self, "zimage_settings_group"):
+            self.zimage_settings_group.setVisible(profile_id == "z-image")
+        if hasattr(self, "wan_settings_group"):
+            self.wan_settings_group.setVisible(profile_id == "wan2.2")
+        if hasattr(self, "model_settings_note"):
+            self.model_settings_note.setPlainText(help_for_profile(profile_id, self.lang))
 
-    def patched_settings_tab(self):
-        from desktop_main import HelpLabel
+    def patched_settings_tab(self) -> QWidget:
+        from desktop_main import HELP, HelpLabel
 
-        widget = original_settings_tab(self)
-        layout = widget.layout()
-        if layout is None:
-            return widget
+        box = QVBoxLayout()
+        box.setContentsMargins(8, 8, 8, 8)
+        box.setSpacing(6)
 
-        form = self._compact_form()
+        guide_box = QTextEdit()
+        guide_box.setReadOnly(True)
+        guide_box.setPlainText(self.t("settings_intro"))
+        guide_box.setMaximumHeight(82)
+        box.addWidget(guide_box, 0)
+
+        common_form = self._compact_form()
+        self.set_language = QComboBox()
+        self.set_language.addItems(SUPPORTED_LANGUAGES)
+        self.set_language.setCurrentText(self.lang)
+        common_form.addRow(HelpLabel(self.t("language"), "UI language." if _is_en(self) else "UIの表示言語です。デフォルトは日本語です。"), self.set_language)
+
+        self.set_target_model = QComboBox()
+        self.set_target_model.addItems(available_model_labels())
+        saved_profile = nested_get(self.settings, "ui", "target_model", v1_default_profile().id) or v1_default_profile().id
+        self.set_target_model.setCurrentText(label_for_profile(saved_profile))
+        common_form.addRow(HelpLabel("Target model", "Choose the model to configure and train." if _is_en(self) else "設定・学習対象のモデルです。選択に応じて必要なモデルパス欄だけ表示します。"), self.set_target_model)
+
+        self.set_musubi_repo = self._line(nested_get(self.settings, "musubi", "repo_path"))
+        common_form.addRow(HelpLabel(self.t("label_musubi_repo"), HELP["musubi_repo"]), self._browse_dir_row(self.set_musubi_repo))
+        self.set_musubi_python = self._line(nested_get(self.settings, "musubi", "python_path"))
+        common_form.addRow(HelpLabel(self.t("label_musubi_python"), HELP["musubi_python"]), self._browse_file_row(self.set_musubi_python))
+        self.set_datasets_dir = self._line(nested_get(self.settings, "paths", "datasets_dir"))
+        common_form.addRow(HelpLabel(self.t("label_datasets_dir"), HELP["datasets_dir"]), self._browse_dir_row(self.set_datasets_dir))
+        self.set_outputs_dir = self._line(nested_get(self.settings, "paths", "outputs_dir"))
+        common_form.addRow(HelpLabel(self.t("label_outputs_dir"), HELP["outputs_dir"]), self._browse_dir_row(self.set_outputs_dir))
+        self.set_comfyui_loras_dir = self._line(nested_get(self.settings, "paths", "comfyui_loras_dir"))
+        common_form.addRow(HelpLabel(self.t("label_comfyui_loras_dir"), HELP["comfyui_loras_dir"]), self._browse_dir_row(self.set_comfyui_loras_dir))
+
+        common_group = QGroupBox("Common Settings" if _is_en(self) else "共通設定")
+        common_layout = QVBoxLayout()
+        common_layout.addLayout(common_form)
+        common_group.setLayout(common_layout)
+        box.addWidget(common_group, 0)
+
+        self.model_settings_note = QTextEdit()
+        self.model_settings_note.setReadOnly(True)
+        self.model_settings_note.setMaximumHeight(96)
+        box.addWidget(self.model_settings_note, 0)
+
+        z_form = self._compact_form()
+        self.set_zimage_dit = self._line(nested_get(self.settings, "model_paths", "zimage_dit"))
+        self.set_zimage_vae = self._line(nested_get(self.settings, "model_paths", "zimage_vae"))
+        self.set_zimage_text_encoder = self._line(nested_get(self.settings, "model_paths", "zimage_text_encoder"))
+        self.set_zimage_base_weights = self._line(nested_get(self.settings, "model_paths", "zimage_base_weights"))
+        z_form.addRow(HelpLabel(ZIMAGE_LABELS["zimage_dit"], _z_help(self, "zimage_dit")), self._browse_file_row(self.set_zimage_dit))
+        z_form.addRow(HelpLabel(ZIMAGE_LABELS["zimage_vae"], _z_help(self, "zimage_vae")), self._browse_file_row(self.set_zimage_vae))
+        z_form.addRow(HelpLabel(ZIMAGE_LABELS["zimage_text_encoder"], _z_help(self, "zimage_text_encoder")), self._browse_file_row(self.set_zimage_text_encoder))
+        z_form.addRow(HelpLabel(ZIMAGE_LABELS["zimage_base_weights"], _z_help(self, "zimage_base_weights")), self._browse_file_row(self.set_zimage_base_weights))
+        self.zimage_settings_group = QGroupBox("Z-Image / Z-Image-Turbo Model Paths")
+        z_layout = QVBoxLayout()
+        z_layout.addLayout(z_form)
+        self.zimage_settings_group.setLayout(z_layout)
+        box.addWidget(self.zimage_settings_group, 0)
+
+        wan_form = self._compact_form()
         self.set_wan_vae = self._line(nested_get(self.settings, "model_paths", "wan_vae"))
         self.set_wan_t5 = self._line(nested_get(self.settings, "model_paths", "wan_t5"))
         self.set_wan_dit = self._line(nested_get(self.settings, "model_paths", "wan_dit"))
         self.set_wan_dit_high_noise = self._line(nested_get(self.settings, "model_paths", "wan_dit_high_noise"))
+        wan_form.addRow(HelpLabel(WAN_LABELS["wan_vae"], _wan_help(self, "wan_vae")), self._browse_file_row(self.set_wan_vae))
+        wan_form.addRow(HelpLabel(WAN_LABELS["wan_t5"], _wan_help(self, "wan_t5")), self._browse_file_row(self.set_wan_t5))
+        wan_form.addRow(HelpLabel(WAN_LABELS["wan_dit"], _wan_help(self, "wan_dit")), self._browse_file_row(self.set_wan_dit))
+        wan_form.addRow(HelpLabel(WAN_LABELS["wan_dit_high_noise"], _wan_help(self, "wan_dit_high_noise")), self._browse_file_row(self.set_wan_dit_high_noise))
+        self.wan_settings_group = QGroupBox("Wan2.2 Model Paths")
+        wan_layout = QVBoxLayout()
+        wan_layout.addLayout(wan_form)
+        self.wan_settings_group.setLayout(wan_layout)
+        box.addWidget(self.wan_settings_group, 0)
 
-        form.addRow(HelpLabel(WAN_LABELS["wan_vae"], _help(self, "wan_vae")), self._browse_file_row(self.set_wan_vae))
-        form.addRow(HelpLabel(WAN_LABELS["wan_t5"], _help(self, "wan_t5")), self._browse_file_row(self.set_wan_t5))
-        form.addRow(HelpLabel(WAN_LABELS["wan_dit"], _help(self, "wan_dit")), self._browse_file_row(self.set_wan_dit))
-        form.addRow(HelpLabel(WAN_LABELS["wan_dit_high_noise"], _help(self, "wan_dit_high_noise")), self._browse_file_row(self.set_wan_dit_high_noise))
+        row = QHBoxLayout()
+        row.setContentsMargins(0, 0, 0, 0)
+        row.setSpacing(6)
+        row.addWidget(self._button(self.t("validate_settings"), self._validate_settings))
+        row.addWidget(self._button(self.t("detect_zimage_files"), self._detect_zimage_files))
+        row.addWidget(self._button(self.t("save_settings"), self._save_settings))
+        row.addWidget(self._button(self.t("reload_settings"), self._reload_settings_fields))
+        row.addStretch()
+        box.addLayout(row)
 
-        group = QGroupBox("Wan2.2 Model Paths")
-        group_layout = QVBoxLayout()
-        group_layout.addLayout(form)
-        group.setLayout(group_layout)
+        self.settings_log = self._log()
+        self.settings_log.setMinimumHeight(220)
+        box.addWidget(self.settings_log, 1)
 
-        insert_at = max(0, layout.count() - 1)
-        layout.insertWidget(insert_at, group, 0)
-        return widget
+        self.set_target_model.currentTextChanged.connect(lambda _value: self._refresh_model_settings_visibility())
+        w = QWidget()
+        w.setLayout(box)
+        self._refresh_model_settings_visibility()
+        return w
+
+    def patched_settings_values(self) -> dict[str, str]:
+        values = {
+            "musubi_repo": self.set_musubi_repo.text(),
+            "musubi_python": self.set_musubi_python.text(),
+            "datasets_dir": self.set_datasets_dir.text(),
+            "outputs_dir": self.set_outputs_dir.text(),
+            "comfyui_loras_dir": self.set_comfyui_loras_dir.text(),
+        }
+        profile_id = _settings_profile_id(self)
+        if profile_id == "wan2.2":
+            values.update({
+                "wan_vae": self.set_wan_vae.text(),
+                "wan_t5": self.set_wan_t5.text(),
+                "wan_dit": self.set_wan_dit.text(),
+                "wan_dit_high_noise": self.set_wan_dit_high_noise.text(),
+            })
+        else:
+            values.update({
+                "zimage_dit": self.set_zimage_dit.text(),
+                "zimage_vae": self.set_zimage_vae.text(),
+                "zimage_text_encoder": self.set_zimage_text_encoder.text(),
+                "zimage_base_weights": self.set_zimage_base_weights.text(),
+            })
+        return values
 
     def patched_settings_data_from_fields(self) -> dict:
-        data = original_settings_data(self)
+        data = load_settings(__import__("desktop_main").SETTINGS_PATH)
+        data.setdefault("ui", {})["language"] = self.set_language.currentText()
+        data["ui"]["target_model"] = _settings_profile_id(self)
+        data.setdefault("musubi", {})["repo_path"] = self.set_musubi_repo.text()
+        data["musubi"]["python_path"] = self.set_musubi_python.text()
+        data.setdefault("paths", {})["datasets_dir"] = self.set_datasets_dir.text()
+        data["paths"]["outputs_dir"] = self.set_outputs_dir.text()
+        data["paths"]["comfyui_loras_dir"] = self.set_comfyui_loras_dir.text()
         model_paths = data.setdefault("model_paths", {})
-        if hasattr(self, "set_wan_vae"):
-            model_paths["wan_vae"] = self.set_wan_vae.text()
-            model_paths["wan_t5"] = self.set_wan_t5.text()
-            model_paths["wan_dit"] = self.set_wan_dit.text()
-            model_paths["wan_dit_high_noise"] = self.set_wan_dit_high_noise.text()
+        model_paths["zimage_dit"] = self.set_zimage_dit.text()
+        model_paths["zimage_vae"] = self.set_zimage_vae.text()
+        model_paths["zimage_text_encoder"] = self.set_zimage_text_encoder.text()
+        model_paths["zimage_base_weights"] = self.set_zimage_base_weights.text()
+        model_paths["wan_vae"] = self.set_wan_vae.text()
+        model_paths["wan_t5"] = self.set_wan_t5.text()
+        model_paths["wan_dit"] = self.set_wan_dit.text()
+        model_paths["wan_dit_high_noise"] = self.set_wan_dit_high_noise.text()
         return data
 
     desktop_app_class._settings_tab = patched_settings_tab
+    desktop_app_class._settings_values = patched_settings_values
     desktop_app_class._settings_data_from_fields = patched_settings_data_from_fields
+    desktop_app_class._refresh_model_settings_visibility = refresh_model_settings_visibility
