@@ -67,6 +67,8 @@ def preview_from_settings(
             lr=lr,
         )
     )
+    if command.startswith("NG:"):
+        return command
 
     return (
         "# Command Preview\n"
