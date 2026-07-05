@@ -18,12 +18,85 @@ llm_endpoint = "http://localhost:8000/v1/chat/completions"
 llm_model = "qwen-caption-helper"
 
 [model_paths]
+# Z-Image / Z-Image-Turbo
+zimage_dit = "../models/z-image/Tongyi-MAI/Z-Image/transformer/diffusion_pytorch_model-00001-of-00002.safetensors"
+zimage_vae = "../models/z-image/Tongyi-MAI/Z-Image/vae/diffusion_pytorch_model.safetensors"
+zimage_text_encoder = "../models/z-image/Tongyi-MAI/Z-Image/text_encoder/model-00001-of-00003.safetensors"
+zimage_base_weights = ""
+
+# Wan2.2
 wan_vae = "../models/wan/Wan2.2-T2V-A14B/Wan2.1_VAE.pth"
 wan_t5 = "../models/wan/Wan2.2-T2V-A14B/models_t5_umt5-xxl-enc-bf16.pth"
 wan_dit = "../models/wan/Wan2.2-T2V-A14B/low_noise_model/diffusion_pytorch_model.safetensors.index.json"
 wan_dit_high_noise = "../models/wan/Wan2.2-T2V-A14B/high_noise_model/diffusion_pytorch_model.safetensors.index.json"
 
-zimage_dit = "../models/z-image/Tongyi-MAI/Z-Image/transformer/diffusion_pytorch_model-00001-of-00002.safetensors"
-zimage_vae = "../models/z-image/Tongyi-MAI/Z-Image/vae/diffusion_pytorch_model.safetensors"
-zimage_text_encoder = "../models/z-image/Tongyi-MAI/Z-Image/text_encoder/model-00001-of-00003.safetensors"
-zimage_base_weights = ""
+# Wan2.1
+wan21_vae = ""
+wan21_t5 = ""
+wan21_dit = ""
+
+# Wan2.1/2.2 Single Frame
+wan_sf_vae = ""
+wan_sf_t5 = ""
+wan_sf_dit = ""
+
+# HunyuanVideo
+hv_vae = ""
+hv_text_encoder = ""
+hv_dit = ""
+
+# HunyuanVideo 1.5
+hv15_vae = ""
+hv15_text_encoder = ""
+hv15_dit = ""
+
+# FramePack
+fpack_vae = ""
+fpack_text_encoder = ""
+fpack_dit = ""
+
+# FramePack Single Frame
+fpack_sf_vae = ""
+fpack_sf_text_encoder = ""
+fpack_sf_dit = ""
+
+# FLUX.1 Kontext
+flux_kontext_vae = ""
+flux_kontext_clip_l = ""
+flux_kontext_t5 = ""
+flux_kontext_dit = ""
+
+# FLUX.2 dev
+flux2_dev_vae = ""
+flux2_dev_text_encoder = ""
+flux2_dev_dit = ""
+
+# FLUX.2 klein
+flux2_klein_vae = ""
+flux2_klein_text_encoder = ""
+flux2_klein_dit = ""
+
+# Qwen-Image
+qwen_image_vae = ""
+qwen_image_text_encoder = ""
+qwen_image_dit = ""
+
+# HiDream-O1-Image
+hidream_o1_vae = ""
+hidream_o1_text_encoder = ""
+hidream_o1_dit = ""
+
+# Kandinsky 5
+kandinsky5_vae = ""
+kandinsky5_text_encoder = ""
+kandinsky5_dit = ""
+
+# Ideogram4
+ideogram4_vae = ""
+ideogram4_text_encoder = ""
+ideogram4_dit = ""
+
+# Krea 2
+krea2_vae = ""
+krea2_text_encoder = ""
+krea2_dit = ""
