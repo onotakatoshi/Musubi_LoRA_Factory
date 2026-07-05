@@ -23,16 +23,16 @@ def run_preflight(settings_path: Path, dataset_toml: str, target_model: str, tas
     lines = [
         "# Preflight Check",
         "",
-        "Ver 1.0 は Z-Image / Z-Image-Turbo 用LoRA作成に限定しています。",
-        "パス検証はモデルアダプタ経由です。Musubi Tuner対応モデルを後から追加しやすい構造にしています。",
+        f"Target model: {profile.display_name}",
+        "パス検証はモデルアダプタ経由です。Z-Image / Wan2.2 などモデルごとに必要ファイルを確認します。",
         "Relative paths are resolved from the repository root.",
         "",
     ]
 
     if not profile.enabled_in_v1:
-        return f"❌ Ver 1.0 では {profile.display_name} は非対応です。Z-Image / Z-Image-Turbo の検証後に追加します。"
+        return f"❌ {profile.display_name} はまだ非対応です。"
     if task != profile.task:
-        return f"❌ Ver 1.0 の {profile.display_name} profile は task={profile.task} 固定です。"
+        return f"❌ {profile.display_name} profile は task={profile.task} 固定です。"
 
     if not settings_path.exists():
         return f"❌ settings.toml がありません: {settings_path}\nアプリの設定タブ、または configs/settings.example.toml から作成してください。"
@@ -89,6 +89,11 @@ def run_preflight(settings_path: Path, dataset_toml: str, target_model: str, tas
         lines.append("## Z-Image note")
         lines.append("- Turbo系そのものを直接学習するより、BaseまたはDe-Turbo系DiTを学習対象にする想定です。")
         lines.append("- 生成時にZ-Image-TurboワークフローへLoRAを適用する運用を優先します。")
+        lines.append("")
+    elif profile.id == "wan2.2":
+        lines.append("## Wan2.2 note")
+        lines.append("- 初期実装は t2v-A14B を対象にします。")
+        lines.append("- wan_dit_high_noise を設定すると、high/low 2系統DiTを使うコマンドを作ります。")
         lines.append("")
 
     text = "\n".join(lines)
