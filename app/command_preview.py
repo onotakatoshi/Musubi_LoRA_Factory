@@ -30,9 +30,9 @@ def preview_from_settings(
 ) -> str:
     profile = get_profile(target_model)
     if not profile.enabled_in_v1:
-        return f"NG: Ver 1.0 では {profile.display_name} は非対応です。Z-Image / Z-Image-Turbo の検証後に追加します。"
+        return f"NG: {profile.display_name} はまだ非対応です。"
     if task != profile.task:
-        return f"NG: Ver 1.0 の {profile.display_name} profile は task={profile.task} 固定です。"
+        return f"NG: {profile.display_name} profile は task={profile.task} 固定です。"
     if not settings_path.exists():
         return f"NG: settings.toml がありません: {settings_path}"
     if not dataset_toml:
@@ -70,8 +70,8 @@ def preview_from_settings(
 
     return (
         "# Command Preview\n"
-        "# Ver 1.0 は Z-Image / Z-Image-Turbo 用LoRA作成に限定しています。\n"
-        "# コマンド生成はモデルアダプタ経由です。Musubi Tuner対応モデルを後から追加しやすい構造にしています。\n"
-        "# 内容を確認し、問題なければPGX上で順番に実行してください。\n\n"
+        f"# Target model: {profile.display_name}\n"
+        f"# Task: {profile.task}\n"
+        "# コマンド生成はモデルアダプタ経由です。内容を確認し、問題なければPGX上で順番に実行してください。\n\n"
         + command
     )
