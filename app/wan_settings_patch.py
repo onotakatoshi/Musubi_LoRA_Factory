@@ -7,6 +7,11 @@ from model_ui import available_model_labels, help_for_profile, label_for_profile
 from settings_detect import validate_settings_paths
 from settings_io import load_settings, nested_get
 
+RIGHT_PANEL_TOP_OFFSET = 14
+MODEL_NOTE_HEIGHT = 102
+MODEL_GROUP_SPACING = 18
+MODEL_PATH_GROUP_MIN_HEIGHT = 206
+
 ZIMAGE_HELP_JA = {
     "zimage_dit": "Z-Imageの学習対象DiTです。BaseまたはDe-Turbo系を指定します。",
     "zimage_vae": "Z-Image用VAEファイルです。",
@@ -134,7 +139,8 @@ def apply_wan_settings_patch(desktop_app_class) -> None:
 
         self.model_settings_note = QTextEdit()
         self.model_settings_note.setReadOnly(True)
-        self.model_settings_note.setMaximumHeight(74)
+        self.model_settings_note.setMinimumHeight(MODEL_NOTE_HEIGHT)
+        self.model_settings_note.setMaximumHeight(MODEL_NOTE_HEIGHT)
 
         z_form = self._compact_form()
         self.set_zimage_dit = self._line(nested_get(self.settings, "model_paths", "zimage_dit"))
@@ -146,6 +152,7 @@ def apply_wan_settings_patch(desktop_app_class) -> None:
         z_form.addRow(HelpLabel(ZIMAGE_LABELS["zimage_text_encoder"], _z_help(self, "zimage_text_encoder")), self._browse_file_row(self.set_zimage_text_encoder))
         z_form.addRow(HelpLabel(ZIMAGE_LABELS["zimage_base_weights"], _z_help(self, "zimage_base_weights")), self._browse_file_row(self.set_zimage_base_weights))
         self.zimage_settings_group = QGroupBox("Z-Image / Z-Image-Turbo Model Paths")
+        self.zimage_settings_group.setMinimumHeight(MODEL_PATH_GROUP_MIN_HEIGHT)
         z_layout = QVBoxLayout()
         z_layout.addLayout(z_form)
         self.zimage_settings_group.setLayout(z_layout)
@@ -160,14 +167,15 @@ def apply_wan_settings_patch(desktop_app_class) -> None:
         wan_form.addRow(HelpLabel(WAN_LABELS["wan_dit"], _wan_help(self, "wan_dit")), self._browse_file_row(self.set_wan_dit))
         wan_form.addRow(HelpLabel(WAN_LABELS["wan_dit_high_noise"], _wan_help(self, "wan_dit_high_noise")), self._browse_file_row(self.set_wan_dit_high_noise))
         self.wan_settings_group = QGroupBox("Wan2.2 Model Paths")
+        self.wan_settings_group.setMinimumHeight(MODEL_PATH_GROUP_MIN_HEIGHT)
         wan_layout = QVBoxLayout()
         wan_layout.addLayout(wan_form)
         self.wan_settings_group.setLayout(wan_layout)
 
         right_panel = QWidget()
         right_layout = QVBoxLayout()
-        right_layout.setContentsMargins(0, 0, 0, 0)
-        right_layout.setSpacing(6)
+        right_layout.setContentsMargins(0, RIGHT_PANEL_TOP_OFFSET, 0, 0)
+        right_layout.setSpacing(MODEL_GROUP_SPACING)
         right_layout.addWidget(self.model_settings_note, 0)
         right_layout.addWidget(self.zimage_settings_group, 0)
         right_layout.addWidget(self.wan_settings_group, 0)
