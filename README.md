@@ -117,16 +117,22 @@ bash ./scripts/download_model_assets.sh wan22-all --models-dir /mnt/models
 bash ./scripts/download_model_assets.sh wan22-all --dry-run
 ```
 
-すでにダウンロード済みで、Settingsの空欄だけ自動入力したい場合:
+すでにダウンロード済みで、Settingsへパスを反映したい場合:
 
 ```bash
 python3 scripts/sync_model_paths.py --models-dir ~/models
 ```
 
-既存の空欄だけでなく、古い値も上書きしたい場合:
+既存値を残したい場合だけ `--keep-existing` を付けます。
 
 ```bash
-python3 scripts/sync_model_paths.py --models-dir ~/models --overwrite
+python3 scripts/sync_model_paths.py --models-dir ~/models --keep-existing
+```
+
+全Target modelのファイル有無と設定状況を確認する場合:
+
+```bash
+python3 scripts/audit_model_assets.py
 ```
 
 ゲート付きモデルで失敗する場合は、先にHugging Faceでライセンス承認し、PGX上でログインします。
