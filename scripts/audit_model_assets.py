@@ -4,16 +4,17 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-import toml
-
 ROOT = Path(__file__).resolve().parents[1]
 APP_DIR = ROOT / "app"
-if str(APP_DIR) not in sys.path:
-    sys.path.insert(0, str(APP_DIR))
+SCRIPT_DIR = ROOT / "scripts"
+for item in (APP_DIR, SCRIPT_DIR):
+    if str(item) not in sys.path:
+        sys.path.insert(0, str(item))
 
 from model_path_autofill_recursive import detect_paths  # noqa: E402
 from model_registry import enabled_profiles  # noqa: E402
 from model_settings_catalog import settings_spec  # noqa: E402
+from toml_compat import load as toml_load  # noqa: E402
 
 SETTINGS_PATH = ROOT / "configs" / "settings.toml"
 MODELS_DIR = ROOT.parent / "models"
@@ -28,7 +29,7 @@ def resolve_setting_path(value: str) -> Path:
 
 def load_settings() -> dict:
     if SETTINGS_PATH.exists():
-        return toml.load(SETTINGS_PATH)
+        return toml_load(SETTINGS_PATH)
     return {}
 
 
