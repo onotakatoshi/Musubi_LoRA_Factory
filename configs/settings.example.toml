@@ -53,7 +53,8 @@ wan_sf_dit = ""
 
 # HunyuanVideo
 hv_vae = ""
-hv_text_encoder = ""
+hv_text_encoder1 = ""
+hv_text_encoder2 = ""
 hv_dit = ""
 
 # HunyuanVideo 1.5

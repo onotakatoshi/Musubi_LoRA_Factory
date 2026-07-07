@@ -74,9 +74,11 @@ MODEL_PATH_CANDIDATES: dict[str, list[str]] = {
         "hunyuan-video/HunyuanVideo/hunyuan-video-t2v-720p/vae/pytorch_model.pt",
         "hunyuan-video/HunyuanVideo/vae/pytorch_model.pt",
     ],
-    "hv_text_encoder": [
-        "hunyuan-video/HunyuanVideo/text_encoder/pytorch_model.bin",
-        "hunyuan-video/HunyuanVideo/text_encoder",
+    "hv_text_encoder1": [
+        "hunyuan-video/Comfy-Org/HunyuanVideo_repackaged/split_files/text_encoders/llava_llama3_fp16.safetensors",
+    ],
+    "hv_text_encoder2": [
+        "hunyuan-video/Comfy-Org/HunyuanVideo_repackaged/split_files/text_encoders/clip_l.safetensors",
     ],
     "hv_dit": [
         "hunyuan-video/HunyuanVideo/hunyuan-video-t2v-720p/transformers/mp_rank_00_model_states.pt",
@@ -124,16 +126,16 @@ MODEL_PATH_CANDIDATES: dict[str, list[str]] = {
     ],
 
     # FLUX.2 klein
-    "flux2_klein_vae": ["flux/FLUX.2-klein/vae/diffusion_pytorch_model.safetensors"],
+    "flux2_klein_vae": ["flux/FLUX.2-klein-9B/vae/diffusion_pytorch_model.safetensors"],
     "flux2_klein_text_encoder": [
-        "flux/FLUX.2-klein/text_encoder_2/model.safetensors",
-        "flux/FLUX.2-klein/text_encoder_2",
-        "flux/FLUX.2-klein/text_encoder/model.safetensors",
-        "flux/FLUX.2-klein/text_encoder",
+        "flux/FLUX.2-klein-9B/text_encoder_2/model.safetensors",
+        "flux/FLUX.2-klein-9B/text_encoder_2",
+        "flux/FLUX.2-klein-9B/text_encoder/model.safetensors",
+        "flux/FLUX.2-klein-9B/text_encoder",
     ],
     "flux2_klein_dit": [
-        "flux/FLUX.2-klein/transformer/diffusion_pytorch_model.safetensors.index.json",
-        "flux/FLUX.2-klein/transformer",
+        "flux/FLUX.2-klein-9B/transformer/diffusion_pytorch_model.safetensors.index.json",
+        "flux/FLUX.2-klein-9B/transformer",
     ],
 
     # These are placeholders until their official download layouts are verified.

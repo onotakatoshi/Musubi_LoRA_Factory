@@ -27,9 +27,10 @@ KEYS: dict[str, tuple[list[str], str]] = {
     "qwen_image_vae": (["Qwen-Image"], "vae"),
     "qwen_image_text_encoder": (["Qwen-Image"], "text"),
     "qwen_image_dit": (["Qwen-Image"], "dit"),
-    "hv_vae": (["HunyuanVideo"], "vae"),
-    "hv_text_encoder": (["HunyuanVideo"], "text"),
-    "hv_dit": (["HunyuanVideo"], "dit"),
+    "hv_vae": (["hunyuan-video-t2v-720p"], "vae"),
+    "hv_text_encoder1": (["HunyuanVideo_repackaged"], "text_llava"),
+    "hv_text_encoder2": (["HunyuanVideo_repackaged"], "text_clip"),
+    "hv_dit": (["hunyuan-video-t2v-720p"], "dit"),
     "flux_kontext_vae": (["FLUX.1-Kontext-dev", "FLUX.1-Kontext"], "vae"),
     "flux_kontext_clip_l": (["FLUX.1-Kontext-dev", "FLUX.1-Kontext"], "text"),
     "flux_kontext_t5": (["FLUX.1-Kontext-dev", "FLUX.1-Kontext"], "t5"),
@@ -37,9 +38,9 @@ KEYS: dict[str, tuple[list[str], str]] = {
     "flux2_dev_vae": (["FLUX.2-dev"], "vae"),
     "flux2_dev_text_encoder": (["FLUX.2-dev"], "text"),
     "flux2_dev_dit": (["FLUX.2-dev"], "dit"),
-    "flux2_klein_vae": (["FLUX.2-klein"], "vae"),
-    "flux2_klein_text_encoder": (["FLUX.2-klein"], "text"),
-    "flux2_klein_dit": (["FLUX.2-klein"], "dit"),
+    "flux2_klein_vae": (["FLUX.2-klein-9B"], "vae"),
+    "flux2_klein_text_encoder": (["FLUX.2-klein-9B"], "text"),
+    "flux2_klein_dit": (["FLUX.2-klein-9B"], "dit"),
 }
 
 
@@ -55,6 +56,8 @@ def find_root(models_dir: Path, hints: list[str]) -> Path | None:
     if not models_dir.exists():
         return None
     for p in sorted(x for x in models_dir.rglob("*") if x.is_dir()):
+        if ".cache" in p.parts:
+            continue
         name = p.name.lower()
         if any(h == name or h in name for h in lowered):
             return p
@@ -67,7 +70,11 @@ def wanted(path: Path, role: str) -> bool:
     if role == "vae":
         return "vae" in s and path.suffix.lower() in {".pth", ".pt", ".safetensors"}
     if role == "t5":
-        return ("t5" in s or "umt5" in s) and path.suffix.lower() in {".pth", ".pt", ".safetensors", ".bin"}
+        return ("t5" in s or "umt5" in s or "text_encoder_2" in s) and (n.endswith(".index.json") or path.suffix.lower() in {".pth", ".pt", ".safetensors", ".bin"})
+    if role == "text_llava":
+        return "llava" in n and path.suffix.lower() in {".pth", ".pt", ".safetensors", ".bin"}
+    if role == "text_clip":
+        return ("clip_l" in n or "clip" in n) and path.suffix.lower() in {".pth", ".pt", ".safetensors", ".bin"}
     if role == "text":
         return any(x in s for x in ["text_encoder", "clip", "llm", "t5", "umt5"]) and path.suffix.lower() in {".pth", ".pt", ".safetensors", ".bin"}
     if role == "low":
@@ -97,7 +104,7 @@ def score(path: Path, role: str) -> tuple[int, str]:
 
 
 def find_role(root: Path, role: str) -> Path | None:
-    files = [p for p in root.rglob("*") if p.is_file() and wanted(p, role)]
+    files = [p for p in root.rglob("*") if p.is_file() and ".cache" not in p.parts and wanted(p, role)]
     if files:
         return sorted(files, key=lambda p: score(p, role))[0]
     if role == "low":

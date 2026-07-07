@@ -46,19 +46,20 @@ KNOWN_FILES: tuple[FileSpec, ...] = (
 
     FileSpec("flux_kontext_vae", ("diffusion_pytorch_model.safetensors",), ("FLUX.1-Kontext", "vae")),
     FileSpec("flux_kontext_clip_l", ("model.safetensors",), ("FLUX.1-Kontext", "text_encoder")),
-    FileSpec("flux_kontext_t5", ("model.safetensors",), ("FLUX.1-Kontext", "text_encoder_2")),
+    FileSpec("flux_kontext_t5", ("model.safetensors.index.json", "model.safetensors"), ("FLUX.1-Kontext", "text_encoder_2")),
     FileSpec("flux_kontext_dit", ("diffusion_pytorch_model.safetensors.index.json", "diffusion_pytorch_model.safetensors"), ("FLUX.1-Kontext", "transformer")),
 
     FileSpec("flux2_dev_vae", ("diffusion_pytorch_model.safetensors",), ("FLUX.2-dev", "vae")),
     FileSpec("flux2_dev_text_encoder", ("model.safetensors",), ("FLUX.2-dev", "text_encoder"), ("text_encoder_2",)),
     FileSpec("flux2_dev_dit", ("diffusion_pytorch_model.safetensors.index.json", "diffusion_pytorch_model.safetensors"), ("FLUX.2-dev", "transformer")),
 
-    FileSpec("flux2_klein_vae", ("diffusion_pytorch_model.safetensors",), ("FLUX.2-klein", "vae")),
-    FileSpec("flux2_klein_text_encoder", ("model.safetensors",), ("FLUX.2-klein", "text_encoder"), ("text_encoder_2",)),
-    FileSpec("flux2_klein_dit", ("diffusion_pytorch_model.safetensors.index.json", "diffusion_pytorch_model.safetensors"), ("FLUX.2-klein", "transformer")),
+    FileSpec("flux2_klein_vae", ("diffusion_pytorch_model.safetensors",), ("FLUX.2-klein-9B", "vae")),
+    FileSpec("flux2_klein_text_encoder", ("model.safetensors",), ("FLUX.2-klein-9B", "text_encoder"), ("text_encoder_2",)),
+    FileSpec("flux2_klein_dit", ("diffusion_pytorch_model.safetensors.index.json", "diffusion_pytorch_model.safetensors"), ("FLUX.2-klein-9B", "transformer")),
 
     FileSpec("hv_vae", ("pytorch_model.pt", "diffusion_pytorch_model.safetensors"), ("HunyuanVideo", "vae")),
-    FileSpec("hv_text_encoder", ("pytorch_model.bin", "model.safetensors"), ("HunyuanVideo", "text_encoder")),
+    FileSpec("hv_text_encoder1", ("llava_llama3_fp16.safetensors",), ("HunyuanVideo_repackaged", "text_encoders")),
+    FileSpec("hv_text_encoder2", ("clip_l.safetensors",), ("HunyuanVideo_repackaged", "text_encoders")),
     FileSpec("hv_dit", ("mp_rank_00_model_states.pt", "diffusion_pytorch_model.safetensors", "diffusion_pytorch_model.safetensors.index.json"), ("HunyuanVideo",), ("transformer", "transformers"), ("vae", "text_encoder")),
 )
 

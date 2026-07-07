@@ -148,6 +148,64 @@ def build_zimage_preview(musubi_python: Path, musubi_repo: Path, dataset_toml: P
     ])
 
 
+def qwen_image_cache_latents_command(musubi_python: Path, musubi_repo: Path, dataset_toml: Path, paths: ModelPaths) -> str:
+    command = " ".join([q(musubi_python), "src/musubi_tuner/qwen_image_cache_latents.py", "--dataset_config", q(dataset_toml), "--vae", q(paths.vae)])
+    return in_repo(command, musubi_repo)
+
+
+def qwen_image_cache_text_command(musubi_python: Path, musubi_repo: Path, dataset_toml: Path, paths: ModelPaths, batch_size: int = 16, fp8_vl: bool = True) -> str:
+    parts = [q(musubi_python), "src/musubi_tuner/qwen_image_cache_text_encoder_outputs.py", "--dataset_config", q(dataset_toml), "--text_encoder", q(paths.text_encoder), "--batch_size", str(batch_size)]
+    if fp8_vl:
+        parts.append("--fp8_vl")
+    return in_repo(" ".join(parts), musubi_repo)
+
+
+def qwen_image_train_command(
+    musubi_python: Path,
+    musubi_repo: Path,
+    dataset_toml: Path,
+    paths: ModelPaths,
+    output_dir: Path,
+    output_name: str,
+    rank: int,
+    alpha: int,
+    epochs: int,
+    lr: float,
+    mixed_precision: str = "bf16",
+    optimizer: str = "adamw8bit",
+    fp8_scaled: bool = True,
+    fp8_vl: bool = True,
+) -> str:
+    parts = [
+        *accelerate_launch(musubi_python, mixed_precision),
+        "src/musubi_tuner/qwen_image_train_network.py", "--dit", q(paths.dit), "--vae", q(paths.vae), "--text_encoder", q(paths.text_encoder),
+        "--dataset_config", q(dataset_toml), "--sdpa", "--mixed_precision", mixed_precision, "--timestep_sampling", "shift",
+        "--optimizer_type", optimizer, "--learning_rate", str(lr), "--gradient_checkpointing",
+        "--max_data_loader_n_workers", "2", "--persistent_data_loader_workers",
+        "--network_module", "networks.lora_qwen_image", "--network_dim", str(rank), "--network_alpha", str(alpha),
+        "--max_train_epochs", str(epochs), "--save_every_n_epochs", "1", "--seed", "42",
+        "--output_dir", q(output_dir), "--output_name", q(output_name),
+    ]
+    if fp8_scaled:
+        parts.append("--fp8_scaled")
+    if fp8_vl:
+        parts.append("--fp8_vl")
+    return in_repo(" ".join(parts), musubi_repo)
+
+
+def build_qwen_image_preview(musubi_python: Path, musubi_repo: Path, dataset_toml: Path, output_dir: Path, output_name: str, paths: ModelPaths, rank: int, alpha: int, epochs: int, lr: float) -> str:
+    return "\n".join([
+        "# 1. Latent cache",
+        qwen_image_cache_latents_command(musubi_python, musubi_repo, dataset_toml, paths),
+        "",
+        "# 2. Text encoder cache",
+        qwen_image_cache_text_command(musubi_python, musubi_repo, dataset_toml, paths),
+        "",
+        "# 3. Train LoRA",
+        qwen_image_train_command(musubi_python=musubi_python, musubi_repo=musubi_repo, dataset_toml=dataset_toml, paths=paths, output_dir=output_dir, output_name=output_name, rank=rank, alpha=alpha, epochs=epochs, lr=lr),
+    ])
+
+
 def build_wan_preview(musubi_python: Path, musubi_repo: Path, dataset_toml: Path, output_dir: Path, output_name: str, paths: ModelPaths, rank: int, alpha: int, epochs: int, lr: float, task: str) -> str:
     return "\n".join([
         "# 1. Latent cache",
@@ -161,9 +219,351 @@ def build_wan_preview(musubi_python: Path, musubi_repo: Path, dataset_toml: Path
     ])
 
 
+
+def flux_kontext_cache_latents_command(musubi_python: Path, musubi_repo: Path, dataset_toml: Path, paths: ModelPaths) -> str:
+    command = " ".join([
+        q(musubi_python), "src/musubi_tuner/flux_kontext_cache_latents.py",
+        "--dataset_config", q(dataset_toml),
+        "--vae", q(paths.vae),
+    ])
+    return in_repo(command, musubi_repo)
+
+
+def flux_kontext_cache_text_command(
+    musubi_python: Path,
+    musubi_repo: Path,
+    dataset_toml: Path,
+    paths: ModelPaths,
+    batch_size: int = 16,
+    fp8_t5: bool = True,
+) -> str:
+    parts = [
+        q(musubi_python), "src/musubi_tuner/flux_kontext_cache_text_encoder_outputs.py",
+        "--dataset_config", q(dataset_toml),
+        "--text_encoder1", q(paths.t5),
+        "--text_encoder2", q(paths.text_encoder),
+        "--batch_size", str(batch_size),
+    ]
+    if fp8_t5:
+        parts.append("--fp8_t5")
+    return in_repo(" ".join(parts), musubi_repo)
+
+
+def flux_kontext_train_command(
+    musubi_python: Path,
+    musubi_repo: Path,
+    dataset_toml: Path,
+    paths: ModelPaths,
+    output_dir: Path,
+    output_name: str,
+    rank: int,
+    alpha: int,
+    epochs: int,
+    lr: float,
+    mixed_precision: str = "bf16",
+    optimizer: str = "adamw8bit",
+    fp8_scaled: bool = True,
+    fp8_t5: bool = True,
+) -> str:
+    parts = [
+        *accelerate_launch(musubi_python, mixed_precision),
+        "src/musubi_tuner/flux_kontext_train_network.py",
+        "--dit", q(paths.dit),
+        "--vae", q(paths.vae),
+        "--text_encoder1", q(paths.t5),
+        "--text_encoder2", q(paths.text_encoder),
+        "--dataset_config", q(dataset_toml),
+        "--sdpa",
+        "--mixed_precision", mixed_precision,
+        "--timestep_sampling", "shift",
+        "--optimizer_type", optimizer,
+        "--learning_rate", str(lr),
+        "--gradient_checkpointing",
+        "--max_data_loader_n_workers", "2",
+        "--persistent_data_loader_workers",
+        "--network_module", "networks.lora_flux",
+        "--network_dim", str(rank),
+        "--network_alpha", str(alpha),
+        "--max_train_epochs", str(epochs),
+        "--save_every_n_epochs", "1",
+        "--seed", "42",
+        "--output_dir", q(output_dir),
+        "--output_name", q(output_name),
+    ]
+    if fp8_scaled:
+        parts.append("--fp8_scaled")
+    if fp8_t5:
+        parts.append("--fp8_t5")
+    return in_repo(" ".join(parts), musubi_repo)
+
+
+def build_flux_kontext_preview(
+    musubi_python: Path,
+    musubi_repo: Path,
+    dataset_toml: Path,
+    output_dir: Path,
+    output_name: str,
+    paths: ModelPaths,
+    rank: int,
+    alpha: int,
+    epochs: int,
+    lr: float,
+) -> str:
+    return "\n".join([
+        "# 1. Latent cache",
+        flux_kontext_cache_latents_command(musubi_python, musubi_repo, dataset_toml, paths),
+        "",
+        "# 2. Text encoder cache",
+        flux_kontext_cache_text_command(musubi_python, musubi_repo, dataset_toml, paths),
+        "",
+        "# 3. Train LoRA",
+        flux_kontext_train_command(
+            musubi_python=musubi_python,
+            musubi_repo=musubi_repo,
+            dataset_toml=dataset_toml,
+            paths=paths,
+            output_dir=output_dir,
+            output_name=output_name,
+            rank=rank,
+            alpha=alpha,
+            epochs=epochs,
+            lr=lr,
+        ),
+    ])
+
+
+def flux2_cache_latents_command(musubi_python: Path, musubi_repo: Path, dataset_toml: Path, paths: ModelPaths) -> str:
+    command = " ".join([
+        q(musubi_python), "src/musubi_tuner/flux_2_cache_latents.py",
+        "--dataset_config", q(dataset_toml),
+        "--vae", q(paths.vae),
+    ])
+    return in_repo(command, musubi_repo)
+
+
+def flux2_cache_text_command(
+    musubi_python: Path,
+    musubi_repo: Path,
+    dataset_toml: Path,
+    paths: ModelPaths,
+    batch_size: int = 16,
+    fp8_text_encoder: bool = True,
+) -> str:
+    parts = [
+        q(musubi_python), "src/musubi_tuner/flux_2_cache_text_encoder_outputs.py",
+        "--dataset_config", q(dataset_toml),
+        "--text_encoder", q(paths.text_encoder),
+        "--batch_size", str(batch_size),
+    ]
+    if fp8_text_encoder:
+        parts.append("--fp8_text_encoder")
+    return in_repo(" ".join(parts), musubi_repo)
+
+
+def flux2_train_command(
+    musubi_python: Path,
+    musubi_repo: Path,
+    dataset_toml: Path,
+    paths: ModelPaths,
+    output_dir: Path,
+    output_name: str,
+    rank: int,
+    alpha: int,
+    epochs: int,
+    lr: float,
+    mixed_precision: str = "bf16",
+    optimizer: str = "adamw8bit",
+    fp8_scaled: bool = True,
+    fp8_text_encoder: bool = True,
+) -> str:
+    parts = [
+        *accelerate_launch(musubi_python, mixed_precision),
+        "src/musubi_tuner/flux_2_train_network.py",
+        "--dit", q(paths.dit),
+        "--vae", q(paths.vae),
+        "--text_encoder", q(paths.text_encoder),
+        "--dataset_config", q(dataset_toml),
+        "--sdpa",
+        "--mixed_precision", mixed_precision,
+        "--timestep_sampling", "shift",
+        "--optimizer_type", optimizer,
+        "--learning_rate", str(lr),
+        "--gradient_checkpointing",
+        "--max_data_loader_n_workers", "2",
+        "--persistent_data_loader_workers",
+        "--network_module", "networks.lora_flux_2",
+        "--network_dim", str(rank),
+        "--network_alpha", str(alpha),
+        "--max_train_epochs", str(epochs),
+        "--save_every_n_epochs", "1",
+        "--seed", "42",
+        "--output_dir", q(output_dir),
+        "--output_name", q(output_name),
+    ]
+    if fp8_scaled:
+        parts.append("--fp8_scaled")
+    if fp8_text_encoder:
+        parts.append("--fp8_text_encoder")
+    return in_repo(" ".join(parts), musubi_repo)
+
+
+def build_flux2_preview(
+    musubi_python: Path,
+    musubi_repo: Path,
+    dataset_toml: Path,
+    output_dir: Path,
+    output_name: str,
+    paths: ModelPaths,
+    rank: int,
+    alpha: int,
+    epochs: int,
+    lr: float,
+) -> str:
+    return "\n".join([
+        "# 1. Latent cache",
+        flux2_cache_latents_command(musubi_python, musubi_repo, dataset_toml, paths),
+        "",
+        "# 2. Text encoder cache",
+        flux2_cache_text_command(musubi_python, musubi_repo, dataset_toml, paths),
+        "",
+        "# 3. Train LoRA",
+        flux2_train_command(
+            musubi_python=musubi_python,
+            musubi_repo=musubi_repo,
+            dataset_toml=dataset_toml,
+            paths=paths,
+            output_dir=output_dir,
+            output_name=output_name,
+            rank=rank,
+            alpha=alpha,
+            epochs=epochs,
+            lr=lr,
+        ),
+    ])
+
+
+
+def hunyuan_cache_latents_command(musubi_python: Path, musubi_repo: Path, dataset_toml: Path, paths: ModelPaths) -> str:
+    command = " ".join([
+        q(musubi_python), "src/musubi_tuner/cache_latents.py",
+        "--dataset_config", q(dataset_toml),
+        "--vae", q(paths.vae),
+    ])
+    return in_repo(command, musubi_repo)
+
+
+def hunyuan_cache_text_command(
+    musubi_python: Path,
+    musubi_repo: Path,
+    dataset_toml: Path,
+    paths: ModelPaths,
+    batch_size: int = 16,
+    fp8_llm: bool = True,
+) -> str:
+    parts = [
+        q(musubi_python), "src/musubi_tuner/cache_text_encoder_outputs.py",
+        "--dataset_config", q(dataset_toml),
+        "--text_encoder1", q(paths.text_encoder),
+        "--text_encoder2", q(paths.base_weights),
+        "--batch_size", str(batch_size),
+    ]
+    if fp8_llm:
+        parts.append("--fp8_llm")
+    return in_repo(" ".join(parts), musubi_repo)
+
+
+def hunyuan_train_command(
+    musubi_python: Path,
+    musubi_repo: Path,
+    dataset_toml: Path,
+    paths: ModelPaths,
+    output_dir: Path,
+    output_name: str,
+    rank: int,
+    alpha: int,
+    epochs: int,
+    lr: float,
+    mixed_precision: str = "bf16",
+    optimizer: str = "adamw8bit",
+    fp8_base: bool = True,
+) -> str:
+    parts = [
+        *accelerate_launch(musubi_python, mixed_precision),
+        "src/musubi_tuner/hv_train_network.py",
+        "--dit", q(paths.dit),
+        "--vae", q(paths.vae),
+        "--text_encoder1", q(paths.text_encoder),
+        "--text_encoder2", q(paths.base_weights),
+        "--dataset_config", q(dataset_toml),
+        "--sdpa",
+        "--mixed_precision", mixed_precision,
+        "--optimizer_type", optimizer,
+        "--learning_rate", str(lr),
+        "--gradient_checkpointing",
+        "--max_data_loader_n_workers", "2",
+        "--persistent_data_loader_workers",
+        "--network_module", "networks.lora",
+        "--network_dim", str(rank),
+        "--network_alpha", str(alpha),
+        "--timestep_sampling", "shift",
+        "--discrete_flow_shift", "7.0",
+        "--max_train_epochs", str(epochs),
+        "--save_every_n_epochs", "1",
+        "--seed", "42",
+        "--output_dir", q(output_dir),
+        "--output_name", q(output_name),
+    ]
+    if fp8_base:
+        parts.append("--fp8_base")
+    return in_repo(" ".join(parts), musubi_repo)
+
+
+def build_hunyuan_preview(
+    musubi_python: Path,
+    musubi_repo: Path,
+    dataset_toml: Path,
+    output_dir: Path,
+    output_name: str,
+    paths: ModelPaths,
+    rank: int,
+    alpha: int,
+    epochs: int,
+    lr: float,
+) -> str:
+    return "\n".join([
+        "# 1. Latent cache",
+        hunyuan_cache_latents_command(musubi_python, musubi_repo, dataset_toml, paths),
+        "",
+        "# 2. Text encoder cache",
+        hunyuan_cache_text_command(musubi_python, musubi_repo, dataset_toml, paths),
+        "",
+        "# 3. Train LoRA",
+        hunyuan_train_command(
+            musubi_python=musubi_python,
+            musubi_repo=musubi_repo,
+            dataset_toml=dataset_toml,
+            paths=paths,
+            output_dir=output_dir,
+            output_name=output_name,
+            rank=rank,
+            alpha=alpha,
+            epochs=epochs,
+            lr=lr,
+        ),
+    ])
+
+
 def build_command_preview(target_model: str, musubi_python: Path, musubi_repo: Path, dataset_toml: Path, output_dir: Path, output_name: str, paths: ModelPaths, rank: int, alpha: int, epochs: int, lr: float, task: str = "t2v-A14B") -> str:
     if target_model == "z-image":
         return build_zimage_preview(musubi_python=musubi_python, musubi_repo=musubi_repo, dataset_toml=dataset_toml, output_dir=output_dir, output_name=output_name, paths=paths, rank=rank, alpha=alpha, epochs=epochs, lr=lr)
-    if target_model in {"wan2.2", "wan2.2-t2v-a14b", "wan2.2-i2v-a14b"}:
+    if target_model in {"wan2.2", "wan2.2-t2v-a14b", "wan2.2-i2v-a14b", "wan2.1"}:
         return build_wan_preview(musubi_python=musubi_python, musubi_repo=musubi_repo, dataset_toml=dataset_toml, output_dir=output_dir, output_name=output_name, paths=paths, rank=rank, alpha=alpha, epochs=epochs, lr=lr, task=task)
+    if target_model == "qwen-image":
+        return build_qwen_image_preview(musubi_python=musubi_python, musubi_repo=musubi_repo, dataset_toml=dataset_toml, output_dir=output_dir, output_name=output_name, paths=paths, rank=rank, alpha=alpha, epochs=epochs, lr=lr)
+    if target_model == "flux-kontext":
+        return build_flux_kontext_preview(musubi_python=musubi_python, musubi_repo=musubi_repo, dataset_toml=dataset_toml, output_dir=output_dir, output_name=output_name, paths=paths, rank=rank, alpha=alpha, epochs=epochs, lr=lr)
+    if target_model in {"flux2-dev", "flux2-klein"}:
+        return build_flux2_preview(musubi_python=musubi_python, musubi_repo=musubi_repo, dataset_toml=dataset_toml, output_dir=output_dir, output_name=output_name, paths=paths, rank=rank, alpha=alpha, epochs=epochs, lr=lr)
+    if target_model == "hunyuan-video":
+        return build_hunyuan_preview(musubi_python=musubi_python, musubi_repo=musubi_repo, dataset_toml=dataset_toml, output_dir=output_dir, output_name=output_name, paths=paths, rank=rank, alpha=alpha, epochs=epochs, lr=lr)
     return f"# {target_model} command template is not implemented yet."

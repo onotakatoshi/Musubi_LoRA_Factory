@@ -52,8 +52,8 @@ REPO[flux2-dev]="black-forest-labs/FLUX.2-dev"
 DEST[flux2-dev]="$MODELS_DIR/flux/FLUX.2-dev"
 NOTE[flux2-dev]="FLUX.2 dev; gated license may be required"
 
-REPO[flux2-klein]="black-forest-labs/FLUX.2-klein"
-DEST[flux2-klein]="$MODELS_DIR/flux/FLUX.2-klein"
+REPO[flux2-klein]="black-forest-labs/FLUX.2-klein-9B"
+DEST[flux2-klein]="$MODELS_DIR/flux/FLUX.2-klein-9B"
 NOTE[flux2-klein]="FLUX.2 klein; gated license may be required"
 
 usage() {
@@ -282,7 +282,7 @@ DEST[qwen-image]="$MODELS_DIR/qwen/Qwen-Image"
 DEST[hunyuan-video]="$MODELS_DIR/hunyuan-video/HunyuanVideo"
 DEST[flux-kontext]="$MODELS_DIR/flux/FLUX.1-Kontext-dev"
 DEST[flux2-dev]="$MODELS_DIR/flux/FLUX.2-dev"
-DEST[flux2-klein]="$MODELS_DIR/flux/FLUX.2-klein"
+DEST[flux2-klein]="$MODELS_DIR/flux/FLUX.2-klein-9B"
 
 unique_targets
 ensure_hf_cli

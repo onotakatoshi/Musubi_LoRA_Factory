@@ -119,10 +119,133 @@ class Wan22A14BAdapter(CatalogAdapter):
         )
 
 
+class QwenImageAdapter(CatalogAdapter):
+    def __init__(self) -> None:
+        super().__init__("qwen-image")
+
+    def _paths(self, model_paths: dict) -> ModelPaths:
+        return ModelPaths(
+            vae=model_paths.get("qwen_image_vae", ""),
+            dit=model_paths.get("qwen_image_dit", ""),
+            text_encoder=model_paths.get("qwen_image_text_encoder", ""),
+        )
+
+    def build_commands(self, context: CommandContext) -> str:
+        profile = get_profile(self.profile_id)
+        return build_command_preview(
+            target_model=profile.id,
+            musubi_python=context.musubi_python,
+            musubi_repo=context.musubi_repo,
+            dataset_toml=context.dataset_toml,
+            output_dir=context.output_dir,
+            output_name=context.output_name,
+            paths=self._paths(context.model_paths),
+            rank=context.rank,
+            alpha=context.alpha,
+            epochs=context.epochs,
+            lr=context.lr,
+            task=profile.task,
+        )
+
+
+
+class FluxKontextAdapter(CatalogAdapter):
+    def __init__(self) -> None:
+        super().__init__("flux-kontext")
+
+    def _paths(self, model_paths: dict) -> ModelPaths:
+        return ModelPaths(
+            vae=model_paths.get("flux_kontext_vae", ""),
+            dit=model_paths.get("flux_kontext_dit", ""),
+            t5=model_paths.get("flux_kontext_t5", ""),
+            text_encoder=model_paths.get("flux_kontext_clip_l", ""),
+        )
+
+    def build_commands(self, context: CommandContext) -> str:
+        profile = get_profile(self.profile_id)
+        return build_command_preview(
+            target_model=profile.id,
+            musubi_python=context.musubi_python,
+            musubi_repo=context.musubi_repo,
+            dataset_toml=context.dataset_toml,
+            output_dir=context.output_dir,
+            output_name=context.output_name,
+            paths=self._paths(context.model_paths),
+            rank=context.rank,
+            alpha=context.alpha,
+            epochs=context.epochs,
+            lr=context.lr,
+            task=profile.task,
+        )
+
+
+class Flux2Adapter(CatalogAdapter):
+    def __init__(self, profile_id: str, *, prefix: str) -> None:
+        super().__init__(profile_id)
+        self.prefix = prefix
+
+    def _paths(self, model_paths: dict) -> ModelPaths:
+        return ModelPaths(
+            vae=model_paths.get(f"{self.prefix}_vae", ""),
+            dit=model_paths.get(f"{self.prefix}_dit", ""),
+            text_encoder=model_paths.get(f"{self.prefix}_text_encoder", ""),
+        )
+
+    def build_commands(self, context: CommandContext) -> str:
+        profile = get_profile(self.profile_id)
+        return build_command_preview(
+            target_model=profile.id,
+            musubi_python=context.musubi_python,
+            musubi_repo=context.musubi_repo,
+            dataset_toml=context.dataset_toml,
+            output_dir=context.output_dir,
+            output_name=context.output_name,
+            paths=self._paths(context.model_paths),
+            rank=context.rank,
+            alpha=context.alpha,
+            epochs=context.epochs,
+            lr=context.lr,
+            task=profile.task,
+        )
+
+
+
+class HunyuanVideoAdapter(CatalogAdapter):
+    def __init__(self) -> None:
+        super().__init__("hunyuan-video")
+
+    def _paths(self, model_paths: dict) -> ModelPaths:
+        return ModelPaths(
+            vae=model_paths.get("hv_vae", ""),
+            dit=model_paths.get("hv_dit", ""),
+            text_encoder=model_paths.get("hv_text_encoder1", ""),
+            base_weights=model_paths.get("hv_text_encoder2", ""),
+        )
+
+    def build_commands(self, context: CommandContext) -> str:
+        profile = get_profile(self.profile_id)
+        return build_command_preview(
+            target_model=profile.id,
+            musubi_python=context.musubi_python,
+            musubi_repo=context.musubi_repo,
+            dataset_toml=context.dataset_toml,
+            output_dir=context.output_dir,
+            output_name=context.output_name,
+            paths=self._paths(context.model_paths),
+            rank=context.rank,
+            alpha=context.alpha,
+            epochs=context.epochs,
+            lr=context.lr,
+            task=profile.task,
+        )
+
+
 ADAPTERS: dict[str, ModelAdapter] = {profile_id: CatalogAdapter(profile_id) for profile_id in profile_ids(include_future=True)}
 ADAPTERS["z-image"] = ZImageAdapter()
 ADAPTERS["wan2.2-t2v-a14b"] = Wan22A14BAdapter("wan2.2-t2v-a14b", prefix="wan")
 ADAPTERS["wan2.2-i2v-a14b"] = Wan22A14BAdapter("wan2.2-i2v-a14b", prefix="wan22_i2v")
+ADAPTERS["wan2.1"] = Wan22A14BAdapter("wan2.1", prefix="wan21")
+ADAPTERS["qwen-image"] = QwenImageAdapter()
 
 
 def get_adapter(profile_id: str) -> ModelAdapter:
@@ -135,3 +258,9 @@ def get_adapter(profile_id: str) -> ModelAdapter:
 
 def adapter_ids() -> list[str]:
     return list(ADAPTERS.keys())
+
+ADAPTERS["flux-kontext"] = FluxKontextAdapter()
+ADAPTERS["flux2-dev"] = Flux2Adapter("flux2-dev", prefix="flux2_dev")
+ADAPTERS["flux2-klein"] = Flux2Adapter("flux2-klein", prefix="flux2_klein")
+
+ADAPTERS["hunyuan-video"] = HunyuanVideoAdapter()

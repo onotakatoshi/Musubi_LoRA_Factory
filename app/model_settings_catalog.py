@@ -98,7 +98,8 @@ MODEL_SETTINGS: dict[str, ModelSettingsSpec] = {
         scripts=("hv_train_network.py",),
         fields=(
             field("hv_vae", "HunyuanVideo VAE", "HunyuanVideo用VAEです。", "HunyuanVideo VAE file."),
-            field("hv_text_encoder", "HunyuanVideo text encoder", "HunyuanVideo用Text Encoderです。", "HunyuanVideo text encoder file."),
+            field("hv_text_encoder1", "HunyuanVideo text encoder 1 / LLaVA", "HunyuanVideo用Text Encoder 1（LLaVA/LLM）です。", "HunyuanVideo text encoder 1 / LLaVA file."),
+            field("hv_text_encoder2", "HunyuanVideo text encoder 2 / CLIP-L", "HunyuanVideo用Text Encoder 2（CLIP-L）です。", "HunyuanVideo text encoder 2 / CLIP-L file."),
             field("hv_dit", "HunyuanVideo DiT", "HunyuanVideoの学習対象DiTです。", "HunyuanVideo DiT file."),
         ),
     ),

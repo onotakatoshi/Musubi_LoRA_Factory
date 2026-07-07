@@ -61,9 +61,9 @@ PROFILES = {
     "wan2.1": profile(
         "wan2.1",
         "Wan2.1",
-        "wan2.1",
-        "Wan2.1用LoRAを作成します。Wan2.2とは別プロファイルとして設定を管理します。",
-        "Create a Wan2.1 LoRA. Settings are managed separately from Wan2.2.",
+        "t2v-14B",
+        "Wan2.1 T2V-14B用LoRAを作成します。Wan2.2とは別プロファイルとして設定を管理します。",
+        "Create a Wan2.1 T2V-14B LoRA. Settings are managed separately from Wan2.2.",
     ),
     "wan-single-frame": profile(
         "wan-single-frame",

@@ -23,3 +23,7 @@ cache/
 .DS_Store
 .vscode/
 .idea/
+
+.cache/
+sample_data/
+*.deb
