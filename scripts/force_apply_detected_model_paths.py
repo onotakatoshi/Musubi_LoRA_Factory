@@ -1,22 +1,29 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 
-import toml
-
 ROOT = Path(__file__).resolve().parents[1]
+APP_DIR = ROOT / "app"
+SCRIPT_DIR = ROOT / "scripts"
+for item in (APP_DIR, SCRIPT_DIR):
+    if str(item) not in sys.path:
+        sys.path.insert(0, str(item))
+
 SETTINGS_PATH = ROOT / "configs" / "settings.toml"
 EXAMPLE_PATH = ROOT / "configs" / "settings.example.toml"
 
 from model_path_autofill_recursive import detect_paths  # noqa: E402
+from toml_compat import dumps as toml_dumps  # noqa: E402
+from toml_compat import load as toml_load  # noqa: E402
 
 
 def load_settings() -> dict:
     if SETTINGS_PATH.exists():
-        return toml.load(SETTINGS_PATH)
+        return toml_load(SETTINGS_PATH)
     if EXAMPLE_PATH.exists():
-        return toml.load(EXAMPLE_PATH)
+        return toml_load(EXAMPLE_PATH)
     return {}
 
 
@@ -36,7 +43,7 @@ def main() -> int:
             print(f"SET {key}: {value}")
 
     SETTINGS_PATH.parent.mkdir(parents=True, exist_ok=True)
-    SETTINGS_PATH.write_text(toml.dumps(data), encoding="utf-8")
+    SETTINGS_PATH.write_text(toml_dumps(data), encoding="utf-8")
     print(f"Wrote: {SETTINGS_PATH}")
     return 0
 

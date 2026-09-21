@@ -3,14 +3,22 @@ from __future__ import annotations
 import shlex
 from pathlib import Path
 
+from model_file_format import format_problem
+
 STAGES = ["latent_cache", "text_cache", "train"]
 
 PATH_FLAGS = {
     "--dataset_config": "file",
-    "--vae": "file",
-    "--dit": "file",
-    "--text_encoder": "file",
-    "--base_weights": "file",
+    "--vae": "weight",
+    "--video_vae": "weight",
+    "--audio_vae": "weight",
+    "--dit": "weight",
+    "--dit_high_noise": "weight",
+    "--t5": "weight",
+    "--text_encoder": "weight",
+    "--text_encoder1": "weight",
+    "--text_encoder2": "weight",
+    "--base_weights": "weight",
     "--output_dir": "dir_parent",
 }
 
@@ -92,10 +100,17 @@ def _validate_command_entry(stage: str, command: str) -> tuple[list[str], list[s
 
     for flag, value, kind in _extract_flag_values(tokens):
         path = Path(value)
-        if kind == "file":
+        if kind in {"file", "weight"}:
             if not path.exists() or not path.is_file():
                 errors.append(f"{stage}: {flag} not found: {path}")
                 lines.append(f"NG: {flag}: {path}")
+                continue
+            # Existing is not the same as loadable: a *.safetensors.index.json manifest
+            # passes every existence check and then dies inside musubi-tuner.
+            problem = format_problem(value) if kind == "weight" else None
+            if problem:
+                errors.append(f"{stage}: {flag} cannot be loaded by musubi-tuner: {problem}")
+                lines.append(f"NG: {flag}: {problem}")
             else:
                 lines.append(f"OK: {flag}: {path}")
         elif kind == "dir_parent":

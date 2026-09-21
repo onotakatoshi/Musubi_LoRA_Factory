@@ -12,12 +12,20 @@ outputs_dir = "outputs/lora"
 comfyui_loras_dir = "../ComfyUI/models/loras"
 
 [caption]
-mode = "joycaption_llm"
+# qwen_vl runs musubi-tuner's caption_images_by_qwen_vl.py and is the only built-in mode
+# that reads the image. qwen_vl_model_path takes any Qwen2.5-VL checkpoint; the Qwen-Image
+# text encoder is one, so it can be reused instead of downloading a separate model.
+mode = "qwen_vl"
+qwen_vl_model_path = "../models/qwen/Qwen-Image/text_encoder/model-00001-of-00004.safetensors"
 joycaption_command = ""
 llm_endpoint = "http://localhost:8000/v1/chat/completions"
 llm_model = "qwen-caption-helper"
 
 [model_paths]
+# musubi-tuner addresses split weights by their FIRST shard
+# ("-00001-of-0000N.safetensors"). It cannot read a *.safetensors.index.json
+# manifest, and it rejects the Diffusers subfolders of the FLUX repositories.
+
 # Z-Image / Z-Image-Turbo
 zimage_dit = "../models/z-image/Tongyi-MAI/Z-Image/transformer/diffusion_pytorch_model-00001-of-00002.safetensors"
 zimage_vae = "../models/z-image/Tongyi-MAI/Z-Image/vae/diffusion_pytorch_model.safetensors"
@@ -27,24 +35,24 @@ zimage_base_weights = ""
 # Wan2.2 T2V-A14B
 wan_vae = "../models/wan/Wan2.2-T2V-A14B/Wan2.1_VAE.pth"
 wan_t5 = "../models/wan/Wan2.2-T2V-A14B/models_t5_umt5-xxl-enc-bf16.pth"
-wan_dit = "../models/wan/Wan2.2-T2V-A14B/low_noise_model/diffusion_pytorch_model.safetensors.index.json"
-wan_dit_high_noise = "../models/wan/Wan2.2-T2V-A14B/high_noise_model/diffusion_pytorch_model.safetensors.index.json"
+wan_dit = "../models/wan/Wan2.2-T2V-A14B/low_noise_model/diffusion_pytorch_model-00001-of-00006.safetensors"
+wan_dit_high_noise = "../models/wan/Wan2.2-T2V-A14B/high_noise_model/diffusion_pytorch_model-00001-of-00006.safetensors"
 
 # Wan2.2 I2V-A14B
 wan22_i2v_vae = "../models/wan/Wan2.2-I2V-A14B/Wan2.1_VAE.pth"
 wan22_i2v_t5 = "../models/wan/Wan2.2-I2V-A14B/models_t5_umt5-xxl-enc-bf16.pth"
-wan22_i2v_dit = "../models/wan/Wan2.2-I2V-A14B/low_noise_model/diffusion_pytorch_model.safetensors.index.json"
-wan22_i2v_dit_high_noise = "../models/wan/Wan2.2-I2V-A14B/high_noise_model/diffusion_pytorch_model.safetensors.index.json"
+wan22_i2v_dit = "../models/wan/Wan2.2-I2V-A14B/low_noise_model/diffusion_pytorch_model-00001-of-00006.safetensors"
+wan22_i2v_dit_high_noise = "../models/wan/Wan2.2-I2V-A14B/high_noise_model/diffusion_pytorch_model-00001-of-00006.safetensors"
 
 # Wan2.2 TI2V-5B
 wan22_ti2v_vae = "../models/wan/Wan2.2-TI2V-5B/Wan2.2_VAE.pth"
 wan22_ti2v_t5 = "../models/wan/Wan2.2-TI2V-5B/models_t5_umt5-xxl-enc-bf16.pth"
-wan22_ti2v_dit = "../models/wan/Wan2.2-TI2V-5B/diffusion_pytorch_model.safetensors.index.json"
+wan22_ti2v_dit = "../models/wan/Wan2.2-TI2V-5B/diffusion_pytorch_model-00001-of-00003.safetensors"
 
 # Wan2.1
-wan21_vae = ""
-wan21_t5 = ""
-wan21_dit = ""
+wan21_vae = "../models/wan/Wan2.1-T2V-14B/Wan2.1_VAE.pth"
+wan21_t5 = "../models/wan/Wan2.1-T2V-14B/models_t5_umt5-xxl-enc-bf16.pth"
+wan21_dit = "../models/wan/Wan2.1-T2V-14B/diffusion_pytorch_model-00001-of-00006.safetensors"
 
 # Wan2.1/2.2 Single Frame
 wan_sf_vae = ""
@@ -52,10 +60,10 @@ wan_sf_t5 = ""
 wan_sf_dit = ""
 
 # HunyuanVideo
-hv_vae = ""
-hv_text_encoder1 = ""
-hv_text_encoder2 = ""
-hv_dit = ""
+hv_vae = "../models/hunyuan-video/HunyuanVideo/hunyuan-video-t2v-720p/vae/pytorch_model.pt"
+hv_text_encoder1 = "../models/hunyuan-video/Comfy-Org/HunyuanVideo_repackaged/split_files/text_encoders/llava_llama3_fp16.safetensors"
+hv_text_encoder2 = "../models/hunyuan-video/Comfy-Org/HunyuanVideo_repackaged/split_files/text_encoders/clip_l.safetensors"
+hv_dit = "../models/hunyuan-video/HunyuanVideo/hunyuan-video-t2v-720p/transformers/mp_rank_00_model_states.pt"
 
 # HunyuanVideo 1.5
 hv15_vae = ""
@@ -72,26 +80,36 @@ fpack_sf_vae = ""
 fpack_sf_text_encoder = ""
 fpack_sf_dit = ""
 
-# FLUX.1 Kontext
-flux_kontext_vae = ""
-flux_kontext_clip_l = ""
-flux_kontext_t5 = ""
-flux_kontext_dit = ""
+# FLUX.1 Kontext. transformer/ and vae/ are Diffusers copies and are NOT usable;
+# the text encoders come from comfyanonymous/flux_text_encoders, not text_encoder*/.
+flux_kontext_vae = "../models/flux/FLUX.1-Kontext-dev/ae.safetensors"
+flux_kontext_clip_l = "../models/flux/flux_text_encoders/clip_l.safetensors"
+flux_kontext_t5 = "../models/flux/flux_text_encoders/t5xxl_fp16.safetensors"
+flux_kontext_dit = "../models/flux/FLUX.1-Kontext-dev/flux1-kontext-dev.safetensors"
 
 # FLUX.2 dev
-flux2_dev_vae = ""
-flux2_dev_text_encoder = ""
-flux2_dev_dit = ""
+flux2_dev_vae = "../models/flux/FLUX.2-dev/ae.safetensors"
+flux2_dev_text_encoder = "../models/flux/FLUX.2-dev/text_encoder/model-00001-of-00010.safetensors"
+flux2_dev_dit = "../models/flux/FLUX.2-dev/flux2-dev.safetensors"
 
-# FLUX.2 klein
-flux2_klein_vae = ""
-flux2_klein_text_encoder = ""
-flux2_klein_dit = ""
+# FLUX.2 klein. klein ships no ae.safetensors; reuse the FLUX.2 dev one.
+flux2_klein_vae = "../models/flux/FLUX.2-dev/ae.safetensors"
+flux2_klein_text_encoder = "../models/flux/FLUX.2-klein-9B/text_encoder/model-00001-of-00004.safetensors"
+flux2_klein_dit = "../models/flux/FLUX.2-klein-9B/flux-2-klein-9b.safetensors"
 
 # Qwen-Image
-qwen_image_vae = ""
-qwen_image_text_encoder = ""
-qwen_image_dit = ""
+qwen_image_vae = "../models/qwen/Qwen-Image/vae/diffusion_pytorch_model.safetensors"
+qwen_image_text_encoder = "../models/qwen/Qwen-Image/text_encoder/model-00001-of-00004.safetensors"
+qwen_image_dit = "../models/qwen/Qwen-Image/transformer/diffusion_pytorch_model-00001-of-00009.safetensors"
+
+# MiniMax-H3. Download from Comfy-Org/MiniMax-H3:
+# bash ./scripts/download_model_assets.sh minimax-h3
+minimax_h3_dit = "../models/minimax-h3/Comfy-Org/MiniMax-H3/diffusion_models/minimax_h3_fl2va_bf16.safetensors"
+minimax_h3_text_encoder = "../models/minimax-h3/Comfy-Org/MiniMax-H3/text_encoders/qwen3vl_32b_minimax_h3_bf16.safetensors"
+minimax_h3_video_vae = "../models/minimax-h3/Comfy-Org/MiniMax-H3/vae/minimax_h3_video_vae_fp16.safetensors"
+minimax_h3_audio_vae = "../models/minimax-h3/Comfy-Org/MiniMax-H3/vae/minimax_h3_audio_vae_fp32.safetensors"
+# Optional: a de-distillation adapter switches the recipe from guidance loss to training adapter.
+minimax_h3_base_weights = ""
 
 # HiDream-O1-Image
 hidream_o1_vae = ""

@@ -61,6 +61,21 @@ def main() -> int:
         parse_bad = {"latent_cache": "python x --dataset_config 'broken", "text_cache": sections["text_cache"], "train": sections["train"]}
         assert "parse error" in validate_command_paths(parse_bad)
 
+        # A *.safetensors.index.json manifest exists on disk but musubi-tuner cannot read
+        # it, so existence alone must not be enough to pass the guard.
+        shard_dir = root / "sharded"
+        shard_dir.mkdir()
+        manifest = shard_dir / "diffusion_pytorch_model.safetensors.index.json"
+        manifest.write_text("{}", encoding="utf-8")
+        (shard_dir / "diffusion_pytorch_model-00001-of-00002.safetensors").write_text("dummy", encoding="utf-8")
+        (shard_dir / "diffusion_pytorch_model-00002-of-00002.safetensors").write_text("dummy", encoding="utf-8")
+        index_sections = dict(sections)
+        index_sections["train"] = index_sections["train"].replace(str(dit), str(manifest))
+        ok, report = command_paths_ok(index_sections)
+        assert not ok, report
+        assert "cannot be loaded by musubi-tuner" in report
+        assert "diffusion_pytorch_model-00001-of-00002.safetensors" in report, report
+
     print("Command path guard test OK")
     return 0
 

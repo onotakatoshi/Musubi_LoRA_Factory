@@ -13,6 +13,11 @@ ZIMAGE_MODEL_ROOT = "../models/z-image/Tongyi-MAI/Z-Image"
 WAN22_T2V_ROOT = "../models/wan/Wan2.2-T2V-A14B"
 WAN22_I2V_ROOT = "../models/wan/Wan2.2-I2V-A14B"
 WAN22_TI2V_ROOT = "../models/wan/Wan2.2-TI2V-5B"
+WAN21_ROOT = "../models/wan/Wan2.1-T2V-14B"
+
+# musubi-tuner addresses split weights by their first shard; it cannot read a
+# *.safetensors.index.json manifest. See app/model_file_format.py.
+WAN_A14B_DIT = "diffusion_pytorch_model-00001-of-00006.safetensors"
 
 
 def default_model_paths() -> dict[str, str]:
@@ -25,15 +30,18 @@ def default_model_paths() -> dict[str, str]:
             "zimage_base_weights": "",
             "wan_vae": f"{WAN22_T2V_ROOT}/Wan2.1_VAE.pth",
             "wan_t5": f"{WAN22_T2V_ROOT}/models_t5_umt5-xxl-enc-bf16.pth",
-            "wan_dit": f"{WAN22_T2V_ROOT}/low_noise_model/diffusion_pytorch_model.safetensors.index.json",
-            "wan_dit_high_noise": f"{WAN22_T2V_ROOT}/high_noise_model/diffusion_pytorch_model.safetensors.index.json",
+            "wan_dit": f"{WAN22_T2V_ROOT}/low_noise_model/{WAN_A14B_DIT}",
+            "wan_dit_high_noise": f"{WAN22_T2V_ROOT}/high_noise_model/{WAN_A14B_DIT}",
             "wan22_i2v_vae": f"{WAN22_I2V_ROOT}/Wan2.1_VAE.pth",
             "wan22_i2v_t5": f"{WAN22_I2V_ROOT}/models_t5_umt5-xxl-enc-bf16.pth",
-            "wan22_i2v_dit": f"{WAN22_I2V_ROOT}/low_noise_model/diffusion_pytorch_model.safetensors.index.json",
-            "wan22_i2v_dit_high_noise": f"{WAN22_I2V_ROOT}/high_noise_model/diffusion_pytorch_model.safetensors.index.json",
+            "wan22_i2v_dit": f"{WAN22_I2V_ROOT}/low_noise_model/{WAN_A14B_DIT}",
+            "wan22_i2v_dit_high_noise": f"{WAN22_I2V_ROOT}/high_noise_model/{WAN_A14B_DIT}",
             "wan22_ti2v_vae": f"{WAN22_TI2V_ROOT}/Wan2.2_VAE.pth",
             "wan22_ti2v_t5": f"{WAN22_TI2V_ROOT}/models_t5_umt5-xxl-enc-bf16.pth",
-            "wan22_ti2v_dit": f"{WAN22_TI2V_ROOT}/diffusion_pytorch_model.safetensors.index.json",
+            "wan22_ti2v_dit": f"{WAN22_TI2V_ROOT}/diffusion_pytorch_model-00001-of-00003.safetensors",
+            "wan21_vae": f"{WAN21_ROOT}/Wan2.1_VAE.pth",
+            "wan21_t5": f"{WAN21_ROOT}/models_t5_umt5-xxl-enc-bf16.pth",
+            "wan21_dit": f"{WAN21_ROOT}/{WAN_A14B_DIT}",
         }
     )
     return paths
@@ -55,7 +63,9 @@ def default_settings() -> dict[str, Any]:
             "comfyui_loras_dir": "../ComfyUI/models/loras",
         },
         "caption": {
-            "mode": "manual",
+            # qwen_vl is the only built-in mode that reads the image itself.
+            "mode": "qwen_vl",
+            "qwen_vl_model_path": "",
             "joycaption_command": "",
             "llm_endpoint": "",
             "llm_model": "",
