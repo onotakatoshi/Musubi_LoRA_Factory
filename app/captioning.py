@@ -1,11 +1,24 @@
 from __future__ import annotations
 
 import json
+import shlex
 import subprocess
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
+
+IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".webp", ".bmp"}
+
+# The only mode that actually looks at the pixels without an external tool.
+QWEN_VL_MODE = "qwen_vl"
+CAPTION_MODES = [QWEN_VL_MODE, "joycaption_llm", "joycaption_only", "llm_only", "manual"]
+
+PLACEHOLDER_PREFIX = "PLACEHOLDER"
+
+
+class CaptionerNotConfigured(RuntimeError):
+    """Raised when a mode promises image captions but nothing can read the image."""
 
 
 @dataclass
@@ -94,6 +107,65 @@ def refine_caption_with_llm(raw_caption: str, lora_type: str, endpoint: str, mod
     return simple_tag_cleanup(content, lora_type)
 
 
+def qwen_vl_caption_command(
+    musubi_python: Path,
+    musubi_repo: Path,
+    image_dir: Path,
+    model_path: Path,
+    max_size: int = 1024,
+    fp8_vl: bool = False,
+    prompt: str = "",
+) -> str:
+    """Build the musubi-tuner Qwen2.5-VL captioning command.
+
+    The script writes one .txt next to each image, which is exactly the layout the
+    caption editor and dataset.toml already expect. The Qwen-Image text encoder is a
+    Qwen2.5-VL checkpoint, so its weights can be reused here instead of downloading a
+    separate captioning model.
+    """
+    parts = [
+        shlex.quote(str(musubi_python)),
+        "src/musubi_tuner/caption_images_by_qwen_vl.py",
+        "--image_dir", shlex.quote(str(image_dir)),
+        "--model_path", shlex.quote(str(model_path)),
+        "--output_format", "text",
+        "--max_size", str(max_size),
+    ]
+    if fp8_vl:
+        parts.append("--fp8_vl")
+    if prompt.strip():
+        parts.extend(["--prompt", shlex.quote(prompt)])
+    return f"cd {shlex.quote(str(musubi_repo))} && " + " ".join(parts)
+
+
+def run_qwen_vl_captions(
+    musubi_python: Path,
+    musubi_repo: Path,
+    image_dir: Path,
+    model_path: Path,
+    max_size: int = 1024,
+    fp8_vl: bool = False,
+    prompt: str = "",
+    env: dict[str, str] | None = None,
+) -> str:
+    if not model_path or not Path(model_path).exists():
+        raise CaptionerNotConfigured(
+            "caption.qwen_vl_model_path が未設定か、ファイルがありません。"
+            "Qwen2.5-VL系のチェックポイント（例: Qwen-Image の text_encoder/model-00001-of-00004.safetensors）を指定してください。"
+        )
+    image_dir = Path(image_dir)
+    images = [p for p in image_dir.iterdir() if p.suffix.lower() in IMAGE_SUFFIXES] if image_dir.is_dir() else []
+    if not images:
+        raise CaptionerNotConfigured(f"画像が見つかりません: {image_dir}")
+
+    command = qwen_vl_caption_command(musubi_python, musubi_repo, image_dir, model_path, max_size, fp8_vl, prompt)
+    proc = subprocess.run(command, shell=True, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, env=env)
+    if proc.returncode != 0:
+        raise RuntimeError(f"Qwen2.5-VL captioning failed (exit {proc.returncode})\n\n{proc.stdout}")
+    written = sum(1 for p in images if p.with_suffix(".txt").exists())
+    return f"OK: {written}/{len(images)} 枚のcaptionを生成しました: {image_dir}"
+
+
 def caption_one_image(
     image_path: Path,
     lora_type: str,
@@ -103,15 +175,25 @@ def caption_one_image(
     llm_model: str,
 ) -> CaptionResult:
     raw = ""
+    if mode == QWEN_VL_MODE:
+        raise CaptionerNotConfigured(
+            "qwen_vl モードはフォルダ単位で実行します。run_qwen_vl_captions() を使ってください。"
+        )
     if mode in {"joycaption_llm", "joycaption_only"}:
         raw = run_joycaption_cli(image_path, joycaption_command)
+        if not raw:
+            # This used to silently fall through to a constant string, which wrote the
+            # same caption onto every image and looked like a working captioner.
+            raise CaptionerNotConfigured(
+                f"{mode} は外部のJoyCaptionコマンドが必要ですが、caption.joycaption_command が空です。"
+                f"コマンドを設定するか、{QWEN_VL_MODE} モードを使ってください。"
+            )
     elif mode == "llm_only":
         raw = image_path.stem.replace("_", " ")
-    else:
-        raw = ""
 
     if not raw:
-        raw = f"high quality {lora_type} detail, sharp focus"
+        # Only reachable for modes that never claimed to read the image.
+        raw = f"{PLACEHOLDER_PREFIX}: high quality {lora_type} detail, sharp focus"
 
     if mode == "joycaption_only":
         cleaned = simple_tag_cleanup(raw, lora_type)

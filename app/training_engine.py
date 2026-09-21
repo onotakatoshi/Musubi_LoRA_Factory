@@ -9,6 +9,7 @@ from pathlib import Path
 from PySide6.QtCore import QObject, QProcess, QProcessEnvironment, QTimer, Signal
 
 from command_path_guard import command_paths_ok
+from process_env import subprocess_env_overrides
 from runner import split_command_sections, validate_command_preview
 from stage_guidance import guidance_for_stage, success_guidance_for_stage
 
@@ -223,8 +224,8 @@ class TrainingEngine(QObject):
 
     def _process_environment(self) -> QProcessEnvironment:
         env = QProcessEnvironment.systemEnvironment()
-        env.insert("PYTHONUNBUFFERED", "1")
-        env.insert("PYTHONIOENCODING", "utf-8")
+        for key, value in subprocess_env_overrides().items():
+            env.insert(key, value)
         return env
 
     def _start_stage(self, stage: str) -> None:

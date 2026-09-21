@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Callable
+from typing import Any, Callable
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QProcess, QProcessEnvironment
 from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
@@ -17,6 +17,10 @@ from PySide6.QtWidgets import (
 )
 
 from caption_editor import bulk_replace_caption_rows, load_caption_rows, remove_words_caption_rows, save_caption_rows
+from captioning import qwen_vl_caption_command
+from path_resolver import resolve_path
+from process_env import subprocess_env_overrides
+from settings_io import nested_get
 
 
 def _t(lang: str, ja: str, en: str) -> str:
@@ -30,12 +34,19 @@ class CaptionTableWidget(QWidget):
     first version safe and easy to understand.
     """
 
-    def __init__(self, dataset_dir_getter: Callable[[], str], lang_getter: Callable[[], str]):
+    def __init__(
+        self,
+        dataset_dir_getter: Callable[[], str],
+        lang_getter: Callable[[], str],
+        settings_getter: Callable[[], dict[str, Any]] | None = None,
+    ):
         super().__init__()
         self.dataset_dir_getter = dataset_dir_getter
         self.lang_getter = lang_getter
+        self.settings_getter = settings_getter
         self.rows: list[list[str]] = []
         self._last_loaded_dataset_dir: str | None = None
+        self.caption_process: QProcess | None = None
 
         box = QVBoxLayout()
         self.guide = QTextEdit()
@@ -50,9 +61,12 @@ class CaptionTableWidget(QWidget):
         self.load_btn.clicked.connect(self.load_captions)
         self.save_btn.clicked.connect(self.save_captions)
         self.reload_btn.clicked.connect(self.load_captions)
+        self.generate_btn = QPushButton()
+        self.generate_btn.clicked.connect(self.generate_captions)
         buttons.addWidget(self.load_btn)
         buttons.addWidget(self.save_btn)
         buttons.addWidget(self.reload_btn)
+        buttons.addWidget(self.generate_btn)
         buttons.addStretch()
         box.addLayout(buttons)
 
@@ -102,6 +116,7 @@ class CaptionTableWidget(QWidget):
         self.load_btn.setText(_t(lang, "キャプションを読み込み", "Load Captions"))
         self.save_btn.setText(_t(lang, "キャプションを保存", "Save Captions"))
         self.reload_btn.setText(_t(lang, "再読み込み", "Reload"))
+        self.generate_btn.setText(_t(lang, "キャプション生成 (Qwen2.5-VL)", "Generate Captions (Qwen2.5-VL)"))
         self.replace_btn.setText(_t(lang, "一括置換", "Bulk Replace"))
         self.remove_words_btn.setText(_t(lang, "語句を一括削除", "Remove Words"))
         self.find_edit.setPlaceholderText(_t(lang, "探す文字列", "Find text"))
@@ -115,6 +130,77 @@ class CaptionTableWidget(QWidget):
                 "Caption Editor\n\nThis lists .txt captions in the folder selected on the Dataset tab.\nCaptions load automatically when this tab is opened. Edit captions directly, use bulk replace/remove, then save. Image filenames are not changed.",
             )
         )
+
+    def _append_log(self, text: str) -> None:
+        self.log.setPlainText((self.log.toPlainText() + text)[-8000:])
+        self.log.verticalScrollBar().setValue(self.log.verticalScrollBar().maximum())
+
+    def generate_captions(self) -> None:
+        """Run musubi-tuner's Qwen2.5-VL captioner over the dataset folder.
+
+        It writes one .txt next to each image, so the table just needs a reload when
+        the process finishes.
+        """
+        lang = self.lang_getter()
+        if self.caption_process is not None:
+            self._append_log(_t(lang, "\n生成はすでに実行中です。\n", "\nCaption generation is already running.\n"))
+            return
+        if self.settings_getter is None:
+            self.log.setPlainText(_t(lang, "NG: 設定を参照できません。", "NG: settings are not available."))
+            return
+
+        settings = self.settings_getter()
+        model_path = nested_get(settings, "caption", "qwen_vl_model_path")
+        if not model_path:
+            self.log.setPlainText(
+                _t(
+                    lang,
+                    "NG: 設定タブの caption.qwen_vl_model_path が未設定です。\n"
+                    "Qwen2.5-VL系のチェックポイント（例: Qwen-Image の text_encoder/model-00001-of-00004.safetensors）を指定してください。",
+                    "NG: caption.qwen_vl_model_path is not set.\n"
+                    "Point it at a Qwen2.5-VL checkpoint, e.g. Qwen-Image's text_encoder/model-00001-of-00004.safetensors.",
+                )
+            )
+            return
+
+        dataset_dir = resolve_path(self.dataset_dir_getter())
+        command = qwen_vl_caption_command(
+            musubi_python=resolve_path(nested_get(settings, "musubi", "python_path")),
+            musubi_repo=resolve_path(nested_get(settings, "musubi", "repo_path")),
+            image_dir=dataset_dir,
+            model_path=resolve_path(model_path),
+        )
+
+        env = QProcessEnvironment.systemEnvironment()
+        for key, value in subprocess_env_overrides().items():
+            env.insert(key, value)
+
+        self.log.setPlainText(_t(lang, f"キャプション生成を開始します:\n{command}\n", f"Starting caption generation:\n{command}\n"))
+        self.generate_btn.setEnabled(False)
+        process = QProcess(self)
+        process.setProcessEnvironment(env)
+        process.setProcessChannelMode(QProcess.ProcessChannelMode.MergedChannels)
+        process.readyReadStandardOutput.connect(self._on_caption_output)
+        process.finished.connect(self._on_caption_finished)
+        self.caption_process = process
+        process.start("bash", ["-lc", command])
+
+    def _on_caption_output(self) -> None:
+        if self.caption_process is None:
+            return
+        data = self.caption_process.readAllStandardOutput().data().decode("utf-8", errors="replace")
+        if data:
+            self._append_log(data)
+
+    def _on_caption_finished(self, exit_code: int, _status) -> None:
+        self.caption_process = None
+        self.generate_btn.setEnabled(True)
+        lang = self.lang_getter()
+        if exit_code == 0:
+            self._append_log(_t(lang, "\n生成完了。キャプションを読み込み直します。\n", "\nDone. Reloading captions.\n"))
+            self.load_captions()
+        else:
+            self._append_log(_t(lang, f"\nNG: 生成が失敗しました (exit {exit_code})\n", f"\nNG: caption generation failed (exit {exit_code})\n"))
 
     def _table_rows(self) -> list[list[str]]:
         rows: list[list[str]] = []

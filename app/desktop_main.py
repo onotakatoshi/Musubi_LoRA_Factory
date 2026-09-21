@@ -267,7 +267,7 @@ class DesktopApp(QMainWindow):
         w = QWidget(); w.setLayout(box); return w
 
     def _caption_tab(self) -> QWidget:
-        return CaptionTableWidget(lambda: self.dataset_dir.text(), lambda: self.lang)
+        return CaptionTableWidget(lambda: self.dataset_dir.text(), lambda: self.lang, lambda: self.settings)
 
     def _preview_tab(self) -> QWidget:
         return ImageCaptionBrowser(lambda: self.dataset_dir.text(), lambda: self.lang)
