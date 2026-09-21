@@ -14,8 +14,10 @@ from caption_diagnostics import diagnose_captions
 from caption_editor import bulk_replace_caption_rows, load_caption_rows, remove_words_caption_rows, save_caption_rows
 from command_preview import preview_from_settings
 from i18n import normalize_language, tr
-from model_adapters import adapter_ids, get_adapter
-from model_registry import enabled_profiles, get_profile, profile_ids, profile_summary
+from model_adapters import ADAPTERS, CatalogAdapter, adapter_ids, get_adapter
+from model_registry import ALIASES, PROFILES, enabled_profiles, get_profile, normalize_profile_id, profile_ids, profile_summary
+from model_settings_catalog import MODEL_SETTINGS
+from model_ui import WIRED_PROFILE_IDS, available_model_ids
 from pipeline import build_dataset_toml, check_dataset
 from preflight import run_preflight
 from project_io import load_project, project_data, save_project
@@ -109,14 +111,35 @@ def main() -> int:
     assert "0.00005" in help_text("lr", "日本語")
     assert get_preset("eye").rank == 16
     assert "Rank=16" in preset_summary("eye", "日本語")
-    assert profile_ids() == ["z-image"]
-    assert "wan2.2" in profile_ids(include_future=True)
+    assert "z-image" in profile_ids()
     assert get_profile("z-image").enabled_in_v1 is True
-    assert get_profile("wan2.2").enabled_in_v1 is False
     assert "Z-Image" in profile_summary("z-image", "日本語")
-    assert [p.id for p in enabled_profiles()] == ["z-image"]
-    assert adapter_ids() == ["z-image"]
-    assert get_adapter("z-image").validate_model_paths({}) == ["model_paths.zimage_vae", "model_paths.zimage_dit", "model_paths.zimage_text_encoder"]
+    assert normalize_profile_id("wan2.2") == "wan2.2-t2v-a14b", "the legacy wan2.2 id must still resolve"
+    assert ALIASES["wan2.2"] == "wan2.2-t2v-a14b"
+
+    # Every registered profile needs a settings spec and an adapter, and the Target model
+    # list must only offer profiles that actually have one.
+    assert set(PROFILES) == set(MODEL_SETTINGS), "registry and settings catalog are out of sync"
+    assert set(PROFILES) == set(adapter_ids()), "registry and adapters are out of sync"
+    assert WIRED_PROFILE_IDS <= set(PROFILES), "Target model list offers an unknown profile"
+    assert set(available_model_ids()) == WIRED_PROFILE_IDS
+    assert available_model_ids()[0] == "z-image"
+
+    # A profile with a real command builder must not be left out of the Target model list.
+    implemented = {pid for pid, adapter in ADAPTERS.items() if type(adapter) is not CatalogAdapter}
+    assert implemented <= WIRED_PROFILE_IDS, f"implemented but not selectable: {sorted(implemented - WIRED_PROFILE_IDS)}"
+    for pid in implemented:
+        assert MODEL_SETTINGS[pid].command_status == "implemented", f"{pid} has a builder but is marked catalog_only"
+    for pid in WIRED_PROFILE_IDS - implemented:
+        assert MODEL_SETTINGS[pid].command_status == "catalog_only", f"{pid} has no builder but is marked implemented"
+
+    assert get_adapter("z-image").validate_model_paths({}) == ["model_paths.zimage_dit", "model_paths.zimage_vae", "model_paths.zimage_text_encoder"]
+    assert get_adapter("minimax-h3").validate_model_paths({}) == [
+        "model_paths.minimax_h3_dit",
+        "model_paths.minimax_h3_text_encoder",
+        "model_paths.minimax_h3_video_vae",
+        "model_paths.minimax_h3_audio_vae",
+    ]
 
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
@@ -195,7 +218,12 @@ def main() -> int:
             output_name="smoke_wan",
             task="t2v-A14B",
         )
-        assert "非対応" in wan_preview
+        # wan2.2 is wired now: the legacy alias resolves to Wan2.2 T2V-A14B and builds a
+        # real command set instead of reporting "not supported".
+        assert "Wan2.2 T2V-A14B" in wan_preview
+        assert "wan_cache_latents.py" in wan_preview
+        assert "wan_train_network.py" in wan_preview
+        assert "--dit_high_noise" in wan_preview
 
         missing_preflight = run_preflight(settings, str(dataset_toml), "z-image", "z-image")
         assert "モデルアダプタ" in missing_preflight

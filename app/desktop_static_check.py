@@ -4,9 +4,10 @@ import ast
 from pathlib import Path
 
 from i18n import SUPPORTED_LANGUAGES, TEXT, tr
-from model_adapters import adapter_ids, get_adapter
-from model_registry import PROFILES, enabled_profiles, get_profile, profile_ids, profile_summary
-from model_ui import available_model_ids, available_model_labels, help_for_profile, label_for_profile, profile_id_from_label, task_for_profile, v1_default_profile
+from model_adapters import ADAPTERS, CatalogAdapter, adapter_ids, get_adapter
+from model_registry import ALIASES, PROFILES, enabled_profiles, get_profile, normalize_profile_id, profile_ids, profile_summary
+from model_settings_catalog import MODEL_SETTINGS, required_keys
+from model_ui import WIRED_PROFILE_IDS, available_model_ids, available_model_labels, help_for_profile, label_for_profile, profile_id_from_label, task_for_profile, v1_default_profile
 from recommended_defaults import DEFAULTS, help_text, status_text
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -41,10 +42,10 @@ def _used_translation_keys() -> set[str]:
 
 def _check_model_registry() -> None:
     assert "z-image" in PROFILES, "z-image profile is required"
-    assert get_profile("z-image").enabled_in_v1 is True, "z-image must be enabled in Ver 1.0"
-    assert profile_ids() == ["z-image"], "Ver 1.0 should expose only z-image"
-    assert "wan2.2" in profile_ids(include_future=True), "wan2.2 future profile should remain registered"
-    assert get_profile("wan2.2").enabled_in_v1 is False, "wan2.2 must remain hidden until Z-Image validation is complete"
+    assert get_profile("z-image").enabled_in_v1 is True, "z-image must stay enabled"
+    assert ALIASES["wan2.2"] == "wan2.2-t2v-a14b", "the legacy wan2.2 id must keep resolving"
+    assert normalize_profile_id("wan2.2") == "wan2.2-t2v-a14b"
+    assert set(PROFILES) == set(MODEL_SETTINGS), "registry and settings catalog are out of sync"
     for profile_id, profile in PROFILES.items():
         assert profile.id == profile_id, f"Profile key/id mismatch: {profile_id}"
         assert profile.display_name, f"Missing display name: {profile_id}"
@@ -53,13 +54,15 @@ def _check_model_registry() -> None:
         assert profile.description_en, f"Missing English description: {profile_id}"
         assert profile_summary(profile_id, "日本語"), f"Missing Japanese summary: {profile_id}"
         assert profile_summary(profile_id, "English"), f"Missing English summary: {profile_id}"
-    assert [p.id for p in enabled_profiles()] == ["z-image"], "Only z-image should be enabled for Ver 1.0"
+    assert [p.id for p in enabled_profiles()] == profile_ids()
 
 
 def _check_model_ui() -> None:
-    assert available_model_ids() == ["z-image"]
-    assert "wan2.2" in available_model_ids(include_future=True)
-    assert available_model_labels() == ["Z-Image / Z-Image-Turbo"]
+    # The Target model list is whatever is wired, in registry order, starting at z-image.
+    assert set(available_model_ids()) == WIRED_PROFILE_IDS
+    assert available_model_ids()[0] == "z-image"
+    assert WIRED_PROFILE_IDS <= set(PROFILES), "Target model list offers an unknown profile"
+    assert available_model_labels() == [PROFILES[pid].display_name for pid in available_model_ids()]
     assert label_for_profile("z-image") == "Z-Image / Z-Image-Turbo"
     assert profile_id_from_label("Z-Image / Z-Image-Turbo") == "z-image"
     assert task_for_profile("z-image") == "z-image"
@@ -69,12 +72,30 @@ def _check_model_ui() -> None:
 
 
 def _check_model_adapters() -> None:
-    assert adapter_ids() == ["z-image"], "Only z-image adapter should be implemented for Ver 1.0"
+    assert set(adapter_ids()) == set(PROFILES), "every profile needs an adapter"
+
+    # A profile with a real command builder must be selectable, and its catalog entry must
+    # say so. Letting these drift is how a model ends up half-wired.
+    implemented = {pid for pid, adapter in ADAPTERS.items() if type(adapter) is not CatalogAdapter}
+    assert implemented <= WIRED_PROFILE_IDS, f"implemented but not selectable: {sorted(implemented - WIRED_PROFILE_IDS)}"
+    for profile_id in implemented:
+        assert MODEL_SETTINGS[profile_id].command_status == "implemented", f"{profile_id} has a builder but is marked catalog_only"
+    for profile_id in WIRED_PROFILE_IDS - implemented:
+        assert MODEL_SETTINGS[profile_id].command_status == "catalog_only", f"{profile_id} has no builder but is marked implemented"
+
+    # Required keys come from the catalog, in catalog order.
+    for profile_id in PROFILES:
+        assert get_adapter(profile_id).required_setting_keys() == required_keys(profile_id), profile_id
+
     adapter = get_adapter("z-image")
-    assert adapter.required_setting_keys() == ["zimage_vae", "zimage_dit", "zimage_text_encoder"]
+    assert adapter.required_setting_keys() == ["zimage_dit", "zimage_vae", "zimage_text_encoder"]
     assert "zimage_base_weights" in adapter.optional_setting_keys()
-    assert adapter.validate_model_paths({}) == ["model_paths.zimage_vae", "model_paths.zimage_dit", "model_paths.zimage_text_encoder"]
+    assert adapter.validate_model_paths({}) == ["model_paths.zimage_dit", "model_paths.zimage_vae", "model_paths.zimage_text_encoder"]
     assert adapter.validate_model_paths({"zimage_vae": "a", "zimage_dit": "b", "zimage_text_encoder": "c"}) == []
+
+    h3 = get_adapter("minimax-h3")
+    assert h3.required_setting_keys() == ["minimax_h3_dit", "minimax_h3_text_encoder", "minimax_h3_video_vae", "minimax_h3_audio_vae"]
+    assert "minimax_h3_base_weights" in h3.optional_setting_keys()
 
 
 def _check_desktop_uses_model_ui() -> None:
@@ -123,9 +144,13 @@ def _check_training_engine_hardening() -> None:
     assert "COMMAND PATH GUARD FAILED" in text
     assert "Logs:" in text
     assert "QProcessEnvironment" in text
-    assert "PYTHONUNBUFFERED" in text
-    assert "PYTHONIOENCODING" in text
+    assert "from process_env import subprocess_env_overrides" in text
     assert "setProcessEnvironment" in text
+    process_env = (ROOT / "app" / "process_env.py").read_text(encoding="utf-8")
+    assert "PYTHONUNBUFFERED" in process_env
+    assert "PYTHONIOENCODING" in process_env
+    # A root-owned ~/.triton/cache otherwise kills every run deep inside torch.
+    assert "TRITON_CACHE_DIR" in process_env
 
 
 def _check_commands_use_musubi_python() -> None:
@@ -136,6 +161,9 @@ def _check_commands_use_musubi_python() -> None:
     assert "zimage_cache_latents.py" in text
     assert "zimage_cache_text_encoder_outputs.py" in text
     assert "zimage_train_network.py" in text
+    assert "minimax_h3_train_network.py" in text
+    # flux_2_* defaults to --model_version dev; klein weights need the flag to be passed.
+    assert "--model_version" in text
 
 
 def _check_command_path_guard() -> None:
@@ -146,6 +174,8 @@ def _check_command_path_guard() -> None:
     assert "script not found" in text
     assert "--dataset_config" in text
     assert "--output_dir" in text
+    assert "from model_file_format import format_problem" in text, "the guard must reject unloadable weight formats, not just missing files"
+    assert "cannot be loaded by musubi-tuner" in text
     assert "from training_engine" not in text, "command_path_guard must not import training_engine"
 
 

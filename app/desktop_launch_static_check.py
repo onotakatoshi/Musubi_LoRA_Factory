@@ -28,15 +28,14 @@ def main() -> int:
     assert "apply_balanced_ui_font" in launcher
     assert "Noto Sans CJK JP" in font
     assert "font-weight: 400" in font
-    assert "QPushButton" in font
-    assert "background-color: #4a5563" in font
-    assert "QPushButton:hover" in font
-    assert "QPushButton:pressed" in font
-    assert "QTabWidget::pane" not in font
-    assert "QTabBar::tab:selected" not in font
-    assert "background: #2f3742" not in font
-    assert "background-color: #ffffff" not in font
-    assert "border: 1px solid #9aa1aa" not in font
+    # Assert the buttons are styled, not one particular hex: pinning the colour is what
+    # made this check go stale when the theme changed.
+    for block in ["QPushButton {", "QPushButton:hover {", "QPushButton:pressed {", "QPushButton:disabled {"]:
+        assert block in font, f"missing button style block: {block}"
+    assert "background" in font.split("QPushButton {", 1)[1].split("}", 1)[0]
+    # The tab bar is deliberately themed now; these used to assert it was left unstyled.
+    for block in ["QTabWidget::pane", "QTabBar::tab", "QTabBar::tab:selected"]:
+        assert block in font, f"missing tab style block: {block}"
     assert "def showEvent" in caption_table
     assert "load_if_needed" in caption_table
     assert "_last_loaded_dataset_dir" in caption_table

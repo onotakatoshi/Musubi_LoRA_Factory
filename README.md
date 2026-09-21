@@ -4,7 +4,7 @@ PGX向けのmusubi-tuner用ローカルデスクトップGUIです。
 
 **Musubi TunerでLoRA作成スクリプトが用意されている主要Target modelを、設定画面の選択肢として追加しています。**
 
-現在、学習コマンド生成まで実装済みなのは Z-Image / Z-Image-Turbo、Wan2.2 T2V-A14B、Wan2.2 I2V-A14B です。Wan2.2 TI2V-5B とその他のTarget modelは、Settingsのモデル別パス管理・設定確認・保存後ログ・musubiスクリプト確認までを先に追加し、学習コマンドテンプレートは検証フェーズで順次有効化します。
+現在、学習コマンド生成まで実装済みなのは Z-Image / Z-Image-Turbo、Wan2.2 T2V-A14B、Wan2.2 I2V-A14B、Wan2.1、HunyuanVideo、FLUX.1 Kontext、FLUX.2 dev、FLUX.2 klein、Qwen-Image、MiniMax-H3 です。Wan2.2 TI2V-5B とその他のTarget modelは、Settingsのモデル別パス管理・設定確認・保存後ログ・musubiスクリプト確認までを先に追加し、学習コマンドテンプレートは検証フェーズで順次有効化します。
 
 追加対象:
 
@@ -22,12 +22,15 @@ PGX向けのmusubi-tuner用ローカルデスクトップGUIです。
 - FLUX.2 dev
 - FLUX.2 klein
 - Qwen-Image
+- MiniMax-H3
 - HiDream-O1-Image
 - Kandinsky 5
 - Ideogram4
 - Krea 2
 
 Z-Imageで最初に試す場合は、まず [PGX Z-Image setup notes](docs/pgx_zimage_setup.md) を見てください。
+
+MiniMax-H3のLoRA作成手順は [MiniMax-H3 command profile](docs/minimax_h3_commands.md) にまとめています。
 
 PGXでβ確認する手順は [PGX Beta Runbook](docs/pgx_beta_runbook.md) にまとめています。
 
@@ -37,6 +40,7 @@ Ver 1.0の合格条件は [Ver 1.0 Acceptance Checklist](docs/v1_acceptance_chec
 
 目的:
 - Z-Image / Z-Image-Turbo 用LoRA作成
+- MiniMax-H3 用LoRA作成
 - Wan2.2 T2V-A14B 用LoRA作成
 - Wan2.2 I2V-A14B 用LoRA作成
 - Musubi Tuner対応Target modelの設定管理
@@ -135,6 +139,18 @@ python3 scripts/sync_model_paths.py --models-dir ~/models --keep-existing
 python3 scripts/audit_model_assets.py
 ```
 
+MiniMax-H3だけを取得する場合:
+
+```bash
+bash ./scripts/download_model_assets.sh minimax-h3
+```
+
+FLUX.1 Kontext用のText Encoder（T5-XXL / CLIP-L）は別リポジトリです。
+
+```bash
+bash ./scripts/download_model_assets.sh flux-text-encoders
+```
+
 ゲート付きモデルで失敗する場合は、先にHugging Faceでライセンス承認し、PGX上でログインします。
 
 ```bash
@@ -178,6 +194,16 @@ bash ./scripts/start.sh
 7. `学習` タブでTarget modelを確認し、Preflight Check後にcache/trainを実行
 8. `Export` タブで完成LoRAをComfyUIへコピー
 
+## モデルファイルの指定ルール
+
+musubi-tunerが読める形式でパスを指定する必要があります。設定画面の自動検出もこのルールに従います。
+
+- **分割されたsafetensorsは先頭ファイルを指定します。** `diffusion_pytorch_model-00001-of-00006.safetensors` のように `-00001-of-0000N` を指すと、残りは自動で読み込まれます。
+- **`*.safetensors.index.json` は指定できません。** ファイルは存在しますがmusubi-tunerに読み込み処理がなく、学習開始時に `HeaderTooLarge` で落ちます。
+- **FLUXはリポジトリ直下の単一ファイルを使います。** `transformer/` `vae/` `text_encoder*/` のサブフォルダはDiffusers形式で、musubi-tunerは受け付けません。`flux1-kontext-dev.safetensors` / `flux2-dev.safetensors` / `flux-2-klein-9b.safetensors` / `ae.safetensors` を指定してください。FLUX.1 KontextのText Encoderは `comfyanonymous/flux_text_encoders` の `t5xxl_fp16.safetensors` と `clip_l.safetensors` です。
+
+Preflight Checkはファイルの有無に加えてこの形式も検証し、間違っている場合は正しい候補を表示します。
+
 ## 設定ファイル
 
 初回起動前に例をコピーできます。
@@ -212,5 +238,6 @@ GUIの `設定` タブからBrowseで指定するのが安全です。
 ## 現時点で対象外
 
 - Wan2.2 TI2V-5Bおよび未検証Target modelの学習コマンド実行
+- MiniMax-H3のteacher matchingレシピ（guidance lossとtraining adapterのみGUI対応）
 - マルチGPU分散
 - クラウド実行
