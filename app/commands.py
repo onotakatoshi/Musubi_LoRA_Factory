@@ -677,7 +677,12 @@ def minimax_h3_train_command(
     task: str = "t2va",
     mixed_precision: str = "bf16",
     optimizer: str = "adamw8bit",
-    blocks_to_swap: int = 48,
+    # Block swap trades speed for memory and is only worth it on a VRAM-limited GPU. On
+    # PGX (GB10, 128GB unified memory) the INT8 transformer fits without it. It is also
+    # fragile at the top of its range: musubi-tuner accepts up to len(blocks)-2, but at
+    # exactly that value block 0 was still on CPU when forward ran and training died with
+    # "expected cuda after wait". Default to no swapping and let the caller opt in.
+    blocks_to_swap: int = 0,
     guidance_loss_scale: float = 4.0,
     guidance_loss_sigma_min: float = 0.15,
     one_frame: bool = False,

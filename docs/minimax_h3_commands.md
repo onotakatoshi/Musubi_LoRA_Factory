@@ -112,7 +112,6 @@ python -m accelerate.commands.launch --num_cpu_threads_per_process 1 --mixed_pre
   --network_module networks.lora_minimax_h3 --network_dim 16 --network_alpha 16 \
   --max_train_epochs 16 --save_every_n_epochs 1 --seed 42 \
   --output_dir /path/to/output --output_name h3_lora \
-  --blocks_to_swap 48 \
   --h3_guidance_loss_scale 4.0 \
   --h3_guidance_loss_sigma_min 0.15 \
   --h3_guidance_loss_uncond_cache /path/to/output/h3_uncond.safetensors
@@ -122,4 +121,9 @@ python -m accelerate.commands.launch --num_cpu_threads_per_process 1 --mixed_pre
 are the only values musubi-tuner accepts for H3: the model draws one base time per item
 and derives the video and audio sigmas from it with its own shifts (12 and 3).
 
-Lower `--blocks_to_swap` if you have memory headroom; raise it if training OOMs.
+`--blocks_to_swap` is omitted on purpose. It trades speed for memory, and on PGX
+(GB10, 128GB unified memory) the transformer fits without it: a 1024px one-frame run on
+the pruned INT8 transformer peaked around 34GB. Add it only if training OOMs, and stay
+below the maximum musubi-tuner reports — at exactly `len(blocks) - 2` (48 of the 50
+blocks) block 0 was still on CPU when forward ran and training failed with
+`MiniMax-H3 block 0 parameter attn.qkv_proj.weight is on cpu, expected cuda after wait`.
