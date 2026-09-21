@@ -58,7 +58,37 @@ def apply_config_export_tab_patch(desktop_app_class) -> None:
 
         project = default_project_name(current_profile_id(self.settings))
         self.lora_path = self._line(str(Path(nested_get(self.settings, "paths", "outputs_dir")) / project / f"{project}.safetensors"))
+        box.addWidget(HelpLabel(
+            "コピー元のLoRAファイル" if self.lang != "English" else "Source LoRA file",
+            "ComfyUIへコピーするファイルです。学習後は自動で入ります。各エポックのチェックポイントを選ぶこともできます。"
+            if self.lang != "English"
+            else "The file to copy into ComfyUI. Filled in automatically after training; you can also pick a per-epoch checkpoint.",
+        ))
         box.addLayout(self._browse_file_row(self.lora_path))
+
+        # The copied name used to be locked to the source name, so every LoRA landed in
+        # ComfyUI under the training tab's output name.
+        self.export_name = self._line(Path(self.lora_path.text()).name)
+        self._export_name_auto = True
+        name_row = QHBoxLayout()
+        name_row.addWidget(HelpLabel(
+            "コピー後のファイル名" if self.lang != "English" else "Copied file name",
+            "ComfyUI側での名前です。空欄ならコピー元と同じ名前になります。拡張子は自動で付きます。"
+            if self.lang != "English"
+            else "Name used inside ComfyUI. Empty copies under the source name. The extension is added automatically.",
+        ))
+        name_row.addWidget(self.export_name, 1)
+        box.addLayout(name_row)
+
+        def _mark_manual(_text: str) -> None:
+            self._export_name_auto = False
+
+        def _follow_source(text: str) -> None:
+            if getattr(self, "_export_name_auto", True):
+                self.export_name.setText(Path(text).name)
+
+        self.export_name.textEdited.connect(_mark_manual)
+        self.lora_path.textChanged.connect(_follow_source)
 
         row = QHBoxLayout()
         row.addWidget(self._button("コピー前チェック" if self.lang != "English" else "Pre-copy Check", self._validate_export))

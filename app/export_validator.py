@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from pipeline import export_file_name
+
 
 def _ng(lines: list[str], message: str) -> str:
     lines.append(message)
@@ -10,7 +12,7 @@ def _ng(lines: list[str], message: str) -> str:
     return "\n".join(lines)
 
 
-def validate_lora_for_export(lora_path: str | Path, comfyui_loras_dir: str | Path) -> str:
+def validate_lora_for_export(lora_path: str | Path, comfyui_loras_dir: str | Path, dest_name: str = "") -> str:
     src = Path(lora_path)
     dest_dir = Path(comfyui_loras_dir)
     lines = ["# Export Validation", ""]
@@ -27,11 +29,13 @@ def validate_lora_for_export(lora_path: str | Path, comfyui_loras_dir: str | Pat
     if not dest_dir.is_dir():
         return _ng(lines, f"NG: ComfyUI LoRAパスがフォルダではありません: {dest_dir}")
     size_mb = src.stat().st_size / 1024 / 1024
-    dest = dest_dir / src.name
+    dest = dest_dir / export_file_name(src, dest_name)
     lines.append(f"OK: Source: {src}")
     lines.append(f"OK: Destination: {dest}")
     lines.append(f"Size: {size_mb:.1f} MB")
     lines.append(f"Overwrite: {'yes' if dest.exists() else 'no'}")
+    if dest.name != src.name:
+        lines.append(f"Renamed: {src.name} -> {dest.name}")
     lines.append("")
     lines.append("Result: OK")
     lines.append("Next: 問題なければ ComfyUIへコピー を押してください。")

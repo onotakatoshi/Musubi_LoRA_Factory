@@ -73,10 +73,25 @@ def build_dataset_toml(dataset_dir: Path, output_dir: Path, resolution: int) -> 
     return str(toml_path)
 
 
-def copy_lora_to_comfyui(lora_path: Path, cfg: AppConfig) -> str:
+def export_file_name(lora_path: Path, dest_name: str = "") -> str:
+    """Name to copy under, defaulting to the source name.
+
+    The training tab's output name decided the file name and nothing downstream could
+    change it, so LoRAs landed in ComfyUI under whatever the project default was.
+    """
+    name = (dest_name or "").strip()
+    if not name:
+        return lora_path.name
+    name = Path(name).name  # never let a path escape the ComfyUI loras dir
+    if not name.lower().endswith(".safetensors"):
+        name += ".safetensors"
+    return name
+
+
+def copy_lora_to_comfyui(lora_path: Path, cfg: AppConfig, dest_name: str = "") -> str:
     if not lora_path.exists():
         return f"NG: LoRA file does not exist: {lora_path}"
     cfg.comfyui_loras_dir.mkdir(parents=True, exist_ok=True)
-    dest = cfg.comfyui_loras_dir / lora_path.name
+    dest = cfg.comfyui_loras_dir / export_file_name(lora_path, dest_name)
     shutil.copy2(lora_path, dest)
     return f"Copied: {dest}"

@@ -557,10 +557,14 @@ class DesktopApp(QMainWindow):
         if hasattr(self, "run_log"):
             self.run_log.append(f"\n{self.t('stop_requested')}")
 
+    def _export_dest_name(self) -> str:
+        widget = getattr(self, "export_name", None)
+        return widget.text() if widget is not None else ""
+
     def _validate_export(self) -> str:
         try:
             cfg = AppConfig.from_file(SETTINGS_PATH)
-            report = validate_lora_for_export(self.lora_path.text(), cfg.comfyui_loras_dir)
+            report = validate_lora_for_export(self.lora_path.text(), cfg.comfyui_loras_dir, self._export_dest_name())
         except Exception as exc:
             report = f"NG: {type(exc).__name__}: {exc}"
         self.export_log.setPlainText(report)
@@ -573,7 +577,7 @@ class DesktopApp(QMainWindow):
                 QMessageBox.warning(self, self.t("copy_to_comfyui"), report)
                 return
             cfg = AppConfig.from_file(SETTINGS_PATH)
-            self.export_log.setPlainText(report + "\n\n" + copy_lora_to_comfyui(Path(self.lora_path.text()), cfg))
+            self.export_log.setPlainText(report + "\n\n" + copy_lora_to_comfyui(Path(self.lora_path.text()), cfg, self._export_dest_name()))
         except Exception as exc:
             self.export_log.setPlainText(f"NG: {type(exc).__name__}: {exc}")
 
