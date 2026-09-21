@@ -143,6 +143,17 @@ def apply_wan_settings_patch(desktop_app_class) -> None:
             self._browse_file_row(self.set_qwen_vl_model_path),
         )
 
+        self.set_subject_term = self._line(nested_get(self.settings, "caption", "subject_term"))
+        common_form.addRow(
+            HelpLabel(
+                "Caption subject term",
+                "Word the captioner must use for the subject. Empty lets it choose, which splits one concept across synonyms."
+                if _is_en(self)
+                else "キャプションで主題に使う語です。空欄だと画像ごとに違う同義語が使われ、1つの概念が複数の語に分散します。",
+            ),
+            self.set_subject_term,
+        )
+
         common_group = QGroupBox("Common Settings" if _is_en(self) else "共通設定")
         common_layout = QVBoxLayout()
         common_layout.addLayout(common_form)
@@ -218,6 +229,7 @@ def apply_wan_settings_patch(desktop_app_class) -> None:
             "outputs_dir": self.set_outputs_dir.text(),
             "comfyui_loras_dir": self.set_comfyui_loras_dir.text(),
             "qwen_vl_model_path": self.set_qwen_vl_model_path.text(),
+            "subject_term": self.set_subject_term.text(),
         }
         for item in settings_spec(_settings_profile_id(self)).fields:
             if item.key in self.model_path_fields:
@@ -237,6 +249,7 @@ def apply_wan_settings_patch(desktop_app_class) -> None:
         data["paths"]["outputs_dir"] = self.set_outputs_dir.text()
         data["paths"]["comfyui_loras_dir"] = self.set_comfyui_loras_dir.text()
         data.setdefault("caption", {})["qwen_vl_model_path"] = self.set_qwen_vl_model_path.text()
+        data["caption"]["subject_term"] = self.set_subject_term.text()
         model_paths = data.setdefault("model_paths", {})
         for key in all_model_path_keys():
             if key in self.model_path_fields:

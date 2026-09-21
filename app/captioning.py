@@ -16,6 +16,31 @@ CAPTION_MODES = [QWEN_VL_MODE, "joycaption_llm", "joycaption_only", "llm_only", 
 
 PLACEHOLDER_PREFIX = "PLACEHOLDER"
 
+# musubi-tuner's own default prompt asks for rich, enriched prose. That is the wrong
+# shape for LoRA captions: the padding ("suggesting a natural outdoor setting", "giving
+# it a curious expression") carries no information and dilutes the tokens that matter.
+TERSE_CAPTION_PROMPT = """# Image Annotator
+Write exactly one short factual sentence describing this image, as training data for a LoRA.
+1. State the main subject, its pose and action, and the immediate surroundings, in plain words.
+2. No mood, no atmosphere, no interpretation. Never write "suggesting", "giving it", "appears to be", "creating a", "curious", "alert".
+3. At most 20 words. Output only the sentence."""
+
+SUBJECT_TERM_RULE = 'Always call the main subject "{term}", even if another name seems more accurate.'
+
+
+def build_caption_prompt(subject_term: str = "", prompt_override: str = "") -> str:
+    """Instruction for the Qwen2.5-VL captioner.
+
+    ``subject_term`` pins the word used for the subject. Without it the captioner picks
+    a different synonym per image (the same animal came back as both "marmot" and
+    "groundhog"), which splits one concept across two tokens during training.
+    """
+    prompt = prompt_override.strip() or TERSE_CAPTION_PROMPT
+    term = subject_term.strip()
+    if term:
+        prompt = prompt + "\n" + SUBJECT_TERM_RULE.format(term=term)
+    return prompt
+
 
 class CaptionerNotConfigured(RuntimeError):
     """Raised when a mode promises image captions but nothing can read the image."""
@@ -115,6 +140,7 @@ def qwen_vl_caption_command(
     max_size: int = 1024,
     fp8_vl: bool = False,
     prompt: str = "",
+    max_new_tokens: int = 64,
 ) -> str:
     """Build the musubi-tuner Qwen2.5-VL captioning command.
 
@@ -130,11 +156,12 @@ def qwen_vl_caption_command(
         "--model_path", shlex.quote(str(model_path)),
         "--output_format", "text",
         "--max_size", str(max_size),
+        "--max_new_tokens", str(max_new_tokens),
     ]
     if fp8_vl:
         parts.append("--fp8_vl")
-    if prompt.strip():
-        parts.extend(["--prompt", shlex.quote(prompt)])
+    # Always pass a prompt: leaving it out falls back to musubi-tuner's verbose default.
+    parts.extend(["--prompt", shlex.quote(prompt.strip() or TERSE_CAPTION_PROMPT)])
     return f"cd {shlex.quote(str(musubi_repo))} && " + " ".join(parts)
 
 
@@ -146,6 +173,7 @@ def run_qwen_vl_captions(
     max_size: int = 1024,
     fp8_vl: bool = False,
     prompt: str = "",
+    max_new_tokens: int = 64,
     env: dict[str, str] | None = None,
 ) -> str:
     if not model_path or not Path(model_path).exists():
@@ -158,7 +186,7 @@ def run_qwen_vl_captions(
     if not images:
         raise CaptionerNotConfigured(f"画像が見つかりません: {image_dir}")
 
-    command = qwen_vl_caption_command(musubi_python, musubi_repo, image_dir, model_path, max_size, fp8_vl, prompt)
+    command = qwen_vl_caption_command(musubi_python, musubi_repo, image_dir, model_path, max_size, fp8_vl, prompt, max_new_tokens)
     proc = subprocess.run(command, shell=True, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, env=env)
     if proc.returncode != 0:
         raise RuntimeError(f"Qwen2.5-VL captioning failed (exit {proc.returncode})\n\n{proc.stdout}")

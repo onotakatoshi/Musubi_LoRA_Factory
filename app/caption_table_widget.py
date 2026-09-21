@@ -17,7 +17,7 @@ from PySide6.QtWidgets import (
 )
 
 from caption_editor import bulk_replace_caption_rows, load_caption_rows, remove_words_caption_rows, save_caption_rows
-from captioning import qwen_vl_caption_command
+from captioning import build_caption_prompt, qwen_vl_caption_command
 from path_resolver import resolve_path
 from process_env import subprocess_env_overrides
 from settings_io import nested_get
@@ -61,11 +61,18 @@ class CaptionTableWidget(QWidget):
         self.load_btn.clicked.connect(self.load_captions)
         self.save_btn.clicked.connect(self.save_captions)
         self.reload_btn.clicked.connect(self.load_captions)
+        self.subject_term_edit = QLineEdit()
+        self.subject_term_edit.setMaximumWidth(180)
+        if settings_getter is not None:
+            self.subject_term_edit.setText(nested_get(settings_getter(), "caption", "subject_term"))
         self.generate_btn = QPushButton()
         self.generate_btn.clicked.connect(self.generate_captions)
         buttons.addWidget(self.load_btn)
         buttons.addWidget(self.save_btn)
         buttons.addWidget(self.reload_btn)
+        self.subject_term_label = QLabel()
+        buttons.addWidget(self.subject_term_label)
+        buttons.addWidget(self.subject_term_edit)
         buttons.addWidget(self.generate_btn)
         buttons.addStretch()
         box.addLayout(buttons)
@@ -117,6 +124,15 @@ class CaptionTableWidget(QWidget):
         self.save_btn.setText(_t(lang, "キャプションを保存", "Save Captions"))
         self.reload_btn.setText(_t(lang, "再読み込み", "Reload"))
         self.generate_btn.setText(_t(lang, "キャプション生成 (Qwen2.5-VL)", "Generate Captions (Qwen2.5-VL)"))
+        self.subject_term_label.setText(_t(lang, "主題の語", "Subject term"))
+        self.subject_term_edit.setPlaceholderText(_t(lang, "例: marmot", "e.g. marmot"))
+        self.subject_term_edit.setToolTip(
+            _t(
+                lang,
+                "キャプション内で主題をこの語に固定します。空欄だと画像ごとに別の同義語が使われ、1つの概念が複数の語に分散します。",
+                "Pins the subject to this word. Left empty, the captioner picks a different synonym per image and one concept ends up split across tokens.",
+            )
+        )
         self.replace_btn.setText(_t(lang, "一括置換", "Bulk Replace"))
         self.remove_words_btn.setText(_t(lang, "語句を一括削除", "Remove Words"))
         self.find_edit.setPlaceholderText(_t(lang, "探す文字列", "Find text"))
@@ -164,11 +180,13 @@ class CaptionTableWidget(QWidget):
             return
 
         dataset_dir = resolve_path(self.dataset_dir_getter())
+        subject_term = self.subject_term_edit.text().strip()
         command = qwen_vl_caption_command(
             musubi_python=resolve_path(nested_get(settings, "musubi", "python_path")),
             musubi_repo=resolve_path(nested_get(settings, "musubi", "repo_path")),
             image_dir=dataset_dir,
             model_path=resolve_path(model_path),
+            prompt=build_caption_prompt(subject_term, nested_get(settings, "caption", "prompt")),
         )
 
         env = QProcessEnvironment.systemEnvironment()

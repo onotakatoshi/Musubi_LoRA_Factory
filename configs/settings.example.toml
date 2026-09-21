@@ -17,6 +17,10 @@ comfyui_loras_dir = "../ComfyUI/models/loras"
 # text encoder is one, so it can be reused instead of downloading a separate model.
 mode = "qwen_vl"
 qwen_vl_model_path = "../models/qwen/Qwen-Image/text_encoder/model-00001-of-00004.safetensors"
+# Pins the word used for the subject so one concept is not split across synonyms.
+subject_term = ""
+# Empty uses the built-in terse prompt; set to replace it entirely.
+prompt = ""
 joycaption_command = ""
 llm_endpoint = "http://localhost:8000/v1/chat/completions"
 llm_model = "qwen-caption-helper"

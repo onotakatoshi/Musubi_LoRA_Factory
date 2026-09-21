@@ -66,6 +66,11 @@ def default_settings() -> dict[str, Any]:
             # qwen_vl is the only built-in mode that reads the image itself.
             "mode": "qwen_vl",
             "qwen_vl_model_path": "",
+            # Pins the word the captioner uses for the subject, so one concept does not
+            # get split across synonyms. Empty means "let the captioner choose".
+            "subject_term": "",
+            # Empty means the built-in terse prompt; set to override it entirely.
+            "prompt": "",
             "joycaption_command": "",
             "llm_endpoint": "",
             "llm_model": "",
