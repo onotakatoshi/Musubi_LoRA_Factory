@@ -13,6 +13,7 @@ WIRED_PROFILE_IDS = {
     "flux2-dev",
     "flux2-klein",
     "qwen-image",
+    "minimax-h3",
 }
 
 

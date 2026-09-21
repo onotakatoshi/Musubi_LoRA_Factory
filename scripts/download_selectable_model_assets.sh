@@ -21,6 +21,8 @@ Target model list:
   - FLUX.1 Kontext dev
   - FLUX.2 dev
   - FLUX.2 klein
+  - FLUX.1 text encoders (T5-XXL + CLIP-L, required by FLUX.1 Kontext)
+  - MiniMax-H3
 
 Downloads can be very large. Some repositories may require Hugging Face
 license approval and `hf auth login` before this script can download them.

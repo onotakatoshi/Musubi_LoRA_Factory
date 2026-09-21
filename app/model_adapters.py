@@ -240,6 +240,37 @@ class HunyuanVideoAdapter(CatalogAdapter):
         )
 
 
+class MiniMaxH3Adapter(CatalogAdapter):
+    def __init__(self) -> None:
+        super().__init__("minimax-h3")
+
+    def _paths(self, model_paths: dict) -> ModelPaths:
+        return ModelPaths(
+            dit=model_paths.get("minimax_h3_dit", ""),
+            text_encoder=model_paths.get("minimax_h3_text_encoder", ""),
+            video_vae=model_paths.get("minimax_h3_video_vae", ""),
+            audio_vae=model_paths.get("minimax_h3_audio_vae", ""),
+            base_weights=model_paths.get("minimax_h3_base_weights", ""),
+        )
+
+    def build_commands(self, context: CommandContext) -> str:
+        profile = get_profile(self.profile_id)
+        return build_command_preview(
+            target_model=profile.id,
+            musubi_python=context.musubi_python,
+            musubi_repo=context.musubi_repo,
+            dataset_toml=context.dataset_toml,
+            output_dir=context.output_dir,
+            output_name=context.output_name,
+            paths=self._paths(context.model_paths),
+            rank=context.rank,
+            alpha=context.alpha,
+            epochs=context.epochs,
+            lr=context.lr,
+            task=profile.task,
+        )
+
+
 ADAPTERS: dict[str, ModelAdapter] = {profile_id: CatalogAdapter(profile_id) for profile_id in profile_ids(include_future=True)}
 ADAPTERS["z-image"] = ZImageAdapter()
 ADAPTERS["wan2.2-t2v-a14b"] = Wan22A14BAdapter("wan2.2-t2v-a14b", prefix="wan")
@@ -264,3 +295,4 @@ ADAPTERS["flux2-dev"] = Flux2Adapter("flux2-dev", prefix="flux2_dev")
 ADAPTERS["flux2-klein"] = Flux2Adapter("flux2-klein", prefix="flux2_klein")
 
 ADAPTERS["hunyuan-video"] = HunyuanVideoAdapter()
+ADAPTERS["minimax-h3"] = MiniMaxH3Adapter()

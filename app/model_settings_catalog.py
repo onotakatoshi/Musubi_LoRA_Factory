@@ -75,6 +75,7 @@ MODEL_SETTINGS: dict[str, ModelSettingsSpec] = {
     "wan2.1": ModelSettingsSpec(
         profile_id="wan2.1",
         group_title="Wan2.1 Model Paths",
+        command_status="implemented",
         scripts=("wan_train_network.py", "wan_cache_latents.py", "wan_cache_text_encoder_outputs.py"),
         fields=(
             field("wan21_vae", "Wan2.1 VAE", "Wan2.1用VAEファイルです。", "Wan2.1 VAE file."),
@@ -95,6 +96,7 @@ MODEL_SETTINGS: dict[str, ModelSettingsSpec] = {
     "hunyuan-video": ModelSettingsSpec(
         profile_id="hunyuan-video",
         group_title="HunyuanVideo Model Paths",
+        command_status="implemented",
         scripts=("hv_train_network.py",),
         fields=(
             field("hv_vae", "HunyuanVideo VAE", "HunyuanVideo用VAEです。", "HunyuanVideo VAE file."),
@@ -136,6 +138,7 @@ MODEL_SETTINGS: dict[str, ModelSettingsSpec] = {
     "flux-kontext": ModelSettingsSpec(
         profile_id="flux-kontext",
         group_title="FLUX.1 Kontext Model Paths",
+        command_status="implemented",
         scripts=("flux_kontext_train_network.py", "flux_kontext_cache_latents.py", "flux_kontext_cache_text_encoder_outputs.py"),
         fields=(
             field("flux_kontext_vae", "FLUX.1 Kontext VAE", "FLUX.1 Kontext用VAEです。", "FLUX.1 Kontext VAE file."),
@@ -147,6 +150,7 @@ MODEL_SETTINGS: dict[str, ModelSettingsSpec] = {
     "flux2-dev": ModelSettingsSpec(
         profile_id="flux2-dev",
         group_title="FLUX.2 dev Model Paths",
+        command_status="implemented",
         scripts=("flux_2_train_network.py", "flux_2_cache_latents.py", "flux_2_cache_text_encoder_outputs.py"),
         fields=(
             field("flux2_dev_vae", "FLUX.2 dev VAE", "FLUX.2 dev用VAEです。", "FLUX.2 dev VAE file."),
@@ -157,6 +161,7 @@ MODEL_SETTINGS: dict[str, ModelSettingsSpec] = {
     "flux2-klein": ModelSettingsSpec(
         profile_id="flux2-klein",
         group_title="FLUX.2 klein Model Paths",
+        command_status="implemented",
         scripts=("flux_2_train_network.py", "flux_2_cache_latents.py", "flux_2_cache_text_encoder_outputs.py"),
         fields=(
             field("flux2_klein_vae", "FLUX.2 klein VAE", "FLUX.2 klein用VAEです。", "FLUX.2 klein VAE file."),
@@ -167,6 +172,7 @@ MODEL_SETTINGS: dict[str, ModelSettingsSpec] = {
     "qwen-image": ModelSettingsSpec(
         profile_id="qwen-image",
         group_title="Qwen-Image Model Paths",
+        command_status="implemented",
         scripts=("qwen_image_train_network.py", "qwen_image_cache_latents.py", "qwen_image_cache_text_encoder_outputs.py"),
         fields=(
             field("qwen_image_vae", "Qwen-Image VAE", "Qwen-Image用VAEです。", "Qwen-Image VAE file."),
@@ -202,6 +208,19 @@ MODEL_SETTINGS: dict[str, ModelSettingsSpec] = {
             field("ideogram4_vae", "Ideogram4 VAE", "Ideogram4用VAEです。", "Ideogram4 VAE file."),
             field("ideogram4_text_encoder", "Ideogram4 text encoder", "Ideogram4用Text Encoderです。", "Ideogram4 text encoder file."),
             field("ideogram4_dit", "Ideogram4 DiT", "Ideogram4の学習対象DiTです。", "Ideogram4 DiT file."),
+        ),
+    ),
+    "minimax-h3": ModelSettingsSpec(
+        profile_id="minimax-h3",
+        group_title="MiniMax-H3 Model Paths",
+        command_status="implemented",
+        scripts=("minimax_h3_train_network.py", "minimax_h3_cache_latents.py", "minimax_h3_cache_text_encoder_outputs.py"),
+        fields=(
+            field("minimax_h3_dit", "MiniMax-H3 DiT", "MiniMax-H3の学習対象DiTです。T2VA/FL2VAはFL2VA版、Ref2VAはRef2VA版を指定します。", "MiniMax-H3 DiT to train. T2VA and FL2VA use the FL2VA transformer; Ref2VA uses the Ref2VA one."),
+            field("minimax_h3_text_encoder", "MiniMax-H3 text encoder", "MiniMax-H3用Qwen3-VL-32B Text Encoderです。", "MiniMax-H3 Qwen3-VL-32B text encoder file."),
+            field("minimax_h3_video_vae", "MiniMax-H3 video VAE", "MiniMax-H3用のVideo VAEです。", "MiniMax-H3 video VAE file."),
+            field("minimax_h3_audio_vae", "MiniMax-H3 audio VAE", "MiniMax-H3用のAudio VAEです。無音データでも必須です。", "MiniMax-H3 audio VAE file. Required even for silent datasets."),
+            field("minimax_h3_base_weights", "MiniMax-H3 training adapter", "任意設定です。de-distillationアダプタを指定すると、guidance lossの代わりにtraining adapterレシピを使います。", "Optional. Point at a de-distillation adapter to use the training-adapter recipe instead of the guidance loss.", required=False),
         ),
     ),
     "krea2": ModelSettingsSpec(

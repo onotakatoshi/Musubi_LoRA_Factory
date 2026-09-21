@@ -14,7 +14,9 @@ LOG_FILE="$LOG_DIR/download_$(date +%Y%m%d_%H%M%S).log"
 
 # High-confidence repositories used by current app defaults or common upstream distribution names.
 # Some Hugging Face repos are gated. Run `hf auth login` first and accept the model license on Hugging Face.
-declare -A REPO DEST NOTE
+# INCLUDE holds optional space-separated hf --include patterns, for repos where only a
+# few of the published files are the ones musubi-tuner actually loads.
+declare -A REPO DEST NOTE INCLUDE
 
 REPO[z-image]="Tongyi-MAI/Z-Image"
 DEST[z-image]="$MODELS_DIR/z-image/Tongyi-MAI/Z-Image"
@@ -56,6 +58,19 @@ REPO[flux2-klein]="black-forest-labs/FLUX.2-klein-9B"
 DEST[flux2-klein]="$MODELS_DIR/flux/FLUX.2-klein-9B"
 NOTE[flux2-klein]="FLUX.2 klein; gated license may be required"
 
+# FLUX.1 Kontext needs these ComfyUI text encoders. The text_encoder/ and text_encoder_2/
+# subfolders inside the black-forest-labs repos are Diffusers format and cannot be used.
+REPO[flux-text-encoders]="comfyanonymous/flux_text_encoders"
+DEST[flux-text-encoders]="$MODELS_DIR/flux/flux_text_encoders"
+NOTE[flux-text-encoders]="FLUX.1 text encoders (T5-XXL + CLIP-L)"
+INCLUDE[flux-text-encoders]="t5xxl_fp16.safetensors clip_l.safetensors"
+
+# MiniMax-H3 publishes many pruned/quantized variants; fetch only the BF16 set by default.
+REPO[minimax-h3]="Comfy-Org/MiniMax-H3"
+DEST[minimax-h3]="$MODELS_DIR/minimax-h3/Comfy-Org/MiniMax-H3"
+NOTE[minimax-h3]="MiniMax-H3 (FL2VA BF16 transformer, Qwen3-VL text encoder, video+audio VAE)"
+INCLUDE[minimax-h3]="diffusion_models/minimax_h3_fl2va_bf16.safetensors text_encoders/qwen3vl_32b_minimax_h3_bf16.safetensors vae/minimax_h3_video_vae_fp16.safetensors vae/minimax_h3_audio_vae_fp32.safetensors"
+
 usage() {
   cat <<'USAGE'
 Usage:
@@ -76,6 +91,8 @@ Targets:
   flux-kontext
   flux2-dev
   flux2-klein
+  flux-text-encoders
+  minimax-h3
 
 Options:
   --models-dir DIR    Download root. Default: $HOME/models
@@ -118,7 +135,7 @@ add_target() {
       TARGETS+=(wan22-t2v-a14b wan22-i2v-a14b wan22-ti2v-5b)
       ;;
     all-known)
-      TARGETS+=(z-image wan22-t2v-a14b wan22-i2v-a14b wan22-ti2v-5b wan21-t2v-14b qwen-image hunyuan-video flux-kontext flux2-dev flux2-klein)
+      TARGETS+=(z-image wan22-t2v-a14b wan22-i2v-a14b wan22-ti2v-5b wan21-t2v-14b qwen-image hunyuan-video flux-kontext flux2-dev flux2-klein flux-text-encoders minimax-h3)
       ;;
     *)
       if have_target "$target"; then
@@ -184,7 +201,15 @@ download_one() {
 
   mkdir -p "$dest"
 
-  local cmd=("${HF_CMD[@]}" "$repo" --local-dir "$dest")
+  local cmd=("${HF_CMD[@]}" "$repo")
+  local include="${INCLUDE[$target]:-}"
+  if [[ -n "$include" ]]; then
+    local pattern
+    for pattern in $include; do
+      cmd+=("$pattern")
+    done
+  fi
+  cmd+=(--local-dir "$dest")
   log "Command: ${cmd[*]}"
 
   if [[ "$DRY_RUN" == "1" ]]; then

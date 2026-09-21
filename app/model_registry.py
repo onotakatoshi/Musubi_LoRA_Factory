@@ -149,6 +149,13 @@ PROFILES = {
         "Ideogram4用LoRAを作成するためのプロファイルです。",
         "Profile for Ideogram4 LoRA training.",
     ),
+    "minimax-h3": profile(
+        "minimax-h3",
+        "MiniMax-H3",
+        "t2va",
+        "MiniMax-H3 (text-to-video-with-audio) 用LoRAを作成します。必要設定はFL2VA DiT、Qwen3-VL Text Encoder、Video VAE、Audio VAEです。学習レシピは既定でguidance lossを使います。",
+        "Create a MiniMax-H3 text-to-video-with-audio LoRA. Required settings are the FL2VA DiT, the Qwen3-VL text encoder, the video VAE and the audio VAE. The guidance-loss recipe is used by default.",
+    ),
     "krea2": profile(
         "krea2",
         "Krea 2",

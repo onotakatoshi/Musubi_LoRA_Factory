@@ -13,6 +13,8 @@ class ModelPaths:
     dit_high_noise: str = ""
     text_encoder: str = ""
     base_weights: str = ""
+    video_vae: str = ""
+    audio_vae: str = ""
 
 
 def q(value: str | Path) -> str:
@@ -332,10 +334,21 @@ def build_flux_kontext_preview(
     ])
 
 
-def flux2_cache_latents_command(musubi_python: Path, musubi_repo: Path, dataset_toml: Path, paths: ModelPaths) -> str:
+FLUX2_MODEL_VERSIONS = {
+    "flux2-dev": "dev",
+    "flux2-klein": "klein-9b",
+}
+
+
+def flux2_model_version(target_model: str) -> str:
+    return FLUX2_MODEL_VERSIONS.get(target_model, "dev")
+
+
+def flux2_cache_latents_command(musubi_python: Path, musubi_repo: Path, dataset_toml: Path, paths: ModelPaths, model_version: str = "dev") -> str:
     command = " ".join([
         q(musubi_python), "src/musubi_tuner/flux_2_cache_latents.py",
         "--dataset_config", q(dataset_toml),
+        "--model_version", model_version,
         "--vae", q(paths.vae),
     ])
     return in_repo(command, musubi_repo)
@@ -348,10 +361,12 @@ def flux2_cache_text_command(
     paths: ModelPaths,
     batch_size: int = 16,
     fp8_text_encoder: bool = True,
+    model_version: str = "dev",
 ) -> str:
     parts = [
         q(musubi_python), "src/musubi_tuner/flux_2_cache_text_encoder_outputs.py",
         "--dataset_config", q(dataset_toml),
+        "--model_version", model_version,
         "--text_encoder", q(paths.text_encoder),
         "--batch_size", str(batch_size),
     ]
@@ -375,10 +390,12 @@ def flux2_train_command(
     optimizer: str = "adamw8bit",
     fp8_scaled: bool = True,
     fp8_text_encoder: bool = True,
+    model_version: str = "dev",
 ) -> str:
     parts = [
         *accelerate_launch(musubi_python, mixed_precision),
         "src/musubi_tuner/flux_2_train_network.py",
+        "--model_version", model_version,
         "--dit", q(paths.dit),
         "--vae", q(paths.vae),
         "--text_encoder", q(paths.text_encoder),
@@ -418,13 +435,14 @@ def build_flux2_preview(
     alpha: int,
     epochs: int,
     lr: float,
+    model_version: str = "dev",
 ) -> str:
     return "\n".join([
         "# 1. Latent cache",
-        flux2_cache_latents_command(musubi_python, musubi_repo, dataset_toml, paths),
+        flux2_cache_latents_command(musubi_python, musubi_repo, dataset_toml, paths, model_version=model_version),
         "",
         "# 2. Text encoder cache",
-        flux2_cache_text_command(musubi_python, musubi_repo, dataset_toml, paths),
+        flux2_cache_text_command(musubi_python, musubi_repo, dataset_toml, paths, model_version=model_version),
         "",
         "# 3. Train LoRA",
         flux2_train_command(
@@ -438,6 +456,7 @@ def build_flux2_preview(
             alpha=alpha,
             epochs=epochs,
             lr=lr,
+            model_version=model_version,
         ),
     ])
 
@@ -553,6 +572,193 @@ def build_hunyuan_preview(
     ])
 
 
+# ---------------------------------------------------------------- MiniMax-H3
+
+# H3 checkpoints are CFG-distilled, so musubi-tuner does not offer plain flow training.
+# Of the three supported recipes we default to the guidance loss: it needs no
+# third-party adapter file and works on the published BF16 base. When the user supplies
+# a de-distillation adapter in minimax_h3_base_weights we switch to the training-adapter
+# recipe instead, because the documentation says to pick exactly one.
+MINIMAX_H3_TASKS = {"t2va", "fl2va", "ref2va"}
+MINIMAX_H3_UNCOND_NAME = "h3_uncond.safetensors"
+
+
+def minimax_h3_uncond_path(output_dir: Path) -> Path:
+    return output_dir / MINIMAX_H3_UNCOND_NAME
+
+
+def dataset_is_image_only(dataset_toml: Path) -> bool:
+    """True when every dataset entry in the TOML is an image dataset.
+
+    H3 treats images as an experimental one-frame mode: the plain image LoRA row of
+    Table B needs --one_frame on all three steps and --video_only on training. This app
+    builds image datasets, so that is the common case, but a hand-written TOML can point
+    at videos instead.
+    """
+    try:
+        import toml as _toml
+
+        data = _toml.load(dataset_toml)
+    except Exception:
+        return False
+    entries = data.get("datasets") or []
+    if not entries:
+        return False
+    for entry in entries:
+        if entry.get("video_directory") or entry.get("video_jsonl_file"):
+            return False
+    return True
+
+
+def minimax_h3_cache_latents_command(
+    musubi_python: Path,
+    musubi_repo: Path,
+    dataset_toml: Path,
+    paths: ModelPaths,
+    task: str = "t2va",
+    cache_seed: int = 42,
+    one_frame: bool = False,
+) -> str:
+    parts = [
+        q(musubi_python), "src/musubi_tuner/minimax_h3_cache_latents.py",
+        "--dataset_config", q(dataset_toml),
+        "--task", task,
+        "--video_vae", q(paths.video_vae),
+        "--audio_vae", q(paths.audio_vae),
+        "--cache_seed", str(cache_seed),
+        "--skip_existing",
+    ]
+    if one_frame:
+        parts.append("--one_frame")
+    return in_repo(" ".join(parts), musubi_repo)
+
+
+def minimax_h3_cache_text_command(
+    musubi_python: Path,
+    musubi_repo: Path,
+    dataset_toml: Path,
+    paths: ModelPaths,
+    output_dir: Path,
+    task: str = "t2va",
+    text_cache_dtype: str = "bf16",
+    text_encoder_blocks_to_swap: int = 50,
+    guidance_loss: bool = True,
+    one_frame: bool = False,
+) -> str:
+    parts = [
+        q(musubi_python), "src/musubi_tuner/minimax_h3_cache_text_encoder_outputs.py",
+        "--dataset_config", q(dataset_toml),
+        "--task", task,
+        "--text_encoder", q(paths.text_encoder),
+        "--text_cache_dtype", text_cache_dtype,
+        "--skip_existing",
+    ]
+    if one_frame:
+        parts.append("--one_frame")
+    if text_encoder_blocks_to_swap > 0:
+        parts.extend(["--text_encoder_blocks_to_swap", str(text_encoder_blocks_to_swap)])
+    if guidance_loss:
+        # Writes the ~10 KB unconditional probe the training step re-anchors against.
+        parts.extend(["--uncond_output", q(minimax_h3_uncond_path(output_dir))])
+    return in_repo(" ".join(parts), musubi_repo)
+
+
+def minimax_h3_train_command(
+    musubi_python: Path,
+    musubi_repo: Path,
+    dataset_toml: Path,
+    paths: ModelPaths,
+    output_dir: Path,
+    output_name: str,
+    rank: int,
+    alpha: int,
+    epochs: int,
+    lr: float,
+    task: str = "t2va",
+    mixed_precision: str = "bf16",
+    optimizer: str = "adamw8bit",
+    blocks_to_swap: int = 48,
+    guidance_loss_scale: float = 4.0,
+    guidance_loss_sigma_min: float = 0.15,
+    one_frame: bool = False,
+) -> str:
+    parts = [
+        *accelerate_launch(musubi_python, mixed_precision),
+        "src/musubi_tuner/minimax_h3_train_network.py",
+        "--dataset_config", q(dataset_toml),
+        "--task", task,
+        "--dit", q(paths.dit),
+        "--sdpa", "--mixed_precision", mixed_precision,
+        # H3 derives its video and audio sigmas from one base time; these three are the
+        # only values musubi-tuner accepts for this architecture.
+        "--timestep_sampling", "uniform", "--weighting_scheme", "none", "--discrete_flow_shift", "1.0",
+        "--optimizer_type", optimizer, "--learning_rate", str(lr),
+        "--gradient_checkpointing", "--max_data_loader_n_workers", "2", "--persistent_data_loader_workers",
+        "--network_module", "networks.lora_minimax_h3", "--network_dim", str(rank), "--network_alpha", str(alpha),
+        "--max_train_epochs", str(epochs), "--save_every_n_epochs", "1", "--seed", "42",
+        "--output_dir", q(output_dir), "--output_name", q(output_name),
+    ]
+    if one_frame:
+        # --video_only drops the audio stream from the loss for single-frame image rows.
+        parts.extend(["--one_frame", "--video_only"])
+    if blocks_to_swap > 0:
+        parts.extend(["--blocks_to_swap", str(blocks_to_swap)])
+    if paths.base_weights:
+        parts.extend(["--base_weights", q(paths.base_weights)])
+    else:
+        parts.extend([
+            "--h3_guidance_loss_scale", str(guidance_loss_scale),
+            "--h3_guidance_loss_sigma_min", str(guidance_loss_sigma_min),
+            "--h3_guidance_loss_uncond_cache", q(minimax_h3_uncond_path(output_dir)),
+        ])
+    return in_repo(" ".join(parts), musubi_repo)
+
+
+def build_minimax_h3_preview(
+    musubi_python: Path,
+    musubi_repo: Path,
+    dataset_toml: Path,
+    output_dir: Path,
+    output_name: str,
+    paths: ModelPaths,
+    rank: int,
+    alpha: int,
+    epochs: int,
+    lr: float,
+    task: str = "t2va",
+) -> str:
+    guidance_loss = not paths.base_weights
+    recipe = "training adapter (--base_weights)" if paths.base_weights else "guidance loss"
+    one_frame = dataset_is_image_only(dataset_toml)
+    mode = "one-frame image LoRA" if one_frame else "video"
+    return "\n".join([
+        f"# Recipe: {recipe}",
+        f"# Dataset mode: {mode}",
+        "",
+        "# 1. Latent cache",
+        minimax_h3_cache_latents_command(musubi_python, musubi_repo, dataset_toml, paths, task=task, one_frame=one_frame),
+        "",
+        "# 2. Text encoder cache",
+        minimax_h3_cache_text_command(musubi_python, musubi_repo, dataset_toml, paths, output_dir, task=task, guidance_loss=guidance_loss, one_frame=one_frame),
+        "",
+        "# 3. Train LoRA",
+        minimax_h3_train_command(
+            musubi_python=musubi_python,
+            musubi_repo=musubi_repo,
+            dataset_toml=dataset_toml,
+            paths=paths,
+            output_dir=output_dir,
+            output_name=output_name,
+            rank=rank,
+            alpha=alpha,
+            epochs=epochs,
+            lr=lr,
+            task=task,
+            one_frame=one_frame,
+        ),
+    ])
+
+
 def build_command_preview(target_model: str, musubi_python: Path, musubi_repo: Path, dataset_toml: Path, output_dir: Path, output_name: str, paths: ModelPaths, rank: int, alpha: int, epochs: int, lr: float, task: str = "t2v-A14B") -> str:
     if target_model == "z-image":
         return build_zimage_preview(musubi_python=musubi_python, musubi_repo=musubi_repo, dataset_toml=dataset_toml, output_dir=output_dir, output_name=output_name, paths=paths, rank=rank, alpha=alpha, epochs=epochs, lr=lr)
@@ -563,7 +769,9 @@ def build_command_preview(target_model: str, musubi_python: Path, musubi_repo: P
     if target_model == "flux-kontext":
         return build_flux_kontext_preview(musubi_python=musubi_python, musubi_repo=musubi_repo, dataset_toml=dataset_toml, output_dir=output_dir, output_name=output_name, paths=paths, rank=rank, alpha=alpha, epochs=epochs, lr=lr)
     if target_model in {"flux2-dev", "flux2-klein"}:
-        return build_flux2_preview(musubi_python=musubi_python, musubi_repo=musubi_repo, dataset_toml=dataset_toml, output_dir=output_dir, output_name=output_name, paths=paths, rank=rank, alpha=alpha, epochs=epochs, lr=lr)
+        return build_flux2_preview(musubi_python=musubi_python, musubi_repo=musubi_repo, dataset_toml=dataset_toml, output_dir=output_dir, output_name=output_name, paths=paths, rank=rank, alpha=alpha, epochs=epochs, lr=lr, model_version=flux2_model_version(target_model))
+    if target_model == "minimax-h3":
+        return build_minimax_h3_preview(musubi_python=musubi_python, musubi_repo=musubi_repo, dataset_toml=dataset_toml, output_dir=output_dir, output_name=output_name, paths=paths, rank=rank, alpha=alpha, epochs=epochs, lr=lr, task=task if task in MINIMAX_H3_TASKS else "t2va")
     if target_model == "hunyuan-video":
         return build_hunyuan_preview(musubi_python=musubi_python, musubi_repo=musubi_repo, dataset_toml=dataset_toml, output_dir=output_dir, output_name=output_name, paths=paths, rank=rank, alpha=alpha, epochs=epochs, lr=lr)
     return f"# {target_model} command template is not implemented yet."
