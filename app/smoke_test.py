@@ -13,12 +13,13 @@ from PIL import Image
 from caption_diagnostics import diagnose_captions
 from caption_editor import bulk_replace_caption_rows, load_caption_rows, remove_words_caption_rows, save_caption_rows
 from command_preview import preview_from_settings
+from error_analyzer import analyze_log, has_failure
 from i18n import normalize_language, tr
 from model_adapters import ADAPTERS, CatalogAdapter, adapter_ids, get_adapter
 from model_registry import ALIASES, PROFILES, enabled_profiles, get_profile, normalize_profile_id, profile_ids, profile_summary
 from model_settings_catalog import MODEL_SETTINGS
 from model_ui import WIRED_PROFILE_IDS, available_model_ids
-from pipeline import build_dataset_toml, check_dataset
+from pipeline import build_dataset_toml, check_dataset, export_file_name
 from preflight import run_preflight
 from project_io import load_project, project_data, save_project
 from recommended_defaults import DEFAULTS, help_text, status_text
@@ -235,6 +236,40 @@ def main() -> int:
         ok_preflight = run_preflight(valid_settings, str(dataset_toml), "z-image", "z-image")
         assert "Result: ✅" in ok_preflight
         assert "zimage_dit" in ok_preflight
+
+    # A healthy log must not be reported as broken. The analyzer used to match bare
+    # words like "accelerate" and "safetensors", which appear in every successful run.
+    healthy = "\n".join([
+        "Trying to import sageattention",
+        "Failed to import sageattention",
+        "INFO:musubi_tuner.dataset.cache_io:epoch is incremented. current_epoch: 1, epoch: 2",
+        "cd /repo && /venv/bin/python -m accelerate.commands.launch src/musubi_tuner/minimax_h3_train_network.py --dataset_config /d/dataset.toml",
+        "steps: 100%|##########| 336/336 [44:09<00:00,  7.89s/it, avr_loss=5.37]",
+    ])
+    assert not has_failure(healthy), "a healthy log must not look like a failure"
+    healthy_report = analyze_log(healthy)
+    assert "✅" in healthy_report, healthy_report
+    assert "Possible causes" not in healthy_report, healthy_report
+    assert "推定段階: Train" in healthy_report, healthy_report
+
+    broken = "\n".join([
+        "Traceback (most recent call last):",
+        '  File "/repo/src/musubi_tuner/minimax_h3/model.py", line 814, in _assert_block_device',
+        "RuntimeError: MiniMax-H3 block 0 parameter attn.qkv_proj.weight is on cpu, expected cuda after wait",
+    ])
+    assert has_failure(broken)
+    broken_report = analyze_log(broken)
+    assert "❌" in broken_report, broken_report
+    assert "blocks_to_swap" in broken_report, broken_report
+
+    index_json = "SafetensorError: Error while deserializing header: HeaderTooLarge"
+    assert "-00001-of-0000N.safetensors" in analyze_log(index_json)
+
+    # Copying into ComfyUI must be able to rename, and must not escape the target dir.
+    assert export_file_name(Path("/a/lora.safetensors"), "") == "lora.safetensors"
+    assert export_file_name(Path("/a/lora.safetensors"), "marmot_v1") == "marmot_v1.safetensors"
+    assert export_file_name(Path("/a/lora.safetensors"), "marmot_v1.safetensors") == "marmot_v1.safetensors"
+    assert export_file_name(Path("/a/lora.safetensors"), "../../evil") == "evil.safetensors"
 
     print("Smoke test OK")
     return 0

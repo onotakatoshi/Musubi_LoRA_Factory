@@ -2,177 +2,218 @@ from __future__ import annotations
 
 import re
 
+# Lines that mean the run actually broke. Without one of these the log is treated as
+# healthy: the previous version matched bare words like "accelerate", "dataset_config"
+# and "safetensors", which appear in every successful command line, so a run that
+# trained perfectly was reported as three possible failures.
+FAILURE_SIGNALS: tuple[re.Pattern[str], ...] = (
+    re.compile(r"^Traceback \(most recent call last\)", re.M),
+    re.compile(r"^\s*[A-Za-z_][A-Za-z0-9_.]*(Error|Exception)\s*:", re.M),
+    re.compile(r"^\s*assert\b", re.M),
+    re.compile(r"COMMAND PATH GUARD FAILED"),
+    re.compile(r"\bout of memory\b", re.I),
+    re.compile(r"\bKilled\b"),
+    re.compile(r"returned non-zero exit status"),
+    re.compile(r"CalledProcessError"),
+    re.compile(r"^NG:", re.M),
+    re.compile(r"===== .*(失敗|FAILED|failed)", re.M),
+)
 
+# Noise that looks like a failure but is not.
+BENIGN_PATTERNS: tuple[re.Pattern[str], ...] = (
+    re.compile(r"Failed to import sageattention"),
+    re.compile(r"Trying to import sageattention"),
+)
+
+# (regex, title, advice). Matched only after a failure signal is present, and written to
+# be specific enough that a healthy log cannot trigger them.
 ERROR_PATTERNS: list[tuple[str, str, str]] = [
     (
-        ".triton/cache",
+        r"\.triton[/\\]cache",
         "Triton cacheフォルダの権限問題です。",
-        "~/.triton/cache に書き込めず失敗しています。最新版では TRITON_CACHE_DIR をプロジェクト内 .cache/triton に固定します。GUIをgit pull後に再起動してください。",
+        "~/.triton/cache に書き込めていません。アプリは書き込み可能な場所へ自動で退避しますが、CLIから直接実行した場合は `sudo chown -R $USER ~/.triton/cache` で直せます。",
     ),
     (
-        "Permission denied",
+        r"Permission denied",
         "権限エラーです。",
-        "ログに出ているパスの所有者または書き込み権限を確認してください。Triton cacheの場合は ~/.triton/cache を削除またはchownしてください。",
+        "ログに出ているパスの所有者と書き込み権限を確認してください。",
     ),
     (
-        "sm_121 is not compatible with the current PyTorch installation",
-        "PyTorchがPGX / GB10のCUDAアーキテクチャに未対応です。",
-        "現在のtorch wheelがGB10向けkernelを含んでいません。musubi-tuner側venvのtorchを、CUDA 13系などGB10でCUDA tensorが作れる版へ入れ替えてください。",
+        r"is on cpu, expected cuda after wait",
+        "ブロックスワップが上限値付近で失敗しています。",
+        "blocks_to_swap を下げるか、メモリに余裕があれば 0（スワップ無し）にしてください。musubi-tunerは len(blocks)-2 まで許可しますが、その最大値では実際に失敗します。",
     ),
     (
-        "no kernel image is available for execution on the device",
-        "CUDA kernelがPGX / GB10で実行できません。",
-        "VAEやText Encoderの問題ではなく、torchのCUDAビルド不一致が原因です。torch.cuda.get_arch_list() に sm_120 または compute_120 があり、CUDA tensor作成が通る環境へ入れ替えてください。",
+        r"HeaderTooLarge",
+        "safetensorsとして読めないファイルを指定しています。",
+        "`*.safetensors.index.json` を指定していないか確認してください。分割された重みは先頭ファイル（-00001-of-0000N.safetensors）を指定します。",
     ),
     (
-        "No training items found in the dataset",
-        "Latent/Text Encoder cacheが未作成、または古い可能性があります。",
-        "dataset.tomlを作り直した後は、Trainの前に必ず Latent Cache → Text Encoder Cache を再実行してください。cacheフォルダを消した場合も同じです。",
+        r"sm_\d+ is not compatible with the current PyTorch installation",
+        "PyTorchがこのGPUのCUDAアーキテクチャに未対応です。",
+        "musubi-tuner側venvのtorchを、このGPU向けkernelを含む版へ入れ替えてください。",
     ),
     (
-        "total batches: 0",
+        r"no kernel image is available for execution on the device",
+        "CUDA kernelがこのGPUで実行できません。",
+        "モデルファイルではなくtorchのCUDAビルド不一致が原因です。torch.cuda.get_arch_list() を確認してください。",
+    ),
+    (
+        r"No training items found in the dataset",
+        "Latent / Text Encoder cacheが未作成、または古い可能性があります。",
+        "dataset.tomlを作り直した後は、学習の前に必ず Latent Cache → Text Cache を再実行してください。",
+    ),
+    (
+        r"total batches: 0",
         "学習に使えるcache済みデータが0件です。",
-        "画像が見つかっていても、cacheが無いとTrainは開始できません。Latent Cache実行とText Cache実行のログがDONEになっているか確認してください。",
+        "Latent Cache と Text Cache が完了しているか確認してください。",
     ),
     (
-        "found 0 images",
+        r"found 0 images",
         "dataset.tomlの画像フォルダを見失っています。",
-        "dataset.tomlを作り直してください。image_directory が /home/... で始まる絶対パスになっている必要があります。",
+        "image_directory が絶対パスになっているか確認し、コンフィグ生成タブで作り直してください。",
     ),
     (
-        "CUDA out of memory",
-        "GPUメモリ不足の可能性があります。",
-        "解像度、rank、同時処理数を下げてください。PGXでも高解像度・高rankではキャッシュまたは学習でメモリが詰まることがあります。",
+        r"CUDA out of memory|\bout of memory\b",
+        "メモリ不足です。",
+        "解像度・rank を下げるか、blocks_to_swap を上げてください。他のGPUプロセス（ComfyUI等）が動いていないかも確認してください。",
     ),
     (
-        "out of memory",
-        "メモリ不足の可能性があります。",
-        "解像度、rank、epochs、キャッシュ条件を見直してください。まずはプリセットのSafe系に戻すのが安全です。",
-    ),
-    (
-        "No such file or directory",
+        r"No such file or directory",
         "ファイルパスが間違っている可能性があります。",
-        "設定タブのmusubi-tuner、Z-Image DiT/VAE/Text Encoder、dataset.tomlの場所を確認してください。",
+        "設定タブのmusubi-tunerパス、選択中モデルのモデルパス、dataset.tomlの場所を確認してください。",
     ),
     (
-        "ModuleNotFoundError",
+        r"ModuleNotFoundError",
         "Python依存ライブラリが不足しています。",
-        "musubi-tuner側のvenvとGUI側のvenvを取り違えていないか確認してください。musubi python pathも確認してください。",
+        "musubi-tuner側のvenvとGUI側のvenvを取り違えていないか、musubi python path を確認してください。",
     ),
     (
-        "ImportError",
+        r"^\s*ImportError\s*:",
         "Pythonモジュールのimportに失敗しています。",
-        "musubi-tunerの環境と、このGUIの環境を取り違えていないか確認してください。",
+        "musubi-tunerの環境とこのGUIの環境を取り違えていないか確認してください。",
     ),
     (
-        "KeyError",
-        "設定ファイルまたはdataset設定に必要なキーがない可能性があります。",
-        "dataset.tomlを作り直し、settings.tomlのZ-Image項目が揃っているか確認してください。",
+        r"^\s*KeyError\s*:",
+        "設定またはdataset設定に必要なキーがありません。",
+        "dataset.tomlを作り直し、settings.tomlの選択中モデルの項目が揃っているか確認してください。",
     ),
     (
-        "RuntimeError",
-        "実行時エラーが発生しています。",
-        "直前の数行に本当の原因が出ていることが多いです。ログ末尾を確認してください。",
-    ),
-    (
-        "accelerate",
-        "accelerate関連の設定問題の可能性があります。",
-        "musubi-tuner環境でaccelerateが使えるか確認してください。GUIのPythonではなくmusubi python path側が重要です。",
-    ),
-    (
-        "dataset_config",
-        "dataset.toml関連の問題の可能性があります。",
-        "コンフィグ生成タブでdataset.tomlを作り直し、画像フォルダとcaptionを確認してください。",
-    ),
-    (
-        "safetensors",
-        "モデルファイルの読み込み問題の可能性があります。",
-        "Z-Image DiT/VAE/Text Encoderのファイルパス、ファイル形式、破損の有無を確認してください。",
-    ),
-    (
-        "zimage_cache_latents",
-        "Latent Cache段階で失敗しています。",
-        "dataset.toml、画像ファイル、VAEパスを優先して確認してください。",
-    ),
-    (
-        "zimage_cache_text_encoder_outputs",
-        "Text Encoder Cache段階で失敗しています。",
-        "Text Encoderパス、caption内容、文字コード、空captionを確認してください。",
-    ),
-    (
-        "zimage_train_network",
-        "学習本体で失敗しています。",
-        "DiTパス、rank/alpha/lr、キャッシュ出力、出力フォルダ権限を確認してください。",
+        r"unrecognized arguments",
+        "musubi-tunerが受け付けないオプションを渡しています。",
+        "musubi-tunerを更新したか確認してください。バージョン差でオプション名が変わることがあります。",
     ),
 ]
 
+# script name -> stage label. Covers every wired model, not just Z-Image.
+STAGE_SCRIPTS: tuple[tuple[str, str], ...] = (
+    ("cache_text_encoder_outputs", "Text Encoder Cache"),
+    ("cache_latents", "Latent Cache"),
+    ("cache_pixel", "Latent Cache"),
+    ("train_network", "Train"),
+)
 
-def extract_recent_error_lines(log_text: str, max_lines: int = 20) -> list[str]:
-    keywords = ["error", "exception", "traceback", "failed", "runtimeerror", "modulenotfounderror", "cuda", "zimage", "dataset", "training items", "total batches", "sm_121", "sm_120", "compute_120", "kernel image", "permission", ".triton", "triton"]
-    lines = log_text.splitlines()
-    hits = []
-    for line in lines:
-        lower = line.lower()
-        if any(k in lower for k in keywords):
-            hits.append(line)
+
+def _strip_benign(log_text: str) -> str:
+    kept = []
+    for line in log_text.splitlines():
+        if any(p.search(line) for p in BENIGN_PATTERNS):
+            continue
+        kept.append(line)
+    return "\n".join(kept)
+
+
+def has_failure(log_text: str) -> bool:
+    text = _strip_benign(log_text)
+    return any(p.search(text) for p in FAILURE_SIGNALS)
+
+
+def extract_recent_error_lines(log_text: str, max_lines: int = 12) -> list[str]:
+    """Lines that are part of an actual failure, not every line mentioning 'cuda'."""
+    hits: list[str] = []
+    for line in _strip_benign(log_text).splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith(("INFO:", "DEBUG:")):
+            continue
+        if any(p.search(line) for p in FAILURE_SIGNALS) or stripped.startswith(("File \"", "Traceback")):
+            hits.append(line.rstrip())
     return hits[-max_lines:]
 
 
 def summarize_stage(log_text: str) -> str:
     lower = log_text.lower()
-    if "failed text_cache" in lower or "text encoder cache failed" in lower:
-        return "推定段階: Text Encoder Cache"
-    if "failed latent_cache" in lower or "latent cache failed" in lower:
-        return "推定段階: Latent Cache"
-    if "failed train" in lower or "train failed" in lower:
-        return "推定段階: Train"
-    if "zimage_cache_text_encoder_outputs" in lower:
-        return "推定段階: Text Encoder Cache"
-    if "zimage_cache_latents" in lower:
-        return "推定段階: Latent Cache"
-    if "zimage_train_network" in lower:
-        return "推定段階: Train"
-    return "推定段階: 不明"
+    for marker, label in (("failed text_cache", "Text Encoder Cache"), ("failed latent_cache", "Latent Cache"), ("failed train", "Train")):
+        if marker in lower:
+            return f"推定段階: {label}"
+    # Otherwise use the last script named in the log, so the stage follows whichever
+    # model is being trained.
+    last_label = ""
+    last_pos = -1
+    for needle, label in STAGE_SCRIPTS:
+        pos = lower.rfind(needle)
+        if pos > last_pos:
+            last_pos, last_label = pos, label
+    return f"推定段階: {last_label}" if last_label else "推定段階: 不明"
+
+
+def _last_progress_line(log_text: str) -> str:
+    for line in reversed(log_text.replace("\r", "\n").splitlines()):
+        if "steps:" in line or "epoch " in line:
+            return line.strip()
+    return ""
 
 
 def analyze_log(log_text: str) -> str:
     if not log_text.strip():
         return "ログがありません。"
 
-    findings: list[str] = []
-    for pattern, title, advice in ERROR_PATTERNS:
-        if re.search(re.escape(pattern), log_text, re.IGNORECASE):
-            findings.append(f"- **{title}**\n  - {advice}")
+    if not has_failure(log_text):
+        lines = ["# Error Analysis", "", "✅ 失敗を示す記録は見つかりませんでした。", ""]
+        progress = _last_progress_line(log_text)
+        if progress:
+            lines.append(f"最後の進捗: {progress}")
+            lines.append("")
+        lines.append(summarize_stage(log_text))
+        lines.append("")
+        lines.append("`Failed to import sageattention` のような警告は正常です（代替の実装が使われます）。")
+        return "\n".join(lines)
 
+    text = _strip_benign(log_text)
+    findings = [
+        f"- **{title}**\n  - {advice}"
+        for pattern, title, advice in ERROR_PATTERNS
+        if re.search(pattern, text, re.IGNORECASE | re.MULTILINE)
+    ]
     recent = extract_recent_error_lines(log_text)
 
-    if not findings and not recent:
-        return "明確な既知エラーパターンは見つかりませんでした。ログ末尾を確認してください。"
-
-    lines = ["# Error Analysis", "", summarize_stage(log_text), ""]
+    lines = ["# Error Analysis", "", "❌ 失敗が記録されています。", "", summarize_stage(log_text), ""]
     if findings:
         lines.append("## Possible causes")
         lines.extend(findings)
         lines.append("")
-    if recent:
-        lines.append("## Recent error lines")
-        lines.extend(f"```text\n{line}\n```" for line in recent[-8:])
-    lines.append("")
-    lines.append("## Next action")
-    if ".triton/cache" in log_text or "Permission denied" in log_text:
-        lines.append("1. GUIを最新版へ更新し、TRITON_CACHE_DIRをプロジェクト内 .cache/triton に固定してください。")
-        lines.append("2. 必要なら古い ~/.triton/cache の所有者を直すか削除してください。")
-        lines.append("3. Text Cacheを再実行してください。")
-    elif "sm_121 is not compatible" in log_text or "no kernel image is available for execution on the device" in log_text:
-        lines.append("1. musubi-tuner側venvのtorchをGB10対応版に入れ替えてください。")
-        lines.append("2. torch.cuda.get_arch_list()にsm_120/compute_120があり、CUDA tensor作成が通ることを確認してください。")
-        lines.append("3. その後、Latent Cache → Text Encoder Cache → Trainの順に再実行してください。")
-    elif "No training items found in the dataset" in log_text or "total batches: 0" in log_text:
-        lines.append("1. コンフィグ生成タブでdataset.tomlを作り直してください。")
-        lines.append("2. 出力フォルダのcacheを消した場合は、Latent Cache → Text Encoder Cacheを再実行してください。")
-        lines.append("3. その後にTrainを実行してください。")
     else:
-        lines.append("1. まず上の推定段階を確認してください。")
-        lines.append("2. Settings / dataset.toml / caption / モデルパスの順に確認してください。")
-        lines.append("3. 修正後、該当ステップを実行してください。")
+        lines.append("既知のパターンには一致しませんでした。下の行を確認してください。")
+        lines.append("")
+    if recent:
+        lines.append("## Error lines")
+        lines.extend(f"```text\n{line}\n```" for line in recent[-8:])
+        lines.append("")
+    lines.append("## Next action")
+    if re.search(r"is on cpu, expected cuda after wait", text):
+        lines.append("1. blocks_to_swap を下げてください（メモリに余裕があれば 0）。")
+        lines.append("2. その後、学習を再実行してください。cacheは作り直し不要です。")
+    elif re.search(r"HeaderTooLarge", text):
+        lines.append("1. 設定タブのモデルパスに `*.safetensors.index.json` が無いか確認してください。")
+        lines.append("2. 分割ファイルは先頭（-00001-of-0000N.safetensors）を指定してください。")
+    elif re.search(r"No training items found|total batches: 0", text):
+        lines.append("1. コンフィグ生成タブで dataset.toml を作り直してください。")
+        lines.append("2. Latent Cache → Text Cache を再実行してから学習してください。")
+    elif re.search(r"out of memory", text, re.IGNORECASE):
+        lines.append("1. 解像度か rank を下げてください。")
+        lines.append("2. 他のGPUプロセス（ComfyUI等）を止めてください。")
+        lines.append("3. それでも足りなければ blocks_to_swap を上げてください。")
+    else:
+        lines.append("1. 上の Error lines の最初の行を確認してください。本当の原因はそこにあることが多いです。")
+        lines.append("2. 推定段階に対応する設定（モデルパス / dataset.toml / caption）を確認してください。")
+        lines.append("3. 修正後、該当ステップを再実行してください。")
     return "\n".join(lines)
