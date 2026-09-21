@@ -130,6 +130,19 @@ def apply_wan_settings_patch(desktop_app_class) -> None:
         self.set_comfyui_loras_dir = self._line(nested_get(self.settings, "paths", "comfyui_loras_dir"))
         common_form.addRow(HelpLabel(self.t("label_comfyui_loras_dir"), HELP["comfyui_loras_dir"]), self._browse_dir_row(self.set_comfyui_loras_dir))
 
+        # The caption tab's generate button needs this, and there was no way to set it
+        # from the GUI: it had to be edited into configs/settings.toml by hand.
+        self.set_qwen_vl_model_path = self._line(nested_get(self.settings, "caption", "qwen_vl_model_path"))
+        common_form.addRow(
+            HelpLabel(
+                "Caption model (Qwen2.5-VL)",
+                "Checkpoint used by the caption tab's generate button. Any Qwen2.5-VL weights work, including Qwen-Image's text_encoder/model-00001-of-0000N.safetensors."
+                if _is_en(self)
+                else "キャプション編集タブの生成ボタンが使うモデルです。Qwen2.5-VL系の重みなら何でも使えます。Qwen-Image の text_encoder/model-00001-of-0000N.safetensors を流用できます。",
+            ),
+            self._browse_file_row(self.set_qwen_vl_model_path),
+        )
+
         common_group = QGroupBox("Common Settings" if _is_en(self) else "共通設定")
         common_layout = QVBoxLayout()
         common_layout.addLayout(common_form)
@@ -204,6 +217,7 @@ def apply_wan_settings_patch(desktop_app_class) -> None:
             "datasets_dir": self.set_datasets_dir.text(),
             "outputs_dir": self.set_outputs_dir.text(),
             "comfyui_loras_dir": self.set_comfyui_loras_dir.text(),
+            "qwen_vl_model_path": self.set_qwen_vl_model_path.text(),
         }
         for item in settings_spec(_settings_profile_id(self)).fields:
             if item.key in self.model_path_fields:
@@ -222,6 +236,7 @@ def apply_wan_settings_patch(desktop_app_class) -> None:
         data.setdefault("paths", {})["datasets_dir"] = self.set_datasets_dir.text()
         data["paths"]["outputs_dir"] = self.set_outputs_dir.text()
         data["paths"]["comfyui_loras_dir"] = self.set_comfyui_loras_dir.text()
+        data.setdefault("caption", {})["qwen_vl_model_path"] = self.set_qwen_vl_model_path.text()
         model_paths = data.setdefault("model_paths", {})
         for key in all_model_path_keys():
             if key in self.model_path_fields:

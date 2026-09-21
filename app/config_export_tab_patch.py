@@ -4,6 +4,7 @@ from pathlib import Path
 
 from PySide6.QtWidgets import QHBoxLayout, QSpinBox, QTextEdit, QVBoxLayout, QWidget
 
+from model_ui import current_profile_id, default_project_name
 from recommended_defaults import DEFAULTS
 from settings_io import nested_get
 from step_guides import guide
@@ -21,7 +22,8 @@ def apply_config_export_tab_patch(desktop_app_class) -> None:
         box.addWidget(guide_box)
 
         form = self._compact_form()
-        self.output_dir = self._line(str(Path(nested_get(self.settings, "paths", "outputs_dir")) / "Eye_Blue_v1_zimage"))
+        project = default_project_name(current_profile_id(self.settings))
+        self.output_dir = self._line(str(Path(nested_get(self.settings, "paths", "outputs_dir")) / project))
         form.addRow(HelpLabel(self.t("label_output_folder"), HELP["output_folder"]), self._browse_dir_row(self.output_dir))
         self.resolution = QSpinBox()
         self.resolution.setRange(256, 2048)
@@ -54,7 +56,8 @@ def apply_config_export_tab_patch(desktop_app_class) -> None:
         guide_box.setMaximumHeight(160)
         box.addWidget(guide_box)
 
-        self.lora_path = self._line(str(Path(nested_get(self.settings, "paths", "outputs_dir")) / "Eye_Blue_v1_zimage" / "eye_lora_zimage.safetensors"))
+        project = default_project_name(current_profile_id(self.settings))
+        self.lora_path = self._line(str(Path(nested_get(self.settings, "paths", "outputs_dir")) / project / f"{project}.safetensors"))
         box.addLayout(self._browse_file_row(self.lora_path))
 
         row = QHBoxLayout()

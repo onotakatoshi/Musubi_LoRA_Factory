@@ -39,7 +39,7 @@ from export_validator import validate_lora_for_export
 from gpu_monitor import gpu_preflight_warning
 from i18n import SUPPORTED_LANGUAGES, normalize_language, tr
 from image_caption_browser import ImageCaptionBrowser
-from model_ui import available_model_labels, help_for_profile, label_for_profile, profile_id_from_label, task_for_profile, v1_default_profile
+from model_ui import available_model_labels, current_profile_id, default_project_name, help_for_profile, label_for_profile, profile_id_from_label, task_for_profile, v1_default_profile
 from output_detector import find_latest_lora, output_summary
 from pipeline import AppConfig, build_dataset_toml, check_dataset, copy_lora_to_comfyui
 from preflight import run_preflight
@@ -253,7 +253,7 @@ class DesktopApp(QMainWindow):
         box = QVBoxLayout()
         guide_box = QTextEdit(); guide_box.setReadOnly(True); guide_box.setPlainText(guide("dataset")); guide_box.setMaximumHeight(190); box.addWidget(guide_box)
         form = self._compact_form()
-        self.dataset_dir = self._line(str(Path(nested_get(self.settings, "paths", "datasets_dir")) / "Eye_Blue_v1"))
+        self.dataset_dir = self._line(str(Path(nested_get(self.settings, "paths", "datasets_dir"))))
         form.addRow(HelpLabel(self.t("label_dataset_folder"), HELP["dataset_folder"]), self._browse_dir_row(self.dataset_dir))
         self.lora_type = QComboBox(); self.lora_type.addItems(preset_names())
         form.addRow(HelpLabel(self.t("label_lora_type"), HELP["lora_type"]), self.lora_type)
@@ -276,7 +276,7 @@ class DesktopApp(QMainWindow):
         box = QVBoxLayout()
         guide_box = QTextEdit(); guide_box.setReadOnly(True); guide_box.setPlainText(guide("config")); guide_box.setMaximumHeight(160); box.addWidget(guide_box)
         form = self._compact_form()
-        self.output_dir = self._line(str(Path(nested_get(self.settings, "paths", "outputs_dir")) / "Eye_Blue_v1_zimage"))
+        self.output_dir = self._line(str(Path(nested_get(self.settings, "paths", "outputs_dir")) / default_project_name(self._current_profile_id())))
         form.addRow(HelpLabel(self.t("label_output_folder"), HELP["output_folder"]), self._browse_dir_row(self.output_dir))
         self.resolution = QSpinBox(); self.resolution.setRange(256, 2048); self.resolution.setSingleStep(64); self.resolution.setValue(DEFAULTS["resolution"])
         form.addRow(HelpLabel(self.t("label_resolution"), default_help_text("resolution", self.lang)), self._default_spin_row("resolution", self.resolution))
@@ -309,7 +309,7 @@ class DesktopApp(QMainWindow):
         form.addRow(HelpLabel(self.t("label_epochs"), default_help_text("epochs", self.lang)), self._default_spin_row("epochs", self.epochs))
         self.lr = QDoubleSpinBox(); self.lr.setDecimals(8); self.lr.setRange(0.000001, 0.01); self.lr.setSingleStep(0.00001); self.lr.setValue(DEFAULTS["lr"])
         form.addRow(HelpLabel(self.t("label_lr"), default_help_text("lr", self.lang)), self._default_spin_row("lr", self.lr))
-        self.output_name = self._line("eye_lora_zimage")
+        self.output_name = self._line(default_project_name(self._current_profile_id()))
         form.addRow(HelpLabel(self.t("label_output_name"), HELP["output_name"]), self.output_name)
         box.addLayout(form)
         project_row = QHBoxLayout()
@@ -342,7 +342,7 @@ class DesktopApp(QMainWindow):
     def _export_tab(self) -> QWidget:
         box = QVBoxLayout()
         guide_box = QTextEdit(); guide_box.setReadOnly(True); guide_box.setPlainText(guide("export")); guide_box.setMaximumHeight(160); box.addWidget(guide_box)
-        self.lora_path = self._line(str(Path(nested_get(self.settings, "paths", "outputs_dir")) / "Eye_Blue_v1_zimage" / "eye_lora_zimage.safetensors"))
+        self.lora_path = self._line(str(Path(nested_get(self.settings, "paths", "outputs_dir")) / default_project_name(self._current_profile_id()) / f"{default_project_name(self._current_profile_id())}.safetensors"))
         box.addLayout(self._browse_file_row(self.lora_path))
         row = QHBoxLayout()
         row.addWidget(self._button("コピー前チェック", self._validate_export))
@@ -352,8 +352,10 @@ class DesktopApp(QMainWindow):
         w = QWidget(); w.setLayout(box); return w
 
     def _current_profile_id(self) -> str:
+        # The dataset and config tabs are built before the training tab creates the
+        # combo box, so fall back to what settings selected rather than to z-image.
         if not hasattr(self, "target_model"):
-            return v1_default_profile().id
+            return current_profile_id(self.settings)
         return profile_id_from_label(self.target_model.currentText())
 
     def _current_task(self) -> str:
@@ -445,7 +447,7 @@ class DesktopApp(QMainWindow):
         self.epochs.setValue(p.epochs)
         self.lr.setValue(p.lr)
         self.resolution.setValue(p.resolution)
-        self.output_name.setText(f"{p.name}_lora_zimage")
+        self.output_name.setText(f"{p.name}_lora")
         self.train_status.setPlainText(preset_summary(p.name, self.lang))
 
     def _training_review(self) -> None:

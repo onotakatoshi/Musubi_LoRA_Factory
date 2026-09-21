@@ -16,7 +16,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from model_ui import available_model_labels, label_for_profile, v1_default_profile
+from model_ui import available_model_labels, current_profile_id, default_project_name, label_for_profile, v1_default_profile
 from recommended_defaults import DEFAULTS, REASONS_EN, REASONS_JA
 
 SUCCESS_BUTTON_STYLE = """
@@ -300,7 +300,7 @@ def _train_tab(self) -> QWidget:
     self.task.setReadOnly(True)
     top_form.addRow(HelpLabel("Task", _basic_help(self, "task")), self.task)
 
-    self.output_name = self._line("zimage_smoke_test")
+    self.output_name = self._line(default_project_name(current_profile_id(self.settings)))
     top_form.addRow(HelpLabel("Output name", _basic_help(self, "output_name")), self.output_name)
     page.addWidget(_group(_txt(self, "1. 基本設定", "1. Basic Settings"), top_form))
 

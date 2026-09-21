@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from model_registry import ModelProfile, enabled_profiles, get_profile
+from model_registry import ModelProfile, enabled_profiles, get_profile, normalize_profile_id
 
 WIRED_PROFILE_IDS = {
     "z-image",
@@ -45,6 +45,23 @@ def profile_id_from_label(label: str) -> str:
                 return profile.id
             return get_profile("z-image").id
     return get_profile("z-image").id
+
+
+def current_profile_id(settings: dict) -> str:
+    """Profile the app should open with, from settings, falling back to the default."""
+    configured = normalize_profile_id(str(settings.get("ui", {}).get("target_model", "") or "").strip())
+    if configured in WIRED_PROFILE_IDS:
+        return configured
+    return v1_default_profile().id
+
+
+def default_project_name(profile_id: str) -> str:
+    """Slug for the default output folder and LoRA name.
+
+    The Z-Image-era literals ("Eye_Blue_v1", "eye_lora_zimage") stayed behind when the
+    app grew to eleven models and read as leftovers from someone else's project.
+    """
+    return f"{normalize_profile_id(profile_id)}_lora"
 
 
 def task_for_profile(profile_id: str) -> str:

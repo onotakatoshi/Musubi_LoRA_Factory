@@ -44,7 +44,7 @@ def apply_dataset_tab_patch(desktop_app_class) -> None:
         box.addWidget(guide_box)
 
         form = self._compact_form()
-        self.dataset_dir = self._line(str(Path(nested_get(self.settings, "paths", "datasets_dir")) / "Eye_Blue_v1"))
+        self.dataset_dir = self._line(str(Path(nested_get(self.settings, "paths", "datasets_dir"))))
         form.addRow(HelpLabel(self.t("label_dataset_folder"), HELP["dataset_folder"]), self._browse_dir_row(self.dataset_dir))
 
         self.lora_type = QComboBox()
