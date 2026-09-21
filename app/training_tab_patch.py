@@ -17,7 +17,7 @@ from PySide6.QtWidgets import (
 )
 
 from model_ui import available_model_labels, current_profile_id, default_project_name, label_for_profile, v1_default_profile
-from recommended_defaults import DEFAULTS, REASONS_EN, REASONS_JA
+from recommended_defaults import DEFAULTS, REASONS_EN, REASONS_JA, default_value, format_default, is_default_value
 
 SUCCESS_BUTTON_STYLE = """
 QPushButton {
@@ -112,11 +112,8 @@ def _group(title: str, layout: QVBoxLayout | QFormLayout | QHBoxLayout) -> QGrou
     return box
 
 
-def _is_default_value(name: str, value: int | float) -> bool:
-    default = DEFAULTS[name]
-    if isinstance(default, float):
-        return abs(float(value) - float(default)) < 1e-12
-    return int(value) == int(default)
+def _is_default_value(name: str, value: int | float, profile_id: str = "") -> bool:
+    return is_default_value(name, value, profile_id)
 
 
 def _training_reason(name: str, lang: str) -> str:
@@ -148,7 +145,7 @@ def _training_param_row(self, name: str, widget: QSpinBox | QDoubleSpinBox) -> Q
     widget.setFixedWidth(96)
 
     reset_text = "Reset" if _en(self) else "戻す"
-    reset = self._button(reset_text, lambda: widget.setValue(DEFAULTS[name]))
+    reset = self._button(reset_text, lambda: widget.setValue(default_value(name, self._current_profile_id())))
     reset.setObjectName("resetButton")
     reset.setToolTip("Reset to default" if _en(self) else "デフォルトに戻す")
     reset.setFixedWidth(66 if _en(self) else 64)
@@ -157,7 +154,7 @@ def _training_param_row(self, name: str, widget: QSpinBox | QDoubleSpinBox) -> Q
     status = QLabel()
     status.setFixedWidth(72 if _en(self) else 48)
 
-    default = DEFAULTS[name]
+    default = format_default(name, self._current_profile_id())
     reason = _training_reason(name, self.lang)
     detail = QLabel(f"Default {default}  {reason}" if _en(self) else f"デフォルト {default}　{reason}")
     detail.setMinimumWidth(220)
@@ -311,25 +308,25 @@ def _train_tab(self) -> QWidget:
     self.rank = QSpinBox()
     self.rank.setRange(4, 128)
     self.rank.setSingleStep(4)
-    self.rank.setValue(DEFAULTS["rank"])
+    self.rank.setValue(default_value("rank", current_profile_id(self.settings)))
     param_box.addLayout(_training_param_row(self, "rank", self.rank))
 
     self.alpha = QSpinBox()
     self.alpha.setRange(4, 128)
     self.alpha.setSingleStep(4)
-    self.alpha.setValue(DEFAULTS["alpha"])
+    self.alpha.setValue(default_value("alpha", current_profile_id(self.settings)))
     param_box.addLayout(_training_param_row(self, "alpha", self.alpha))
 
     self.epochs = QSpinBox()
     self.epochs.setRange(1, 100)
-    self.epochs.setValue(DEFAULTS["epochs"])
+    self.epochs.setValue(default_value("epochs", current_profile_id(self.settings)))
     param_box.addLayout(_training_param_row(self, "epochs", self.epochs))
 
     self.lr = QDoubleSpinBox()
     self.lr.setDecimals(8)
     self.lr.setRange(0.000001, 0.01)
     self.lr.setSingleStep(0.00001)
-    self.lr.setValue(DEFAULTS["lr"])
+    self.lr.setValue(default_value("lr", current_profile_id(self.settings)))
     param_box.addLayout(_training_param_row(self, "lr", self.lr))
     page.addWidget(_group(_txt(self, "2. 学習パラメータ", "2. Training Parameters"), param_box))
 

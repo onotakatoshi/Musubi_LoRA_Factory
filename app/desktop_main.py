@@ -44,7 +44,7 @@ from output_detector import find_latest_lora, output_summary
 from pipeline import AppConfig, build_dataset_toml, check_dataset, copy_lora_to_comfyui
 from preflight import run_preflight
 from project_io import default_project_path, load_project, project_data, save_project
-from recommended_defaults import DEFAULTS, help_text as default_help_text, status_text as default_status_text
+from recommended_defaults import DEFAULTS, default_value, defaults_for, help_text as default_help_text, is_default_value, status_text as default_status_text
 from settings_detect import detect_zimage_files, validate_settings_paths
 from settings_io import load_settings, nested_get, save_settings
 from state_check import config_status, dataset_status, train_ready_status
@@ -171,8 +171,8 @@ class DesktopApp(QMainWindow):
         return row
 
     def _reset_default(self, name: str, widget: QSpinBox | QDoubleSpinBox, label: QLabel) -> None:
-        widget.setValue(DEFAULTS[name])
-        label.setText(default_status_text(name, widget.value(), self.lang))
+        widget.setValue(default_value(name, self._current_profile_id()))
+        label.setText(default_status_text(name, widget.value(), self.lang, self._current_profile_id()))
 
     def _pick_dir(self, target: QLineEdit) -> None:
         path = QFileDialog.getExistingDirectory(self, self.t("select_folder"), target.text() or str(Path.home()))
@@ -278,7 +278,7 @@ class DesktopApp(QMainWindow):
         form = self._compact_form()
         self.output_dir = self._line(str(Path(nested_get(self.settings, "paths", "outputs_dir")) / default_project_name(self._current_profile_id())))
         form.addRow(HelpLabel(self.t("label_output_folder"), HELP["output_folder"]), self._browse_dir_row(self.output_dir))
-        self.resolution = QSpinBox(); self.resolution.setRange(256, 2048); self.resolution.setSingleStep(64); self.resolution.setValue(DEFAULTS["resolution"])
+        self.resolution = QSpinBox(); self.resolution.setRange(256, 2048); self.resolution.setSingleStep(64); self.resolution.setValue(default_value("resolution", self._current_profile_id()))
         form.addRow(HelpLabel(self.t("label_resolution"), default_help_text("resolution", self.lang)), self._default_spin_row("resolution", self.resolution))
         self.dataset_toml = self._line("")
         form.addRow(HelpLabel(self.t("label_dataset_toml"), HELP["dataset_toml"]), self.dataset_toml)
@@ -301,13 +301,13 @@ class DesktopApp(QMainWindow):
         form.addRow(HelpLabel(self.t("label_task_profile"), HELP["task_profile"]), self.task)
         self.preset = QComboBox(); self.preset.addItems(preset_names()); self.preset.setCurrentText(self.lora_type.currentText())
         form.addRow(HelpLabel("Preset", "用途別の推奨設定です。Ver 1.0ではZ-Image用プリセットです。"), self.preset)
-        self.rank = QSpinBox(); self.rank.setRange(4, 128); self.rank.setSingleStep(4); self.rank.setValue(DEFAULTS["rank"])
+        self.rank = QSpinBox(); self.rank.setRange(4, 128); self.rank.setSingleStep(4); self.rank.setValue(default_value("rank", self._current_profile_id()))
         form.addRow(HelpLabel(self.t("label_rank"), default_help_text("rank", self.lang)), self._default_spin_row("rank", self.rank))
-        self.alpha = QSpinBox(); self.alpha.setRange(4, 128); self.alpha.setSingleStep(4); self.alpha.setValue(DEFAULTS["alpha"])
+        self.alpha = QSpinBox(); self.alpha.setRange(4, 128); self.alpha.setSingleStep(4); self.alpha.setValue(default_value("alpha", self._current_profile_id()))
         form.addRow(HelpLabel(self.t("label_alpha"), default_help_text("alpha", self.lang)), self._default_spin_row("alpha", self.alpha))
-        self.epochs = QSpinBox(); self.epochs.setRange(1, 100); self.epochs.setValue(DEFAULTS["epochs"])
+        self.epochs = QSpinBox(); self.epochs.setRange(1, 100); self.epochs.setValue(default_value("epochs", self._current_profile_id()))
         form.addRow(HelpLabel(self.t("label_epochs"), default_help_text("epochs", self.lang)), self._default_spin_row("epochs", self.epochs))
-        self.lr = QDoubleSpinBox(); self.lr.setDecimals(8); self.lr.setRange(0.000001, 0.01); self.lr.setSingleStep(0.00001); self.lr.setValue(DEFAULTS["lr"])
+        self.lr = QDoubleSpinBox(); self.lr.setDecimals(8); self.lr.setRange(0.000001, 0.01); self.lr.setSingleStep(0.00001); self.lr.setValue(default_value("lr", self._current_profile_id()))
         form.addRow(HelpLabel(self.t("label_lr"), default_help_text("lr", self.lang)), self._default_spin_row("lr", self.lr))
         self.output_name = self._line(default_project_name(self._current_profile_id()))
         form.addRow(HelpLabel(self.t("label_output_name"), HELP["output_name"]), self.output_name)
@@ -366,6 +366,28 @@ class DesktopApp(QMainWindow):
             self.task.setText(self._current_task())
         if hasattr(self, "train_status"):
             self.train_status.setPlainText(help_for_profile(self._current_profile_id(), self.lang))
+        self._apply_profile_defaults()
+
+    def _apply_profile_defaults(self) -> None:
+        """Move the parameter widgets onto the newly selected profile's recommendations.
+
+        Only fields still sitting on the previous profile's default are moved, so a value
+        the user typed is never overwritten by switching models.
+        """
+        new_profile = self._current_profile_id()
+        previous = getattr(self, "_defaults_profile_id", None)
+        self._defaults_profile_id = new_profile
+        if previous == new_profile:
+            return
+        for name in ("resolution", "rank", "alpha", "epochs", "lr"):
+            widget = getattr(self, name, None)
+            if widget is None:
+                continue
+            if previous is not None and not is_default_value(name, widget.value(), previous):
+                continue
+            widget.setValue(default_value(name, new_profile))
+        for refresh in getattr(self, "_param_refreshers", []):
+            refresh()
 
     def _settings_values(self) -> dict[str, str]:
         return {

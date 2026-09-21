@@ -5,7 +5,7 @@ from pathlib import Path
 from PySide6.QtWidgets import QHBoxLayout, QSpinBox, QTextEdit, QVBoxLayout, QWidget
 
 from model_ui import current_profile_id, default_project_name
-from recommended_defaults import DEFAULTS
+from recommended_defaults import DEFAULTS, default_value
 from settings_io import nested_get
 from step_guides import guide
 
@@ -28,7 +28,7 @@ def apply_config_export_tab_patch(desktop_app_class) -> None:
         self.resolution = QSpinBox()
         self.resolution.setRange(256, 2048)
         self.resolution.setSingleStep(64)
-        self.resolution.setValue(DEFAULTS["resolution"])
+        self.resolution.setValue(default_value("resolution", current_profile_id(self.settings)))
         form.addRow(HelpLabel(self.t("label_resolution"), "Training image resolution." if self.lang == "English" else "学習画像の解像度です。"), self._default_spin_row("resolution", self.resolution))
         self.dataset_toml = self._line("")
         form.addRow(HelpLabel(self.t("label_dataset_toml"), HELP["dataset_toml"]), self.dataset_toml)

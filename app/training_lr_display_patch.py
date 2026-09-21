@@ -4,24 +4,16 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QDoubleSpinBox, QHBoxLayout, QLabel, QSpinBox
 
 import training_tab_patch
-from recommended_defaults import DEFAULTS
+from recommended_defaults import default_value, format_default, is_default_value
 
 
 DETAIL_LABEL_MIN_WIDTH = 520
 DETAIL_LABEL_MAX_WIDTH = 760
 
 
-def _format_default_value(name: str) -> str:
-    value = DEFAULTS[name]
-    if name == "lr":
-        return f"{float(value):.5f}"
-    return str(value)
-
-
 def apply_training_lr_display_patch() -> None:
     original_param_help = training_tab_patch._param_help
     original_en = training_tab_patch._en
-    original_is_default = training_tab_patch._is_default_value
     original_reason = training_tab_patch._training_reason
 
     def patched_training_param_row(self, name: str, widget: QSpinBox | QDoubleSpinBox) -> QHBoxLayout:
@@ -34,7 +26,7 @@ def apply_training_lr_display_patch() -> None:
         widget.setFixedWidth(96)
 
         reset_text = "Reset" if original_en(self) else "戻す"
-        reset = self._button(reset_text, lambda: widget.setValue(DEFAULTS[name]))
+        reset = self._button(reset_text, lambda: widget.setValue(default_value(name, self._current_profile_id())))
         reset.setObjectName("resetButton")
         reset.setToolTip("Reset to default" if original_en(self) else "デフォルトに戻す")
         reset.setFixedWidth(66 if original_en(self) else 64)
@@ -43,19 +35,26 @@ def apply_training_lr_display_patch() -> None:
         status = QLabel()
         status.setFixedWidth(72 if original_en(self) else 48)
 
-        default = _format_default_value(name)
-        reason = original_reason(name, self.lang)
-        detail = QLabel(f"Default {default}  {reason}" if original_en(self) else f"デフォルト {default}　{reason}")
+        detail = QLabel()
         detail.setMinimumWidth(DETAIL_LABEL_MIN_WIDTH)
         detail.setMaximumWidth(DETAIL_LABEL_MAX_WIDTH)
 
         def refresh() -> None:
-            if original_is_default(name, widget.value()):
+            # Read the profile on every refresh: switching Target model changes both the
+            # recommended value shown here and whether the current value counts as one.
+            profile_id = self._current_profile_id()
+            shown = format_default(name, profile_id)
+            reason = original_reason(name, self.lang)
+            detail.setText(f"Default {shown}  {reason}" if original_en(self) else f"デフォルト {shown}　{reason}")
+            if is_default_value(name, widget.value(), profile_id):
                 status.setText("Default" if original_en(self) else "推奨")
             else:
                 status.setText("Custom" if original_en(self) else "変更")
 
         widget.valueChanged.connect(lambda _value: refresh())
+        if not hasattr(self, "_param_refreshers"):
+            self._param_refreshers = []
+        self._param_refreshers.append(refresh)
         refresh()
 
         row = QHBoxLayout()
