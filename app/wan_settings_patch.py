@@ -70,7 +70,8 @@ def apply_wan_settings_patch(desktop_app_class) -> None:
             for group_profile_id, group in self.model_setting_groups.items():
                 group.setVisible(group_profile_id == profile_id)
         if hasattr(self, "detect_zimage_button"):
-            self.detect_zimage_button.setVisible(is_zimage)
+            # Detection works for whichever profile is selected, not just Z-Image.
+            self.detect_zimage_button.setVisible(True)
         if hasattr(self, "model_settings_note"):
             self.model_settings_note.setPlainText(help_for_profile(profile_id, self.lang))
 

@@ -39,13 +39,14 @@ from export_validator import validate_lora_for_export
 from gpu_monitor import gpu_preflight_warning
 from i18n import SUPPORTED_LANGUAGES, normalize_language, tr
 from image_caption_browser import ImageCaptionBrowser
+from model_registry import get_profile
 from model_ui import available_model_labels, current_profile_id, default_project_name, help_for_profile, label_for_profile, profile_id_from_label, task_for_profile, v1_default_profile
 from output_detector import find_latest_lora, output_summary
 from pipeline import AppConfig, build_dataset_toml, check_dataset, copy_lora_to_comfyui
 from preflight import run_preflight
 from project_io import default_project_path, load_project, project_data, save_project
 from recommended_defaults import DEFAULTS, default_value, defaults_for, help_text as default_help_text, is_default_value, status_text as default_status_text
-from settings_detect import detect_zimage_files, validate_settings_paths
+from settings_detect import detect_model_files, validate_settings_paths
 from settings_io import load_settings, nested_get, save_settings
 from state_check import config_status, dataset_status, train_ready_status
 from step_guides import guide
@@ -402,17 +403,34 @@ class DesktopApp(QMainWindow):
         self.settings_log.setPlainText(validate_settings_paths(self._settings_values(), self._current_profile_id()))
 
     def _detect_zimage_files(self) -> None:
-        model_dir = QFileDialog.getExistingDirectory(self, self.t("select_zimage_folder"), str(Path.home()))
+        profile_id = self._current_profile_id()
+        model_dir = QFileDialog.getExistingDirectory(self, self.t("select_model_folder"), str(Path.home()))
         if not model_dir:
             return
-        found = detect_zimage_files(Path(model_dir))
-        if found.get("zimage_dit"):
-            self.set_zimage_dit.setText(found["zimage_dit"])
-        if found.get("zimage_vae"):
-            self.set_zimage_vae.setText(found["zimage_vae"])
-        if found.get("zimage_text_encoder"):
-            self.set_zimage_text_encoder.setText(found["zimage_text_encoder"])
-        self.settings_log.setPlainText(f"# {self.t('detected_zimage_files')}\n\nDiT: {found.get('zimage_dit') or self.t('not_found')}\nVAE: {found.get('zimage_vae') or self.t('not_found')}\nText Encoder: {found.get('zimage_text_encoder') or self.t('not_found')}\n\n{self.t('confirm_save_after_detect')}")
+        found = detect_model_files(Path(model_dir), profile_id)
+
+        # The patched settings tab keeps every model path in model_path_fields; the
+        # unpatched one has the zimage_* line edits.
+        fields = getattr(self, "model_path_fields", None)
+        for key, value in found.items():
+            if not value:
+                continue
+            if fields is not None and key in fields:
+                fields[key].setText(value)
+            else:
+                widget = getattr(self, f"set_{key}", None)
+                if widget is not None:
+                    widget.setText(value)
+
+        profile_name = get_profile(profile_id).display_name
+        lines = [f"# {self.t('detected_model_files')}: {profile_name}", "", f"Searched: {model_dir}", ""]
+        lines.extend(f"{key}: {value or self.t('not_found')}" for key, value in found.items())
+        if not any(found.values()):
+            lines.append("")
+            lines.append(self.t("detect_found_nothing"))
+        lines.append("")
+        lines.append(self.t("confirm_save_after_detect"))
+        self.settings_log.setPlainText("\n".join(lines))
 
     def _settings_data_from_fields(self) -> dict:
         data = load_settings(SETTINGS_PATH)

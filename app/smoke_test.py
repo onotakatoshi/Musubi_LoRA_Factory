@@ -20,6 +20,7 @@ from model_registry import ALIASES, PROFILES, enabled_profiles, get_profile, nor
 from model_settings_catalog import MODEL_SETTINGS
 from model_ui import WIRED_PROFILE_IDS, available_model_ids
 from pipeline import build_dataset_toml, check_dataset, export_file_name
+from settings_detect import detect_model_files
 from preflight import run_preflight
 from project_io import load_project, project_data, save_project
 from recommended_defaults import DEFAULTS, help_text, status_text
@@ -270,6 +271,32 @@ def main() -> int:
     assert export_file_name(Path("/a/lora.safetensors"), "marmot_v1") == "marmot_v1.safetensors"
     assert export_file_name(Path("/a/lora.safetensors"), "marmot_v1.safetensors") == "marmot_v1.safetensors"
     assert export_file_name(Path("/a/lora.safetensors"), "../../evil") == "evil.safetensors"
+
+    # Detection must find the real files and must stay quiet rather than proposing
+    # another model's weights when pointed somewhere without them.
+    with tempfile.TemporaryDirectory() as detect_tmp:
+        fake = Path(detect_tmp)
+        zimage = fake / "z-image" / "Tongyi-MAI" / "Z-Image"
+        for sub, names in [
+            ("transformer", ["diffusion_pytorch_model-00001-of-00002.safetensors", "diffusion_pytorch_model-00002-of-00002.safetensors", "diffusion_pytorch_model.safetensors.index.json"]),
+            ("vae", ["diffusion_pytorch_model.safetensors"]),
+            ("text_encoder", ["model-00001-of-00003.safetensors", "model-00002-of-00003.safetensors"]),
+        ]:
+            (zimage / sub).mkdir(parents=True)
+            for name in names:
+                (zimage / sub / name).write_text("dummy", encoding="utf-8")
+
+        detected = detect_model_files(zimage, "z-image")
+        assert detected["zimage_dit"].endswith("diffusion_pytorch_model-00001-of-00002.safetensors"), detected
+        assert detected["zimage_vae"].endswith("vae/diffusion_pytorch_model.safetensors"), detected
+        assert detected["zimage_text_encoder"].endswith("model-00001-of-00003.safetensors"), detected
+        assert not any(v.endswith(".index.json") for v in detected.values()), detected
+
+        # A folder holding a different architecture must not be offered as Z-Image.
+        other = fake / "elsewhere" / "diffusion_models"
+        other.mkdir(parents=True)
+        (other / "some_other_model_turbo_bf16.safetensors").write_text("dummy", encoding="utf-8")
+        assert not any(detect_model_files(other.parent, "z-image").values()), "detection must not guess across models"
 
     print("Smoke test OK")
     return 0

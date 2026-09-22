@@ -6,46 +6,55 @@ from model_adapters import get_adapter
 from model_registry import get_profile
 from path_resolver import resolve_path
 
-MODEL_EXTS = {".safetensors", ".pt", ".pth", ".bin"}
+from model_file_format import resolve_model_file
+from model_path_autofill_recursive import KEYS as ROLE_KEYS
+from model_path_autofill_recursive import detect_paths, find_role, setting_value
+from model_settings_catalog import optional_keys, required_keys
 
 
-def _score_file(path: Path, keywords: list[str]) -> int:
-    name = path.name.lower()
-    score = 0
-    for kw in keywords:
-        if kw in name:
-            score += 10
-    if "fp8" in name:
-        score += 2
-    if "turbo" in name:
-        score += 1
-    return score
+def detect_model_files(model_dir: Path, profile_id: str) -> dict[str, str]:
+    """Detect the selected profile's model files under a folder the user picked.
 
+    This used to be a Z-Image-only scorer that matched keywords against the file name
+    and added points for "fp8" and "turbo". It found nothing in the official repository
+    layout (whose files are named diffusion_pytorch_model-00001-of-00002.safetensors),
+    and pointed at another model's weights entirely when given a ComfyUI tree. Both
+    preferences were also backwards: musubi-tuner's docs say to train against Base
+    rather than Turbo, and reject fp8_scaled weights for several models.
 
-def _best_file(root: Path, keywords: list[str]) -> Path | None:
-    root = resolve_path(root)
-    if not root.exists():
-        return None
-    candidates = [p for p in root.rglob("*") if p.is_file() and p.suffix.lower() in MODEL_EXTS]
-    scored = [(p, _score_file(p, keywords)) for p in candidates]
-    scored = [(p, s) for p, s in scored if s > 0]
-    if not scored:
-        return None
-    scored.sort(key=lambda item: item[1], reverse=True)
-    return scored[0][0]
-
-
-def detect_zimage_files(model_dir: Path) -> dict[str, str]:
-    """Detect likely Z-Image files from a selected model directory.
-
-    This is intentionally conservative: it proposes candidates but does not
-    overwrite settings unless the user clicks Apply in the GUI.
+    It now reuses the same detection the rest of the app uses: the exact table for known
+    repository layouts, then a role-based scan that prefers the first shard of a split
+    set and never proposes a *.safetensors.index.json manifest.
     """
-    return {
-        "zimage_dit": str(_best_file(model_dir, ["z_image", "z-image", "zimage", "dit", "transformer"]) or ""),
-        "zimage_vae": str(_best_file(model_dir, ["ae", "vae"]) or ""),
-        "zimage_text_encoder": str(_best_file(model_dir, ["text_encoder", "text-encoder", "qwen", "encoder"]) or ""),
-    }
+    wanted = required_keys(profile_id) + optional_keys(profile_id)
+    root = resolve_path(model_dir)
+
+    found = {key: value for key, value in detect_paths(root).items() if key in wanted}
+
+    # detect_paths expects a models root containing per-model folders. When the user
+    # picks the model folder itself, scan it directly for each remaining role.
+    root_text = root.as_posix().lower()
+    for key in wanted:
+        if found.get(key):
+            continue
+        entry = ROLE_KEYS.get(key)
+        if entry is None:
+            continue
+        hints, role = entry
+        path = find_role(root, role)
+        if path is None:
+            continue
+        # A role-only match is not evidence of the right model: pointed at a ComfyUI
+        # tree, "the file that looks like a DiT" was another architecture entirely.
+        # Require the model's name somewhere in the folder or the file path.
+        candidate_text = path.as_posix().lower()
+        if not any(h.lower() in root_text or h.lower() in candidate_text for h in hints):
+            continue
+        resolved = resolve_model_file(path)
+        if resolved is not None:
+            found[key] = setting_value(resolved.resolve())
+
+    return {key: found.get(key, "") for key in wanted}
 
 
 def _status_dir(key: str, value: str) -> str:
