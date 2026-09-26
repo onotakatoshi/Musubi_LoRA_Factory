@@ -23,6 +23,7 @@ DEFAULTS = {
 #   flux 2         docs/flux_2.md          network_dim 32,  learning_rate 1e-4
 #   qwen image     docs/qwen_image.md      network_dim 16,  learning_rate 5e-5
 #   minimax h3     docs/minimax_h3.md      network_dim 16,  network_alpha 16, learning_rate 1e-4
+#   krea 2         docs/krea2.md           network_dim 32,  network_alpha 32, learning_rate 1e-4
 #
 # Every one of those docs uses --max_train_epochs 16, which is why the shared default is
 # 16 and no profile overrides it. Resolution is not prescribed by the docs (it lives in
@@ -42,6 +43,7 @@ PROFILE_DEFAULTS: dict[str, dict[str, int | float]] = {
     "flux2-klein": {"rank": 32, "alpha": 32, "lr": 1e-4},
     "qwen-image": {"rank": 16, "alpha": 16, "lr": 5e-5},
     "minimax-h3": {"rank": 16, "alpha": 16, "lr": 1e-4, "resolution": 1024},
+    "krea2": {"rank": 32, "alpha": 32, "lr": 1e-4, "resolution": 1024},
 }
 
 

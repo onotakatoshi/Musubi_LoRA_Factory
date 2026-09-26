@@ -226,11 +226,13 @@ MODEL_SETTINGS: dict[str, ModelSettingsSpec] = {
     "krea2": ModelSettingsSpec(
         profile_id="krea2",
         group_title="Krea 2 Model Paths",
+        command_status="implemented",
         scripts=("krea2_train_network.py", "krea2_cache_latents.py", "krea2_cache_text_encoder_outputs.py"),
         fields=(
-            field("krea2_vae", "Krea 2 VAE", "Krea 2用VAEです。", "Krea 2 VAE file."),
-            field("krea2_text_encoder", "Krea 2 text encoder", "Krea 2用Text Encoderです。", "Krea 2 text encoder file."),
-            field("krea2_dit", "Krea 2 DiT", "Krea 2の学習対象DiTです。", "Krea 2 DiT file."),
+            field("krea2_dit", "Krea 2 DiT (RAW)", "Krea 2の学習対象DiTです。RAW版を指定します。Turboは蒸留された推論用なので学習には使いません。", "Krea 2 DiT to train. Use the RAW checkpoint; Turbo is the distilled inference model and is not the training target."),
+            field("krea2_vae", "Krea 2 VAE (Qwen-Image)", "Qwen-Image と同じVAEです。すでに持っていれば流用できます。", "The Qwen-Image VAE. Reuse the one you already have."),
+            field("krea2_text_encoder", "Krea 2 text encoder (Qwen3-VL-4B)", "Qwen3-VL-4B-Instruct の単一safetensorsファイルです。フォルダではなくファイルを指定します。", "Qwen3-VL-4B-Instruct as a single safetensors file, not a directory."),
+            field("krea2_base_weights", "Krea 2 base weights", "任意設定です。学習前にマージするLoRAを指定します。", "Optional. A LoRA merged into the base before training.", required=False),
         ),
     ),
 }

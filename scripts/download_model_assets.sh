@@ -66,6 +66,14 @@ NOTE[flux-text-encoders]="FLUX.1 text encoders (T5-XXL + CLIP-L)"
 INCLUDE[flux-text-encoders]="t5xxl_fp16.safetensors clip_l.safetensors"
 
 # MiniMax-H3 publishes many pruned/quantized variants; fetch only the BF16 set by default.
+# Krea 2: train on RAW, not Turbo. The official krea/Krea-2-Raw repo is gated behind a
+# manual authorized list; the Comfy-Org mirror carries the same 26.28GB bf16 weights
+# with no gate, plus the VAE and text encoder Krea 2 needs.
+REPO[krea2]="Comfy-Org/Krea-2"
+DEST[krea2]="$MODELS_DIR/krea2/Comfy-Org/Krea-2"
+NOTE[krea2]="Krea 2 RAW DiT + Qwen-Image VAE + Qwen3-VL-4B text encoder"
+INCLUDE[krea2]="diffusion_models/krea2_raw_bf16.safetensors vae/qwen_image_vae.safetensors text_encoders/qwen3vl_4b_bf16.safetensors"
+
 REPO[minimax-h3]="Comfy-Org/MiniMax-H3"
 DEST[minimax-h3]="$MODELS_DIR/minimax-h3/Comfy-Org/MiniMax-H3"
 NOTE[minimax-h3]="MiniMax-H3 (FL2VA BF16 transformer, Qwen3-VL text encoder, video+audio VAE)"
@@ -93,6 +101,7 @@ Targets:
   flux2-klein
   flux-text-encoders
   minimax-h3
+  krea2
 
 Options:
   --models-dir DIR    Download root. Default: $HOME/models
@@ -135,7 +144,7 @@ add_target() {
       TARGETS+=(wan22-t2v-a14b wan22-i2v-a14b wan22-ti2v-5b)
       ;;
     all-known)
-      TARGETS+=(z-image wan22-t2v-a14b wan22-i2v-a14b wan22-ti2v-5b wan21-t2v-14b qwen-image hunyuan-video flux-kontext flux2-dev flux2-klein flux-text-encoders minimax-h3)
+      TARGETS+=(z-image wan22-t2v-a14b wan22-i2v-a14b wan22-ti2v-5b wan21-t2v-14b qwen-image hunyuan-video flux-kontext flux2-dev flux2-klein flux-text-encoders minimax-h3 krea2)
       ;;
     *)
       if have_target "$target"; then

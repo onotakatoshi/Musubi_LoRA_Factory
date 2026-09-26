@@ -764,6 +764,111 @@ def build_minimax_h3_preview(
     ])
 
 
+# ---------------------------------------------------------------- Krea 2
+
+# Krea 2 reuses the Qwen-Image VAE and takes a Qwen3-VL-4B text encoder. Training runs
+# against the RAW DiT; the Turbo checkpoint is the distilled inference model and is not
+# the training target (same split as Z-Image Base vs Turbo).
+def krea2_cache_latents_command(musubi_python: Path, musubi_repo: Path, dataset_toml: Path, paths: ModelPaths) -> str:
+    command = " ".join([
+        q(musubi_python), "src/musubi_tuner/krea2_cache_latents.py",
+        "--dataset_config", q(dataset_toml),
+        "--vae", q(paths.vae),
+    ])
+    return in_repo(command, musubi_repo)
+
+
+def krea2_cache_text_command(
+    musubi_python: Path,
+    musubi_repo: Path,
+    dataset_toml: Path,
+    paths: ModelPaths,
+    batch_size: int = 1,
+) -> str:
+    command = " ".join([
+        q(musubi_python), "src/musubi_tuner/krea2_cache_text_encoder_outputs.py",
+        "--dataset_config", q(dataset_toml),
+        "--text_encoder", q(paths.text_encoder),
+        "--batch_size", str(batch_size),
+    ])
+    return in_repo(command, musubi_repo)
+
+
+def krea2_train_command(
+    musubi_python: Path,
+    musubi_repo: Path,
+    dataset_toml: Path,
+    paths: ModelPaths,
+    output_dir: Path,
+    output_name: str,
+    rank: int,
+    alpha: int,
+    epochs: int,
+    lr: float,
+    mixed_precision: str = "bf16",
+    optimizer: str = "adamw8bit",
+    convrot_int8: bool = False,
+) -> str:
+    parts = [
+        *accelerate_launch(musubi_python, mixed_precision),
+        "src/musubi_tuner/krea2_train_network.py",
+        "--dit", q(paths.dit),
+        "--vae", q(paths.vae),
+        "--dataset_config", q(dataset_toml),
+        "--sdpa", "--mixed_precision", mixed_precision,
+        # krea2_shift reproduces K2's resolution-aware inference time-shift per sample,
+        # so it stays correct at whatever resolution the dataset uses. The docs' fixed
+        # "--discrete_flow_shift 2.5" only matches 1024x1024.
+        "--timestep_sampling", "krea2_shift", "--weighting_scheme", "none",
+        "--optimizer_type", optimizer, "--learning_rate", str(lr),
+        "--gradient_checkpointing", "--max_data_loader_n_workers", "2", "--persistent_data_loader_workers",
+        "--network_module", "networks.lora_krea2", "--network_dim", str(rank), "--network_alpha", str(alpha),
+        "--max_train_epochs", str(epochs), "--save_every_n_epochs", "1", "--seed", "42",
+        "--output_dir", q(output_dir), "--output_name", q(output_name),
+    ]
+    if convrot_int8:
+        # For ComfyUI pre-quantized ConvRot INT8 checkpoints. Cannot combine with fp8.
+        parts.append("--convrot_int8")
+    if paths.base_weights:
+        parts.extend(["--base_weights", q(paths.base_weights)])
+    return in_repo(" ".join(parts), musubi_repo)
+
+
+def build_krea2_preview(
+    musubi_python: Path,
+    musubi_repo: Path,
+    dataset_toml: Path,
+    output_dir: Path,
+    output_name: str,
+    paths: ModelPaths,
+    rank: int,
+    alpha: int,
+    epochs: int,
+    lr: float,
+) -> str:
+    return "\n".join([
+        "# 1. Latent cache",
+        krea2_cache_latents_command(musubi_python, musubi_repo, dataset_toml, paths),
+        "",
+        "# 2. Text encoder cache",
+        krea2_cache_text_command(musubi_python, musubi_repo, dataset_toml, paths),
+        "",
+        "# 3. Train LoRA",
+        krea2_train_command(
+            musubi_python=musubi_python,
+            musubi_repo=musubi_repo,
+            dataset_toml=dataset_toml,
+            paths=paths,
+            output_dir=output_dir,
+            output_name=output_name,
+            rank=rank,
+            alpha=alpha,
+            epochs=epochs,
+            lr=lr,
+        ),
+    ])
+
+
 def build_command_preview(target_model: str, musubi_python: Path, musubi_repo: Path, dataset_toml: Path, output_dir: Path, output_name: str, paths: ModelPaths, rank: int, alpha: int, epochs: int, lr: float, task: str = "t2v-A14B") -> str:
     if target_model == "z-image":
         return build_zimage_preview(musubi_python=musubi_python, musubi_repo=musubi_repo, dataset_toml=dataset_toml, output_dir=output_dir, output_name=output_name, paths=paths, rank=rank, alpha=alpha, epochs=epochs, lr=lr)
@@ -775,6 +880,8 @@ def build_command_preview(target_model: str, musubi_python: Path, musubi_repo: P
         return build_flux_kontext_preview(musubi_python=musubi_python, musubi_repo=musubi_repo, dataset_toml=dataset_toml, output_dir=output_dir, output_name=output_name, paths=paths, rank=rank, alpha=alpha, epochs=epochs, lr=lr)
     if target_model in {"flux2-dev", "flux2-klein"}:
         return build_flux2_preview(musubi_python=musubi_python, musubi_repo=musubi_repo, dataset_toml=dataset_toml, output_dir=output_dir, output_name=output_name, paths=paths, rank=rank, alpha=alpha, epochs=epochs, lr=lr, model_version=flux2_model_version(target_model))
+    if target_model == "krea2":
+        return build_krea2_preview(musubi_python=musubi_python, musubi_repo=musubi_repo, dataset_toml=dataset_toml, output_dir=output_dir, output_name=output_name, paths=paths, rank=rank, alpha=alpha, epochs=epochs, lr=lr)
     if target_model == "minimax-h3":
         return build_minimax_h3_preview(musubi_python=musubi_python, musubi_repo=musubi_repo, dataset_toml=dataset_toml, output_dir=output_dir, output_name=output_name, paths=paths, rank=rank, alpha=alpha, epochs=epochs, lr=lr, task=task if task in MINIMAX_H3_TASKS else "t2va")
     if target_model == "hunyuan-video":

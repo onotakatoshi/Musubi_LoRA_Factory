@@ -75,6 +75,11 @@ KNOWN_FILES: tuple[FileSpec, ...] = (
     FileSpec("minimax_h3_text_encoder", ("qwen3vl_32b_minimax_h3_bf16.safetensors", "qwen3vl_32b_minimax_h3_*.safetensors"), ("MiniMax-H3",)),
     FileSpec("minimax_h3_video_vae", ("minimax_h3_video_vae_fp16.safetensors", "minimax_h3_video_vae_*.safetensors"), ("MiniMax-H3",)),
     FileSpec("minimax_h3_audio_vae", ("minimax_h3_audio_vae_fp32.safetensors", "minimax_h3_audio_vae_*.safetensors"), ("MiniMax-H3",)),
+
+    # "raw" only: the turbo checkpoint is the distilled inference model.
+    FileSpec("krea2_dit", ("krea2_raw_bf16.safetensors", "krea2_raw_int8_convrot.safetensors", "raw.safetensors"), ("krea",), (), ("turbo",)),
+    FileSpec("krea2_vae", ("qwen_image_vae.safetensors", "diffusion_pytorch_model.safetensors"), ("qwen",), ("vae",)),
+    FileSpec("krea2_text_encoder", ("qwen3vl_4b_bf16.safetensors",)),
 )
 
 

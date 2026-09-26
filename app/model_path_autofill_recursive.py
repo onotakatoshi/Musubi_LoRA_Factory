@@ -48,6 +48,9 @@ KEYS: dict[str, tuple[list[str], str]] = {
     "minimax_h3_text_encoder": (["MiniMax-H3", "minimax-h3"], "text"),
     "minimax_h3_video_vae": (["MiniMax-H3", "minimax-h3"], "video_vae"),
     "minimax_h3_audio_vae": (["MiniMax-H3", "minimax-h3"], "audio_vae"),
+    "krea2_dit": (["Krea-2", "krea2"], "dit"),
+    "krea2_vae": (["Krea-2", "krea2"], "vae"),
+    "krea2_text_encoder": (["Krea-2", "krea2"], "text"),
 }
 
 

@@ -130,7 +130,11 @@ ideogram4_vae = ""
 ideogram4_text_encoder = ""
 ideogram4_dit = ""
 
-# Krea 2
-krea2_vae = ""
-krea2_text_encoder = ""
-krea2_dit = ""
+# Krea 2. 学習は RAW 版の DiT に対して行う（Turbo は蒸留された推論用）。
+# 公式の krea/Krea-2-Raw は手動承認制のgateがあるため、同じ重みを配布している
+# Comfy-Org のミラーを使う。VAE と Text Encoder も同じリポジトリに入っている。
+#   bash ./scripts/download_model_assets.sh krea2
+krea2_dit = "../models/krea2/Comfy-Org/Krea-2/diffusion_models/krea2_raw_bf16.safetensors"
+krea2_vae = "../models/krea2/Comfy-Org/Krea-2/vae/qwen_image_vae.safetensors"
+krea2_text_encoder = "../models/krea2/Comfy-Org/Krea-2/text_encoders/qwen3vl_4b_bf16.safetensors"
+krea2_base_weights = ""

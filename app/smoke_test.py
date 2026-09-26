@@ -136,6 +136,12 @@ def main() -> int:
         assert MODEL_SETTINGS[pid].command_status == "catalog_only", f"{pid} has no builder but is marked implemented"
 
     assert get_adapter("z-image").validate_model_paths({}) == ["model_paths.zimage_dit", "model_paths.zimage_vae", "model_paths.zimage_text_encoder"]
+    # Krea 2 trains on the RAW DiT and reuses the Qwen-Image VAE.
+    assert get_adapter("krea2").validate_model_paths({}) == [
+        "model_paths.krea2_dit",
+        "model_paths.krea2_vae",
+        "model_paths.krea2_text_encoder",
+    ]
     assert get_adapter("minimax-h3").validate_model_paths({}) == [
         "model_paths.minimax_h3_dit",
         "model_paths.minimax_h3_text_encoder",
@@ -297,6 +303,21 @@ def main() -> int:
         other.mkdir(parents=True)
         (other / "some_other_model_turbo_bf16.safetensors").write_text("dummy", encoding="utf-8")
         assert not any(detect_model_files(other.parent, "z-image").values()), "detection must not guess across models"
+
+    # Krea 2's shift schedule must stay resolution-aware. A fixed
+    # --discrete_flow_shift 2.5 is only correct at 1024x1024, so it must not be baked in.
+    from commands import ModelPaths, build_krea2_preview
+    krea2_preview = build_krea2_preview(
+        musubi_python=Path("/venv/bin/python"), musubi_repo=Path("/repo"),
+        dataset_toml=Path("/d/dataset.toml"), output_dir=Path("/d"), output_name="k",
+        paths=ModelPaths(dit="/m/raw.safetensors", vae="/m/vae.safetensors", text_encoder="/m/te.safetensors"),
+        rank=32, alpha=32, epochs=16, lr=1e-4,
+    )
+    assert "krea2_cache_latents.py" in krea2_preview
+    assert "krea2_cache_text_encoder_outputs.py" in krea2_preview
+    assert "networks.lora_krea2" in krea2_preview
+    assert "--timestep_sampling krea2_shift" in krea2_preview, krea2_preview
+    assert "--discrete_flow_shift" not in krea2_preview, "krea2_shift derives the shift per sample"
 
     print("Smoke test OK")
     return 0

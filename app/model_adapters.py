@@ -295,4 +295,35 @@ ADAPTERS["flux2-dev"] = Flux2Adapter("flux2-dev", prefix="flux2_dev")
 ADAPTERS["flux2-klein"] = Flux2Adapter("flux2-klein", prefix="flux2_klein")
 
 ADAPTERS["hunyuan-video"] = HunyuanVideoAdapter()
+class Krea2Adapter(CatalogAdapter):
+    def __init__(self) -> None:
+        super().__init__("krea2")
+
+    def _paths(self, model_paths: dict) -> ModelPaths:
+        return ModelPaths(
+            dit=model_paths.get("krea2_dit", ""),
+            vae=model_paths.get("krea2_vae", ""),
+            text_encoder=model_paths.get("krea2_text_encoder", ""),
+            base_weights=model_paths.get("krea2_base_weights", ""),
+        )
+
+    def build_commands(self, context: CommandContext) -> str:
+        profile = get_profile(self.profile_id)
+        return build_command_preview(
+            target_model=profile.id,
+            musubi_python=context.musubi_python,
+            musubi_repo=context.musubi_repo,
+            dataset_toml=context.dataset_toml,
+            output_dir=context.output_dir,
+            output_name=context.output_name,
+            paths=self._paths(context.model_paths),
+            rank=context.rank,
+            alpha=context.alpha,
+            epochs=context.epochs,
+            lr=context.lr,
+            task=profile.task,
+        )
+
+
 ADAPTERS["minimax-h3"] = MiniMaxH3Adapter()
+ADAPTERS["krea2"] = Krea2Adapter()

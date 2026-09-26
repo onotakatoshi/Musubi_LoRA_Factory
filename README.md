@@ -4,7 +4,7 @@ PGX向けのmusubi-tuner用ローカルデスクトップGUIです。
 
 **Musubi TunerでLoRA作成スクリプトが用意されている主要Target modelを、設定画面の選択肢として追加しています。**
 
-現在、学習コマンド生成まで実装済みなのは Z-Image / Z-Image-Turbo、Wan2.2 T2V-A14B、Wan2.2 I2V-A14B、Wan2.1、HunyuanVideo、FLUX.1 Kontext、FLUX.2 dev、FLUX.2 klein、Qwen-Image、MiniMax-H3 です。Wan2.2 TI2V-5B とその他のTarget modelは、Settingsのモデル別パス管理・設定確認・保存後ログ・musubiスクリプト確認までを先に追加し、学習コマンドテンプレートは検証フェーズで順次有効化します。
+現在、学習コマンド生成まで実装済みなのは Z-Image / Z-Image-Turbo、Wan2.2 T2V-A14B、Wan2.2 I2V-A14B、Wan2.1、HunyuanVideo、FLUX.1 Kontext、FLUX.2 dev、FLUX.2 klein、Qwen-Image、MiniMax-H3、Krea 2 です。Wan2.2 TI2V-5B とその他のTarget modelは、Settingsのモデル別パス管理・設定確認・保存後ログ・musubiスクリプト確認までを先に追加し、学習コマンドテンプレートは検証フェーズで順次有効化します。
 
 追加対象:
 
@@ -30,7 +30,7 @@ PGX向けのmusubi-tuner用ローカルデスクトップGUIです。
 
 Z-Imageで最初に試す場合は、まず [PGX Z-Image setup notes](docs/pgx_zimage_setup.md) を見てください。
 
-MiniMax-H3のLoRA作成手順は [MiniMax-H3 command profile](docs/minimax_h3_commands.md) にまとめています。
+MiniMax-H3のLoRA作成手順は [MiniMax-H3 command profile](docs/minimax_h3_commands.md)、Krea 2は [Krea 2 command profile](docs/krea2_commands.md) にまとめています。
 
 PGXでβ確認する手順は [PGX Beta Runbook](docs/pgx_beta_runbook.md) にまとめています。
 
@@ -144,6 +144,14 @@ MiniMax-H3だけを取得する場合:
 ```bash
 bash ./scripts/download_model_assets.sh minimax-h3
 ```
+
+Krea 2（RAW DiT + VAE + Text Encoder）を取得する場合:
+
+```bash
+bash ./scripts/download_model_assets.sh krea2
+```
+
+公式の `krea/Krea-2-Raw` は手動承認制のgateがあるため、同じ重みを配布している Comfy-Org のミラーを使います。
 
 FLUX.1 Kontext用のText Encoder（T5-XXL / CLIP-L）は別リポジトリです。
 

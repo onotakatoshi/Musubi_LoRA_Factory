@@ -77,6 +77,27 @@ CANDIDATES: dict[str, list[str]] = {
         "minimax-h3/Comfy-Org/MiniMax-H3/vae/minimax_h3_audio_vae_fp32.safetensors",
         "minimax-h3/**/minimax_h3_audio_vae_*.safetensors",
     ],
+
+    # Krea 2 trains on the RAW checkpoint; never offer turbo.* here. The official
+    # krea/Krea-2-Raw repo is gated behind a manual authorized list, so the Comfy-Org
+    # mirror (same 26.28GB weights, no gate) is the first candidate.
+    "krea2_dit": [
+        "krea2/Comfy-Org/Krea-2/diffusion_models/krea2_raw_bf16.safetensors",
+        "krea2/**/krea2_raw_bf16.safetensors",
+        "krea2/**/krea2_raw_int8_convrot.safetensors",
+        "krea2/Krea-2-Raw/raw.safetensors",
+        "krea2/**/raw.safetensors",
+    ],
+    "krea2_vae": [
+        "krea2/Comfy-Org/Krea-2/vae/qwen_image_vae.safetensors",
+        "qwen/Qwen-Image/vae/diffusion_pytorch_model.safetensors",
+        "**/qwen_image_vae.safetensors",
+    ],
+    "krea2_text_encoder": [
+        "krea2/Comfy-Org/Krea-2/text_encoders/qwen3vl_4b_bf16.safetensors",
+        "qwen3vl/text_encoders/qwen3vl_4b_bf16.safetensors",
+        "**/qwen3vl_4b_bf16.safetensors",
+    ],
 }
 
 
@@ -101,6 +122,11 @@ COMFYUI_CANDIDATES: dict[str, list[str]] = {
         "vae/minimax_h3_video_vae_int8_convrot.safetensors",
     ],
     "minimax_h3_audio_vae": ["vae/minimax_h3_audio_vae_fp32.safetensors"],
+    # ComfyUI keeps the Qwen-Image VAE and the Qwen3-VL text encoder that Krea 2
+    # reuses. The DiT is deliberately absent: ComfyUI trees carry turbo and community
+    # mixes, and there is no way to tell a RAW-derived mix from a Turbo-derived one.
+    "krea2_vae": ["vae/qwen_image_vae.safetensors"],
+    "krea2_text_encoder": ["text_encoders/qwen3vl_4b_bf16.safetensors"],
 }
 
 
